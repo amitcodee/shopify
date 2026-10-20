@@ -41,11 +41,11 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
 
 ## Accepted risks
 
-| Risk                                                                                                         | Why accepted / mitigation                                                                                  |
-| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| The lockout message reveals that an account exists, and an attacker can lock a known account for 15 minutes. | Usability over secrecy; per-IP throttling bounds the rate; lock is short. Revisit with email-based unlock. |
-| `pnpm audit`: 1 high advisory (`braces` via `eslint-config-next`).                                           | Development/lint-time only, not shipped in any runtime image.                                              |
-| Container images were not built locally (no Docker on the development machine).                              | The standalone builds were booted natively; CI must build the images before the first release.             |
+| Risk                                                                            | Why accepted / mitigation                                                                                                                               |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The lockout message reveals that an account exists.                             | Usability over secrecy; per-IP throttling bounds the rate. Since 2026-10-20 the owner is emailed an unlock link, so a lockout no longer keeps them out. |
+| `pnpm audit`: 1 high advisory (`braces` via `eslint-config-next`).              | Development/lint-time only, not shipped in any runtime image.                                                                                           |
+| Container images were not built locally (no Docker on the development machine). | The standalone builds were booted natively; CI must build the images before the first release.                                                          |
 
 ## Follow-ups closed after the review
 
@@ -70,3 +70,9 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   the database server was not in UTC (a 15-minute lockout lasted 5h45m on an IST server); every
   connection now runs with `TimeZone=UTC`. Tests: `rate-limit.e2e`, `hardening.e2e` (lockout
   upper bound).
+- **2026-10-20 — account recovery.** Locking an account emails the owner a single-use unlock
+  link (bound to that lockout) and a password reset link. Merchants can reset a forgotten
+  password: the link is HMAC-signed, expires in 1 hour, is bound to the current password hash
+  (single use), clears lockouts, signs out every session and does not sign in, so 2FA still
+  applies. The forgot-password endpoint answers the same for unknown emails. Tests:
+  `account-recovery.e2e`, `account-recovery.spec`.

@@ -60,6 +60,15 @@ export const mfaLoginInputSchema = z.strictObject({
 
 export const verifyEmailInputSchema = z.strictObject({ token: z.string().min(10).max(2000) });
 
+export const forgotPasswordInputSchema = z.strictObject({ email: emailSchema });
+
+export const resetPasswordInputSchema = z.strictObject({
+  token: z.string().min(10).max(2000),
+  password: passwordSchema,
+});
+
+export const unlockAccountInputSchema = z.strictObject({ token: z.string().min(10).max(2000) });
+
 export const totpCodeInputSchema = z.strictObject({ code: totpCodeSchema });
 
 export const twoFactorSetupSchema = z.object({

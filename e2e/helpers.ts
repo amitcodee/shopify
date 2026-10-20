@@ -27,9 +27,9 @@ export async function signUp(page: Page, name = 'E2E Merchant') {
   return { email, password };
 }
 
-/** The API keeps sent email in memory during E2E, so build the emailed link out of band. */
-export function emailVerificationToken(email: string): string {
-  return execFileSync(process.execPath, ['scripts/email-verification-token.js', email], {
+/** The API keeps sent email in memory during E2E, so build emailed links out of band. */
+export function emailLinkToken(purpose: 'verify-email' | 'reset-password', email: string): string {
+  return execFileSync(process.execPath, ['scripts/email-link-token.js', purpose, email], {
     cwd: 'packages/db',
     env: { ...process.env, APP_ENCRYPTION_KEY: E2E_ENCRYPTION_KEY },
     encoding: 'utf8',
@@ -38,7 +38,7 @@ export function emailVerificationToken(email: string): string {
 
 /** Opens the verification link and confirms; lands on store onboarding. */
 export async function verifyEmail(page: Page, email: string) {
-  await page.goto(`${ADMIN_URL}/verify-email/${emailVerificationToken(email)}`);
+  await page.goto(`${ADMIN_URL}/verify-email/${emailLinkToken('verify-email', email)}`);
   await page.getByRole('button', { name: 'Confirm email' }).click();
   await expect(page).toHaveURL(/\/onboarding$/);
 }

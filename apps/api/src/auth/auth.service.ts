@@ -14,6 +14,7 @@ import type {
   TwoFactorSetup,
 } from '@repo/contracts';
 import type { PrismaClient, TenantTx, User } from '@repo/db';
+import { createHash } from 'node:crypto';
 import { decryptSecret, encryptSecret, signToken, verifyToken } from '../common/crypto.js';
 import type { AuthUser, RequestMeta } from '../common/request.js';
 import { ENV, type Env } from '../config/env.js';
@@ -26,13 +27,17 @@ import { generateTotpSecret, otpauthUrl, verifyTotp } from './totp.js';
 
 const INVALID_CREDENTIALS = 'Invalid email or password.';
 const INVALID_CODE = 'That code is not valid. Check your authenticator app and try again.';
-const LOCKED = 'Too many failed sign-in attempts. Try again in 15 minutes.';
+const LOCKED =
+  'Too many failed sign-in attempts. We emailed you a link to unlock your account, or try again in 15 minutes.';
 const MFA_TTL_MS = 5 * 60 * 1000;
 /** Failed password/code attempts before the account is locked for LOCK_MS. */
 const MAX_FAILED_LOGINS = 10;
 const LOCK_MS = 15 * 60 * 1000;
 const VERIFY_EMAIL_TTL_MS = 24 * 60 * 60 * 1000;
 const INVALID_VERIFY_LINK = 'This verification link is invalid or has expired.';
+const INVALID_RESET_LINK = 'This password reset link is invalid or has expired.';
+const INVALID_UNLOCK_LINK = 'This unlock link is invalid or has expired.';
+const RESET_TTL_MS = 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
@@ -78,6 +83,63 @@ export class AuthService {
     await this.db.user.updateMany({
       where: { id: user.id, emailVerifiedAt: null },
       data: { emailVerifiedAt: new Date() },
+    });
+  }
+
+  /** Emails a password reset link. Same response whether or not the account exists. */
+  async forgotPassword(email: string): Promise<void> {
+    const user = await this.db.user.findUnique({ where: { email } });
+    if (!user || user.disabledAt) return;
+    const url = `${this.env.ADMIN_PUBLIC_URL}/reset-password/${this.resetToken(user)}`;
+    await this.db.$transaction((tx) =>
+      this.outbox.enqueueEmail(tx, null, {
+        to: user.email,
+        subject: 'Reset your password',
+        text: `Hi ${user.name},\n\nSomeone asked to reset the password for your account. If it was you, choose a new password:\n${url}\n\nThis link expires in 1 hour and works once. If you did not ask for this, ignore this email: your password stays the same.`,
+      }),
+    );
+  }
+
+  /**
+   * Sets a new password from an emailed link. The link is bound to the current password hash, so
+   * it works once. Clears any lockout and signs the user out everywhere; it does not sign them
+   * in, so two-factor authentication still applies at the next sign-in.
+   */
+  async resetPassword(token: string, password: string): Promise<void> {
+    const claim = verifyToken<{ uid: string; ph: string }>(
+      this.env.APP_ENCRYPTION_KEY,
+      'reset-password',
+      token,
+    );
+    const user = claim ? await this.db.user.findUnique({ where: { id: claim.uid } }) : null;
+    if (!user || user.disabledAt || claim?.ph !== passwordFingerprint(user.passwordHash)) {
+      throw new BadRequestException(INVALID_RESET_LINK);
+    }
+    const passwordHash = await this.passwords.hash(password);
+    const updated = await this.db.user.updateMany({
+      // Conditional on the old hash: two concurrent uses of one link cannot both succeed.
+      where: { id: user.id, passwordHash: user.passwordHash },
+      data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
+    });
+    if (updated.count === 0) throw new BadRequestException(INVALID_RESET_LINK);
+    await this.sessions.revokeAllForUser(user.id);
+  }
+
+  /** Ends a lockout early from the link emailed when it started (proves inbox control). */
+  async unlockAccount(token: string): Promise<void> {
+    const claim = verifyToken<{ uid: string; lu: number }>(
+      this.env.APP_ENCRYPTION_KEY,
+      'unlock-account',
+      token,
+    );
+    const user = claim ? await this.db.user.findUnique({ where: { id: claim.uid } }) : null;
+    // Bound to this lockout: the link stops working once used or once the lock is replaced.
+    if (!user || user.disabledAt || user.lockedUntil?.getTime() !== claim?.lu) {
+      throw new BadRequestException(INVALID_UNLOCK_LINK);
+    }
+    await this.db.user.updateMany({
+      where: { id: user.id, lockedUntil: user.lockedUntil },
+      data: { lockedUntil: null, failedLoginCount: 0 },
     });
   }
 
@@ -167,16 +229,45 @@ export class AuthService {
     await this.sessions.revokeOthers(user.id, keepSessionId);
   }
 
-  /** Counts a failed attempt atomically; the 10th failure locks the account for 15 minutes. */
+  /**
+   * Counts a failed attempt atomically; the 10th failure locks the account for 15 minutes and
+   * emails the owner a link to unlock it (or to reset the password if it was not them).
+   */
   private async recordFailure(userId: string): Promise<void> {
-    await this.db.$executeRaw`
+    const [row] = await this.db.$queryRaw<{ lockedUntil: Date | null; locked: boolean }[]>`
       UPDATE "User" SET
         "lockedUntil" = CASE WHEN "failedLoginCount" + 1 >= ${MAX_FAILED_LOGINS}::int
                              THEN now() + make_interval(secs => ${LOCK_MS / 1000}::double precision)
                              ELSE "lockedUntil" END,
         "failedLoginCount" = CASE WHEN "failedLoginCount" + 1 >= ${MAX_FAILED_LOGINS}::int
                                   THEN 0 ELSE "failedLoginCount" + 1 END
-      WHERE id = ${userId}::uuid`;
+      WHERE id = ${userId}::uuid
+      RETURNING "lockedUntil", ("failedLoginCount" = 0 AND "lockedUntil" > now()) AS locked`;
+    if (!row?.locked || !row.lockedUntil) return;
+    const user = await this.db.user.findUniqueOrThrow({ where: { id: userId } });
+    const unlock = signToken(
+      this.env.APP_ENCRYPTION_KEY,
+      'unlock-account',
+      { uid: user.id, lu: row.lockedUntil.getTime() },
+      LOCK_MS,
+    );
+    const admin = this.env.ADMIN_PUBLIC_URL;
+    await this.db.$transaction((tx) =>
+      this.outbox.enqueueEmail(tx, null, {
+        to: user.email,
+        subject: 'Your account was locked',
+        text: `Hi ${user.name},\n\nWe locked your account for 15 minutes after ${MAX_FAILED_LOGINS} failed sign-in attempts.\n\nIf this was you, unlock it now:\n${admin}/unlock/${unlock}\n\nIf it was not you, someone may be trying to guess your password. Choose a new one:\n${admin}/reset-password/${this.resetToken(user)}`,
+      }),
+    );
+  }
+
+  private resetToken(user: User): string {
+    return signToken(
+      this.env.APP_ENCRYPTION_KEY,
+      'reset-password',
+      { uid: user.id, ph: passwordFingerprint(user.passwordHash) },
+      RESET_TTL_MS,
+    );
   }
 
   /** Verifies a TOTP code and records its time step so it cannot be replayed. */
@@ -241,4 +332,9 @@ This link expires in 24 hours. If you did not sign up, ignore this email.`,
 
 function isLocked(user: User): boolean {
   return user.lockedUntil !== null && user.lockedUntil > new Date();
+}
+
+/** Short digest of the password hash: changes whenever the password does (single-use links). */
+function passwordFingerprint(passwordHash: string): string {
+  return createHash('sha256').update(passwordHash).digest('base64url').slice(0, 22);
 }

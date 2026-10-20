@@ -1,7 +1,15 @@
 import { contentSecurityPolicy, HSTS_HEADER, STATIC_SECURITY_HEADERS } from '@repo/contracts';
 import { type NextRequest, NextResponse } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/signup', '/invite', '/verify-email'];
+const PUBLIC_PATHS = [
+  '/login',
+  '/signup',
+  '/invite',
+  '/verify-email',
+  '/forgot-password',
+  '/reset-password',
+  '/unlock',
+];
 const isProd = process.env.NODE_ENV === 'production';
 const mediaOrigin = new URL(process.env.API_URL ?? 'http://localhost:4000').origin;
 

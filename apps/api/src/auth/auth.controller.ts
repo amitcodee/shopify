@@ -13,6 +13,9 @@ import {
   type SignupInput,
   signupInputSchema,
   verifyEmailInputSchema,
+  forgotPasswordInputSchema,
+  resetPasswordInputSchema,
+  unlockAccountInputSchema,
 } from '@repo/contracts';
 import type { AppRequest, AuthUser, RequestMeta } from '../common/request.js';
 import { CurrentUser, ReqMeta } from '../common/request.js';
@@ -51,6 +54,39 @@ export class AuthController {
     @Body(new ZodPipe(verifyEmailInputSchema)) body: z.output<typeof verifyEmailInputSchema>,
   ): Promise<void> {
     return this.auth.verifyEmail(body.token);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 600_000 } })
+  @Post('password/forgot')
+  @HttpCode(204)
+  @ApiZodBody(forgotPasswordInputSchema)
+  forgotPassword(
+    @Body(new ZodPipe(forgotPasswordInputSchema)) body: z.output<typeof forgotPasswordInputSchema>,
+  ): Promise<void> {
+    return this.auth.forgotPassword(body.email);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('password/reset')
+  @HttpCode(204)
+  @ApiZodBody(resetPasswordInputSchema)
+  resetPassword(
+    @Body(new ZodPipe(resetPasswordInputSchema)) body: z.output<typeof resetPasswordInputSchema>,
+  ): Promise<void> {
+    return this.auth.resetPassword(body.token, body.password);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('unlock')
+  @HttpCode(204)
+  @ApiZodBody(unlockAccountInputSchema)
+  unlock(
+    @Body(new ZodPipe(unlockAccountInputSchema)) body: z.output<typeof unlockAccountInputSchema>,
+  ): Promise<void> {
+    return this.auth.unlockAccount(body.token);
   }
 
   @ApiBearerAuth()
