@@ -5,8 +5,10 @@ import type {
   ConnectProvider,
   ConnectWebhookOutcome,
   CreateAccountInput,
+  CreatedAccount,
   ProviderPayout,
 } from './connect-provider.js';
+import { PAYOUT_COUNTRIES } from '@repo/contracts';
 import { MOCK_SIGNATURE_HEADER } from './mock-payment.provider.js';
 import { InvalidWebhookError } from './payment-provider.js';
 
@@ -21,13 +23,18 @@ type MockConnectEvent =
  */
 export class MockConnectProvider implements ConnectProvider {
   readonly name = 'mock';
+  readonly label = 'Sandbox';
+  readonly onboarding = 'hosted' as const;
+  readonly countries = PAYOUT_COUNTRIES;
+  readonly currencies = null;
+  readonly hasDashboard = true;
 
   constructor(
     private readonly secret: string,
     private readonly adminUrl: string,
   ) {}
 
-  createAccount(_input: CreateAccountInput): Promise<{ accountId: string }> {
+  createAccount(_input: CreateAccountInput): Promise<CreatedAccount> {
     return Promise.resolve({ accountId: `acct_mock_${randomUUID().replaceAll('-', '')}` });
   }
 

@@ -62,7 +62,7 @@ export async function createStore(page: Page, name: string, { payments = true } 
 /** Settings → Payments → sandbox onboarding, ending with an active payouts account. */
 export async function enablePayments(page: Page, storeId: string) {
   await page.goto(`${ADMIN_URL}/s/${storeId}/settings/payments`);
-  await page.getByRole('button', { name: 'Set up payments' }).click();
+  await page.getByRole('button', { name: 'Set up Sandbox' }).click();
   await expect(page.getByRole('heading', { name: 'Sandbox onboarding' })).toBeVisible();
   await page.getByRole('button', { name: 'Complete onboarding' }).click();
   await expect(page.getByText('Payments are set up.')).toBeVisible();

@@ -21,6 +21,72 @@ export const PAYOUT_COUNTRIES = [
   'JP',
 ] as const;
 
+export const gatewaySchema = z.enum(['mock', 'stripe', 'razorpay']);
+export type GatewayName = z.infer<typeof gatewaySchema>;
+
+/** A payment gateway the platform offers merchants (from the API's PAYMENT_PROVIDERS). */
+export const gatewayInfoSchema = z.object({
+  provider: gatewaySchema,
+  label: z.string(),
+  /** "hosted": onboarding on the provider's pages; "form": details entered in the admin. */
+  onboarding: z.enum(['hosted', 'form']),
+  countries: z.array(z.string()),
+  /** Store currencies the gateway can settle; null = any. */
+  currencies: z.array(z.string()).nullable(),
+  sandbox: z.boolean(),
+});
+export type GatewayInfo = z.infer<typeof gatewayInfoSchema>;
+
+export const RAZORPAY_BUSINESS_TYPES = [
+  'individual',
+  'proprietorship',
+  'partnership',
+  'private_limited',
+  'public_limited',
+  'llp',
+  'ngo',
+  'trust',
+  'society',
+] as const;
+
+/**
+ * Razorpay Route linked-account onboarding. Razorpay has no hosted onboarding for linked
+ * accounts, so these go from the admin straight to Razorpay; we never store the bank details.
+ */
+export const razorpayBusinessDetailsSchema = z.strictObject({
+  legalBusinessName: z.string().trim().min(4).max(200),
+  businessType: z.enum(RAZORPAY_BUSINESS_TYPES),
+  contactName: z.string().trim().min(4).max(100),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[6-9]\d{9}$/, 'Enter a 10-digit Indian mobile number'),
+  pan: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{5}\d{4}[A-Z]$/, 'Enter a valid PAN'),
+  street1: z.string().trim().min(3).max(100),
+  street2: z.string().trim().max(100).optional(),
+  city: z.string().trim().min(2).max(100),
+  state: z.string().trim().min(2).max(100),
+  postalCode: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Enter a 6-digit PIN code'),
+  accountNumber: z
+    .string()
+    .trim()
+    .regex(/^\d{9,18}$/, 'Enter the bank account number (9–18 digits)'),
+  ifsc: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Enter a valid IFSC code'),
+  beneficiaryName: z.string().trim().min(4).max(120),
+});
+export type RazorpayBusinessDetails = z.infer<typeof razorpayBusinessDetailsSchema>;
+
 export const paymentAccountStatusSchema = z.enum([
   /** Created; the merchant has not finished the provider's onboarding. */
   'ONBOARDING',
@@ -34,7 +100,8 @@ export const paymentAccountStatusSchema = z.enum([
 export type PaymentAccountStatus = z.infer<typeof paymentAccountStatusSchema>;
 
 export const paymentAccountSchema = z.object({
-  provider: z.string(),
+  provider: gatewaySchema,
+  label: z.string(),
   accountId: z.string(),
   status: paymentAccountStatusSchema,
   chargesEnabled: z.boolean(),
@@ -44,6 +111,10 @@ export const paymentAccountSchema = z.object({
   requirementsDue: z.array(z.string()),
   disabledReason: z.string().nullable(),
   country: z.string().nullable(),
+  /** Whether the gateway offers merchants a dashboard link (payouts, bank account, tax forms). */
+  hasDashboard: z.boolean(),
+  /** False when the platform no longer offers this gateway (checkout is then off). */
+  gatewayEnabled: z.boolean(),
   updatedAt: z.iso.datetime(),
 });
 export type PaymentAccount = z.infer<typeof paymentAccountSchema>;
@@ -73,8 +144,9 @@ export const salesSummarySchema = z.object({
 export type SalesSummary = z.infer<typeof salesSummarySchema>;
 
 export const paymentsOverviewSchema = z.object({
-  /** Active payment provider for checkout ("stripe" or the "mock" sandbox). */
-  provider: z.string(),
+  /** Gateways this store can connect (currency-compatible ones first). */
+  gateways: z.array(gatewayInfoSchema),
+  /** True when the connected gateway (or, before connecting, every offered one) is the sandbox. */
   sandbox: z.boolean(),
   account: paymentAccountSchema.nullable(),
   /** True when shoppers can check out (account connected and charges enabled). */
@@ -90,11 +162,14 @@ export const paymentsOverviewSchema = z.object({
 });
 export type PaymentsOverview = z.infer<typeof paymentsOverviewSchema>;
 
-export const connectAccountInputSchema = z.strictObject({
-  country: z.enum(PAYOUT_COUNTRIES),
-});
+export const connectAccountInputSchema = z.discriminatedUnion('provider', [
+  z.strictObject({ provider: z.enum(['mock', 'stripe']), country: z.enum(PAYOUT_COUNTRIES) }),
+  z.strictObject({ provider: z.literal('razorpay'), business: razorpayBusinessDetailsSchema }),
+]);
+export type ConnectAccountInput = z.infer<typeof connectAccountInputSchema>;
 
-export const providerLinkSchema = z.object({ url: z.string() });
+/** Where to continue onboarding; null when it is already complete (form onboarding). */
+export const providerLinkSchema = z.object({ url: z.string().nullable() });
 export type ProviderLink = z.infer<typeof providerLinkSchema>;
 
 export const sandboxOnboardingInputSchema = z.strictObject({

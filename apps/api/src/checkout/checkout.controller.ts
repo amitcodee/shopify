@@ -36,7 +36,7 @@ import { Public } from '../auth/auth.guard.js';
 import { ApiZodBody, ZodPipe } from '../common/zod.js';
 import { CustomerAuthService } from '../customers/customer-auth.service.js';
 import { MockPaymentProvider, MOCK_SIGNATURE_HEADER } from '../payments/mock-payment.provider.js';
-import { ACTIVE_PAYMENT_PROVIDER, type PaymentProvider } from '../payments/payment-provider.js';
+import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-provider.js';
 import { PaymentWebhooksService } from '../payments/payment-webhooks.service.js';
 import { CartToken, CurrentShop, StorefrontGuard } from '../storefront/storefront.guard.js';
 import type { ShopContext } from '../storefront/store-resolver.js';
@@ -62,7 +62,7 @@ export class CheckoutController {
     private readonly checkout: CheckoutService,
     private readonly customers: CustomerAuthService,
     private readonly webhooks: PaymentWebhooksService,
-    @Inject(ACTIVE_PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
+    @Inject(PAYMENT_PROVIDERS) private readonly providers: Map<string, PaymentProvider>,
   ) {}
 
   @Post('checkout/preview')
@@ -107,15 +107,11 @@ export class CheckoutController {
     @Param('reference') reference: string,
     @Body(new ZodPipe(mockPaymentOutcomeSchema)) body: z.output<typeof mockPaymentOutcomeSchema>,
   ): Promise<MockPayment> {
-    if (!(this.provider instanceof MockPaymentProvider)) throw new NotFoundException();
+    const sandbox = this.providers.get('mock');
+    if (!(sandbox instanceof MockPaymentProvider)) throw new NotFoundException();
     const payment = await this.checkout.findMockPayment(shop, reference);
     if (payment.status === 'PENDING') {
-      const hook = this.provider.buildWebhook(
-        reference,
-        body.outcome,
-        payment.amount,
-        payment.currency,
-      );
+      const hook = sandbox.buildWebhook(reference, body.outcome, payment.amount, payment.currency);
       await this.webhooks.handle('mock', hook.body, { [MOCK_SIGNATURE_HEADER]: hook.signature });
     }
     return this.checkout.getMockPayment(shop, reference);

@@ -16,9 +16,9 @@ export async function GET(
       `/admin/stores/${encodeURIComponent(storeId)}/payments/account/onboarding-link`,
       { method: 'POST' },
     );
-    return NextResponse.redirect(link.url);
+    if (link.url) return NextResponse.redirect(link.url);
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
-    return NextResponse.redirect(new URL(`/s/${storeId}/settings/payments`, request.url));
   }
+  return NextResponse.redirect(new URL(`/s/${storeId}/settings/payments`, request.url));
 }

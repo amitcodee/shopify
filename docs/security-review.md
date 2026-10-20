@@ -76,3 +76,10 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   (single use), clears lockouts, signs out every session and does not sign in, so 2FA still
   applies. The forgot-password endpoint answers the same for unknown emails. Tests:
   `account-recovery.e2e`, `account-recovery.spec`.
+- **2026-10-20 — Razorpay and multiple gateways.** Each store settles through the gateway it
+  connected; webhooks are verified per gateway (Razorpay HMAC-SHA256 of the raw body) and
+  de-duplicated by event id. Razorpay Route onboarding passes PAN and bank details straight to
+  Razorpay without storing them (and never echoes the account number back on validation errors);
+  only ids and status are kept. The platform fee is the untransferred remainder of each Payment
+  Link, fixed server-side at checkout ([ADR 0007](adr/0007-payment-gateways-razorpay.md)).
+  Tests: `razorpay.test`, `razorpay.e2e`.

@@ -7,7 +7,8 @@ import { createPrismaClient, type PrismaClient } from '@repo/db';
 import request from 'supertest';
 import { expect } from 'vitest';
 import { AppModule } from '../src/app.module.js';
-import { loadEnv } from '../src/config/env.js';
+import { type Env, loadEnv } from '../src/config/env.js';
+import { GATEWAYS, type Gateways } from '../src/payments/payments.module.js';
 import { configureApp } from '../src/configure-app.js';
 import { signStorefrontRequest } from '../src/storefront/storefront.guard.js';
 
@@ -21,11 +22,15 @@ export interface TestContext {
   close: () => Promise<void>;
 }
 
-export async function createTestApp(): Promise<TestContext> {
+/** Pass `gateways` to replace the payment adapters (e.g. Razorpay over a fake HTTP layer). */
+export async function createTestApp(
+  options: { gateways?: (env: Env) => Gateways } = {},
+): Promise<TestContext> {
   const env = loadEnv({ ...process.env, CORS_ORIGINS: 'http://localhost:3100' });
-  const moduleRef = await Test.createTestingModule({
-    imports: [AppModule.register(env)],
-  }).compile();
+  let builder = Test.createTestingModule({ imports: [AppModule.register(env)] });
+  if (options.gateways)
+    builder = builder.overrideProvider(GATEWAYS).useValue(options.gateways(env));
+  const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication<INestApplication<Server>>({ rawBody: true });
   configureApp(app, env);
   await app.init();
@@ -117,7 +122,11 @@ export async function enablePayments(
 ): Promise<void> {
   const auth = { Authorization: `Bearer ${token}` };
   const base = `/api/v1/admin/stores/${storeId}/payments`;
-  const connect = await ctx.http().post(`${base}/account`).set(auth).send({ country: 'US' });
+  const connect = await ctx
+    .http()
+    .post(`${base}/account`)
+    .set(auth)
+    .send({ provider: 'mock', country: 'US' });
   expect(connect.status, JSON.stringify(connect.body)).toBe(200);
   const done = await ctx.http().post(`${base}/sandbox-onboarding`).set(auth).send({ outcome });
   expect(done.status, JSON.stringify(done.body)).toBe(200);

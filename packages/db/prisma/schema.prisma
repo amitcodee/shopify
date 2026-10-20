@@ -627,6 +627,8 @@ model PaymentAccount {
   requirementsDue  String[]             @default([])
   disabledReason   String?
   country          String?              @db.Char(2)
+  /// Provider-specific ids (e.g. Razorpay Route product configuration id). Never bank details.
+  providerData     Json                 @default("{}")
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
 

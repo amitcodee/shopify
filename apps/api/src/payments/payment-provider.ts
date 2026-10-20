@@ -82,6 +82,5 @@ export interface PaymentProvider {
 }
 
 export const PAYMENT_PROVIDERS = Symbol('PAYMENT_PROVIDERS');
-export const ACTIVE_PAYMENT_PROVIDER = Symbol('ACTIVE_PAYMENT_PROVIDER');
 
 export class InvalidWebhookError extends Error {}

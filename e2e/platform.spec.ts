@@ -44,7 +44,10 @@ test('merchant upgrades their plan; platform admin suspends and reactivates the 
     .getByRole('row', { name: /Plan Store/ })
     .getByRole('button', { name: 'Reactivate' })
     .click();
-  await expect(adminPage.getByRole('row', { name: /Plan Store/ })).toContainText('Active');
+  // The suspension reason disappears once reactivated (the row also shows payments status).
+  await expect(adminPage.getByRole('row', { name: /Plan Store/ })).not.toContainText(
+    'Policy review',
+  );
   await shopper.reload();
   await expect(shopper.getByRole('link', { name: 'Plan Store' })).toBeVisible();
 

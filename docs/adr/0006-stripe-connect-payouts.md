@@ -61,7 +61,7 @@ revenue per currency and how many stores can accept payments.
 ## Consequences
 
 - Production needs `STRIPE_CONNECT_WEBHOOK_SECRET` (the API refuses to start without it when
-  `PAYMENT_PROVIDER=stripe`) and Connect enabled on the platform's Stripe account.
+  `PAYMENT_PROVIDERS` includes `stripe`) and Connect enabled on the platform's Stripe account.
 - The platform carries dispute and negative-balance risk for connected accounts. Disputes
   (`charge.dispute.created/updated/closed` on the platform endpoint) are mirrored into `Dispute`
   rows (store-scoped, RLS), written to the order timeline and emailed to the store; the order page,

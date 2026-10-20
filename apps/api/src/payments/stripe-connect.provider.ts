@@ -5,8 +5,10 @@ import type {
   ConnectProvider,
   ConnectWebhookOutcome,
   CreateAccountInput,
+  CreatedAccount,
   ProviderPayout,
 } from './connect-provider.js';
+import { PAYOUT_COUNTRIES } from '@repo/contracts';
 import { InvalidWebhookError } from './payment-provider.js';
 
 /**
@@ -18,6 +20,11 @@ import { InvalidWebhookError } from './payment-provider.js';
  */
 export class StripeConnectProvider implements ConnectProvider {
   readonly name = 'stripe';
+  readonly label = 'Stripe';
+  readonly onboarding = 'hosted' as const;
+  readonly countries = PAYOUT_COUNTRIES;
+  readonly currencies = null;
+  readonly hasDashboard = true;
 
   constructor(
     private readonly stripe: Stripe,
@@ -28,7 +35,7 @@ export class StripeConnectProvider implements ConnectProvider {
     return new StripeConnectProvider(new Stripe(secretKey), webhookSecret);
   }
 
-  async createAccount(input: CreateAccountInput): Promise<{ accountId: string }> {
+  async createAccount(input: CreateAccountInput): Promise<CreatedAccount> {
     const account = await this.stripe.accounts.create(
       {
         country: input.country,

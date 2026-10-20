@@ -101,10 +101,19 @@ describe('deriveStatus', () => {
     disabledReason: null,
     country: 'US',
   };
-  it('is ACTIVE once charges are enabled, else RESTRICTED after submission, else ONBOARDING', () => {
+  it('is ACTIVE with charges enabled, RESTRICTED when something is due, else ONBOARDING', () => {
     expect(deriveStatus({ ...base, chargesEnabled: true, detailsSubmitted: true })).toBe('ACTIVE');
+    expect(
+      deriveStatus({
+        ...base,
+        chargesEnabled: false,
+        detailsSubmitted: true,
+        requirementsDue: ['external_account'],
+      }),
+    ).toBe('RESTRICTED');
+    // Submitted with nothing outstanding: the provider is reviewing it.
     expect(deriveStatus({ ...base, chargesEnabled: false, detailsSubmitted: true })).toBe(
-      'RESTRICTED',
+      'ONBOARDING',
     );
     expect(deriveStatus({ ...base, chargesEnabled: false, detailsSubmitted: false })).toBe(
       'ONBOARDING',

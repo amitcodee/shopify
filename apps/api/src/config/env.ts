@@ -14,6 +14,19 @@ const originList = z
 
 const postgresUrl = z.url({ protocol: /^postgres(ql)?$/ });
 
+export const GATEWAYS = ['mock', 'stripe', 'razorpay'] as const;
+export type Gateway = (typeof GATEWAYS)[number];
+
+const gatewayList = z
+  .string()
+  .transform((value) =>
+    value
+      .split(',')
+      .map((name) => name.trim().toLowerCase())
+      .filter(Boolean),
+  )
+  .pipe(z.array(z.enum(GATEWAYS)).min(1));
+
 const SECRET_KEYS = [
   'DATABASE_URL',
   'DATABASE_URL_PLATFORM',
@@ -23,6 +36,8 @@ const SECRET_KEYS = [
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
   'STRIPE_CONNECT_WEBHOOK_SECRET',
+  'RAZORPAY_KEY_SECRET',
+  'RAZORPAY_WEBHOOK_SECRET',
   'POSTMARK_SERVER_TOKEN',
 ] as const;
 
@@ -57,13 +72,22 @@ const envSchema = z
     STOREFRONT_PUBLIC_URL: z.string().default('http://{subdomain}.localhost:3200'),
     /** Scheme used to build storefront links from the (signed) shopper host. */
     STOREFRONT_PROTOCOL: z.enum(['http', 'https']).default('http'),
-    /** Payment adapter: the sandbox simulator or Stripe (test keys in development). */
-    PAYMENT_PROVIDER: z.enum(['mock', 'stripe']).default('mock'),
+    /**
+     * Payment gateways merchants can connect, comma-separated: "mock" (sandbox, development only),
+     * "stripe", "razorpay". Each store settles through the one it connects.
+     */
+    PAYMENT_PROVIDERS: gatewayList.optional(),
+    /** Deprecated single-gateway form of PAYMENT_PROVIDERS. */
+    PAYMENT_PROVIDER: z.enum(GATEWAYS).optional(),
     MOCK_PAYMENT_WEBHOOK_SECRET: z.string().min(16).default('mock-sandbox-webhook-secret'),
     STRIPE_SECRET_KEY: z.string().startsWith('sk_').optional(),
     STRIPE_WEBHOOK_SECRET: z.string().startsWith('whsec_').optional(),
     /** Signing secret of the Connect webhook endpoint (events from merchants' accounts). */
     STRIPE_CONNECT_WEBHOOK_SECRET: z.string().startsWith('whsec_').optional(),
+    /** Razorpay API keys (rzp_test_… in development) and the webhook secret set in its dashboard. */
+    RAZORPAY_KEY_ID: z.string().startsWith('rzp_').optional(),
+    RAZORPAY_KEY_SECRET: z.string().min(8).optional(),
+    RAZORPAY_WEBHOOK_SECRET: z.string().min(8).optional(),
     /** Where rate-limit counters live: PostgreSQL (shared by all instances) or process memory. */
     RATE_LIMIT_STORE: z.enum(['postgres', 'memory']).default('postgres'),
     /** Unpaid orders release reserved stock after this many minutes. */
@@ -79,9 +103,13 @@ const envSchema = z
     /** Require platform admins to use two-factor authentication (default: on in production). */
     REQUIRE_PLATFORM_2FA: z.enum(['true', 'false']).optional(),
   })
+  .transform(({ PAYMENT_PROVIDER, PAYMENT_PROVIDERS, ...env }) => ({
+    ...env,
+    PAYMENT_PROVIDERS: PAYMENT_PROVIDERS ?? [PAYMENT_PROVIDER ?? 'mock'],
+  }))
   .superRefine((env, ctx) => {
     if (
-      env.PAYMENT_PROVIDER === 'stripe' &&
+      env.PAYMENT_PROVIDERS.includes('stripe') &&
       (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET || !env.STRIPE_CONNECT_WEBHOOK_SECRET)
     ) {
       ctx.addIssue({
@@ -91,10 +119,20 @@ const envSchema = z
           'Stripe needs STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and STRIPE_CONNECT_WEBHOOK_SECRET',
       });
     }
-    if (env.NODE_ENV === 'production' && env.PAYMENT_PROVIDER === 'mock') {
+    if (
+      env.PAYMENT_PROVIDERS.includes('razorpay') &&
+      (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET || !env.RAZORPAY_WEBHOOK_SECRET)
+    ) {
       ctx.addIssue({
         code: 'custom',
-        path: ['PAYMENT_PROVIDER'],
+        path: ['RAZORPAY_KEY_ID'],
+        message: 'Razorpay needs RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET',
+      });
+    }
+    if (env.NODE_ENV === 'production' && env.PAYMENT_PROVIDERS.includes('mock')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PAYMENT_PROVIDERS'],
         message: 'The mock payment provider is not allowed in production',
       });
     }

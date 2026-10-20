@@ -30,7 +30,7 @@ import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { ApiZodBody, ZodPipe } from '../common/zod.js';
 import { TenantDb } from '../database/database.module.js';
 import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
-import { ACTIVE_CONNECT_PROVIDER, type ConnectProvider } from './connect-provider.js';
+import { CONNECT_PROVIDERS, type ConnectProvider } from './connect-provider.js';
 import { ConnectWebhooksService } from './connect-webhooks.service.js';
 import { MockConnectProvider } from './mock-connect.provider.js';
 import { MOCK_SIGNATURE_HEADER, MockPaymentProvider } from './mock-payment.provider.js';
@@ -48,7 +48,7 @@ export class PaymentAccountsController {
     private readonly accounts: PaymentAccountsService,
     private readonly webhooks: ConnectWebhooksService,
     private readonly tenantDb: TenantDb,
-    @Inject(ACTIVE_CONNECT_PROVIDER) private readonly provider: ConnectProvider,
+    @Inject(CONNECT_PROVIDERS) private readonly connectProviders: Map<string, ConnectProvider>,
     @Inject(PAYMENT_PROVIDERS) private readonly payments: Map<string, PaymentProvider>,
     private readonly paymentWebhooks: PaymentWebhooksService,
   ) {}
@@ -71,7 +71,18 @@ export class PaymentAccountsController {
     @Body(new ZodPipe(connectAccountInputSchema)) body: z.output<typeof connectAccountInputSchema>,
     @ReqMeta() meta: RequestMeta,
   ): Promise<ProviderLink> {
-    return this.accounts.connect(store, body.country, user, meta);
+    return this.accounts.connect(store, body, user, meta);
+  }
+
+  @Post('account/disconnect')
+  @HttpCode(204)
+  @RequirePermission('billing:manage')
+  disconnect(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<void> {
+    return this.accounts.disconnect(store, user, meta);
   }
 
   @Post('account/onboarding-link')
@@ -138,18 +149,15 @@ export class PaymentAccountsController {
     @Body(new ZodPipe(sandboxOnboardingInputSchema))
     body: z.output<typeof sandboxOnboardingInputSchema>,
   ): Promise<PaymentsOverview> {
-    if (!(this.provider instanceof MockConnectProvider)) throw new NotFoundException();
+    const sandbox = this.connectProviders.get('mock');
+    if (!(sandbox instanceof MockConnectProvider)) throw new NotFoundException();
     const account = await this.tenantDb.run(store.id, (tx) =>
       tx.paymentAccount.findUnique({ where: { storeId: store.id } }),
     );
     if (!account || account.provider !== 'mock' || account.status === 'DISCONNECTED') {
       throw new NotFoundException('Set up payments first.');
     }
-    const hook = this.provider.buildAccountWebhook(
-      account.accountId,
-      body.outcome,
-      account.country,
-    );
+    const hook = sandbox.buildAccountWebhook(account.accountId, body.outcome, account.country);
     await this.webhooks.handle('mock', hook.body, { [MOCK_SIGNATURE_HEADER]: hook.signature });
     return this.accounts.overview(store.id);
   }

@@ -46,11 +46,13 @@ schema-owner credential, the Next.js apps get no database credentials), `.github
 
 The API refuses to start in production when:
 
-- `PAYMENT_PROVIDER=mock` or `DNS_VERIFIER=mock`;
+- `PAYMENT_PROVIDERS` includes `mock`, or `DNS_VERIFIER=mock`;
 - `STOREFRONT_PROTOCOL` is not `https`, or `PUBLIC_API_URL` / `ADMIN_PUBLIC_URL` are not https;
 - `STOREFRONT_SHARED_SECRET` / `APP_ENCRYPTION_KEY` are missing or shorter than 32 characters;
 - Stripe is selected without `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
   `STRIPE_CONNECT_WEBHOOK_SECRET`;
+- Razorpay is selected without `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and
+  `RAZORPAY_WEBHOOK_SECRET`;
 - `EMAIL_TRANSPORT` is `mailbox` (production needs `postmark` + `POSTMARK_SERVER_TOKEN`);
 - any secret still contains a `CHANGE_ME` placeholder (in every environment).
 
@@ -69,3 +71,8 @@ Also verify by hand:
       connected accounts": `account.updated`, `account.application.deauthorized`) points at
       `/api/v1/webhooks/connect/stripe` with its secret in `STRIPE_CONNECT_WEBHOOK_SECRET`
       (ADR 0006).
+- [ ] Razorpay (if offered): Route is enabled on the platform account, live keys are set, and two
+      webhooks point at `/api/v1/webhooks/payments/razorpay` (`payment_link.paid`,
+      `payment_link.expired`, `payment_link.cancelled`, `payment.dispute.*`) and
+      `/api/v1/webhooks/connect/razorpay` (`product.route.*`, `account.suspended`), both signed
+      with `RAZORPAY_WEBHOOK_SECRET` (ADR 0007).

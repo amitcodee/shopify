@@ -22,7 +22,9 @@ import { PlanLimits, PlansService } from './plans.service.js';
       provide: BILLING_PROVIDER,
       inject: [ENV],
       useFactory: (env: Env) =>
-        env.PAYMENT_PROVIDER === 'stripe' && env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET
+        env.PAYMENT_PROVIDERS.includes('stripe') &&
+        env.STRIPE_SECRET_KEY &&
+        env.STRIPE_WEBHOOK_SECRET
           ? new StripeBillingProvider(new Stripe(env.STRIPE_SECRET_KEY), env.STRIPE_WEBHOOK_SECRET)
           : new MockBillingProvider(),
     },

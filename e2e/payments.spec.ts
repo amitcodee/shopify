@@ -26,7 +26,7 @@ test('a store sells only after the merchant sets up payouts', async ({ page, bro
   // Onboarding left incomplete shows what is missing.
   await page.goto(`${ADMIN_URL}/s/${storeId}/settings/payments`);
   await page.getByLabel('Country of your business').selectOption('GB');
-  await page.getByRole('button', { name: 'Set up payments' }).click();
+  await page.getByRole('button', { name: 'Set up Sandbox' }).click();
   await page.getByRole('button', { name: 'Finish with missing bank details' }).click();
   await expect(page.getByText('Action required')).toBeVisible();
   await expect(page.getByText('external account')).toBeVisible();
@@ -39,4 +39,11 @@ test('a store sells only after the merchant sets up payouts', async ({ page, bro
 
   await shopper.reload();
   await expect(shopper.getByRole('button', { name: 'Continue to payment' })).toBeVisible();
+
+  // Disconnecting stops checkout until a provider is set up again.
+  await page.getByRole('button', { name: 'Disconnect' }).click();
+  await page.getByRole('button', { name: 'Stop taking payments with Sandbox' }).click();
+  await expect(page.getByText('Your payouts account is disconnected.')).toBeVisible();
+  await shopper.reload();
+  await expect(shopper.getByText('This store isn’t accepting payments yet.')).toBeVisible();
 });

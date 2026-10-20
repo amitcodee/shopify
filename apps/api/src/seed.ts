@@ -79,7 +79,13 @@ async function main(): Promise<void> {
   await new PlansService(db).subscriptionFor(store.id);
   await seedCatalog(db, store.id);
   // Sandbox payouts account so the demo store can take (simulated) payments right away.
-  if ((process.env.PAYMENT_PROVIDER ?? 'mock') === 'mock') {
+  const gateways = process.env.PAYMENT_PROVIDERS ?? process.env.PAYMENT_PROVIDER ?? 'mock';
+  if (
+    gateways
+      .split(',')
+      .map((g) => g.trim())
+      .includes('mock')
+  ) {
     await db.paymentAccount.upsert({
       where: { storeId: store.id },
       update: {},

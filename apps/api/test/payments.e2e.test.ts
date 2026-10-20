@@ -92,7 +92,7 @@ describe('Payments (Connect payout accounts)', () => {
 
     const before = await ctx.http().get(`${admin}/payments`).set(auth).expect(200);
     expect(before.body).toMatchObject({
-      provider: 'mock',
+      gateways: [expect.objectContaining({ provider: 'mock', onboarding: 'hosted' })],
       sandbox: true,
       account: null,
       acceptingPayments: false,
@@ -106,7 +106,7 @@ describe('Payments (Connect payout accounts)', () => {
       .http()
       .post(`${admin}/payments/account`)
       .set(auth)
-      .send({ country: 'US' })
+      .send({ provider: 'mock', country: 'US' })
       .expect(200);
     expect(link.body.url).toMatch(/\/settings\/payments\/sandbox\?account=acct_mock_/);
     // Connecting again reuses the account instead of creating another.
@@ -114,7 +114,7 @@ describe('Payments (Connect payout accounts)', () => {
       .http()
       .post(`${admin}/payments/account`)
       .set(auth)
-      .send({ country: 'US' })
+      .send({ provider: 'mock', country: 'US' })
       .expect(200);
     expect(again.body.url).toBe(link.body.url);
 
@@ -278,7 +278,7 @@ describe('Payments (Connect payout accounts)', () => {
       .http()
       .post(`${owner.admin}/payments/account`)
       .set(adminAuth)
-      .send({ country: 'US' })
+      .send({ provider: 'mock', country: 'US' })
       .expect(403);
     await ctx
       .http()
@@ -315,7 +315,7 @@ describe('Payments (Connect payout accounts)', () => {
       .http()
       .post(`${admin}/payments/account`)
       .set(auth)
-      .send({ country: 'KP' })
+      .send({ provider: 'mock', country: 'KP' })
       .expect(400);
     await ctx.http().post(`${admin}/payments/account/onboarding-link`).set(auth).expect(404);
     await ctx.http().post(`${admin}/payments/account/refresh`).set(auth).expect(404);

@@ -1,11 +1,21 @@
-import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import type {
+  ConnectAccountInput,
+  GatewayInfo,
+  GatewayName,
   PaymentAccount as PaymentAccountDto,
   PaymentAccountStatus,
   PaymentsOverview,
   ProviderLink,
 } from '@repo/contracts';
-import type { PaymentAccount, PrismaClient, TenantTx } from '@repo/db';
+import type { PaymentAccount, Prisma, PrismaClient, TenantTx } from '@repo/db';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { ENV, type Env } from '../config/env.js';
@@ -13,7 +23,7 @@ import { PLATFORM_DB, TenantDb } from '../database/database.module.js';
 import { toDisputeDto } from '../orders/orders.service.js';
 import { PlansService } from '../platform/plans.service.js';
 import {
-  ACTIVE_CONNECT_PROVIDER,
+  CONNECT_PROVIDERS,
   type ConnectedAccountState,
   type ConnectProvider,
   type ConnectWebhookOutcome,
@@ -24,13 +34,15 @@ const SUMMARY_DAYS = 30;
 
 /** Where a chargeable store's sales go, resolved inside the checkout transaction. */
 export interface PaymentDestination {
+  provider: string;
   accountId: string;
   feeBps: number;
 }
 
 /**
- * Store payout accounts (Stripe Connect). Merchants onboard on the provider's hosted pages;
- * the account's status is kept in sync from Connect webhooks and on return from onboarding.
+ * Store payout accounts across gateways (Stripe Connect, Razorpay Route, sandbox). Each store
+ * connects one gateway; checkout, refunds and webhooks follow it. Status is kept in sync from
+ * Connect webhooks and, for hosted onboarding, re-read when the merchant returns.
  */
 @Injectable()
 export class PaymentAccountsService {
@@ -39,7 +51,7 @@ export class PaymentAccountsService {
   constructor(
     private readonly tenantDb: TenantDb,
     @Inject(PLATFORM_DB) private readonly platformDb: PrismaClient,
-    @Inject(ACTIVE_CONNECT_PROVIDER) private readonly provider: ConnectProvider,
+    @Inject(CONNECT_PROVIDERS) private readonly providers: Map<string, ConnectProvider>,
     @Inject(ENV) private readonly env: Env,
     private readonly plans: PlansService,
     private readonly audit: AuditService,
@@ -103,13 +115,16 @@ export class PaymentAccountsService {
     const platformFees = data.paid._sum.applicationFee ?? 0;
     const refunded = data.refunds._sum.amount ?? 0;
     const chargebacks = data.lost._sum.amount ?? 0;
-    const account =
-      data.account && data.account.provider === this.provider.name ? data.account : null;
+    const gateways = this.gateways(data.currency);
+    const account = data.account;
+    const connected = account && account.status !== 'DISCONNECTED' ? account : null;
     return {
-      provider: this.provider.name,
-      sandbox: this.provider.name === 'mock',
-      account: account ? toDto(account) : null,
-      acceptingPayments: account !== null && isChargeable(account),
+      gateways,
+      sandbox: connected
+        ? connected.provider === 'mock'
+        : gateways.length > 0 && gateways.every((g) => g.sandbox),
+      account: account ? this.toDto(account) : null,
+      acceptingPayments: connected !== null && this.isChargeable(connected),
       transactionFeeBps: data.subscription.plan.transactionFeeBps,
       summary: {
         currency: data.currency,
@@ -123,57 +138,76 @@ export class PaymentAccountsService {
       },
       openDisputes: data.openDisputes,
       disputes: data.disputes.map((d) => toDisputeDto(d, d.order.number)),
-      payouts: account ? await this.payouts(account.accountId) : null,
+      payouts: connected ? await this.payouts(connected) : null,
     };
   }
 
   /**
-   * Creates the store's connected account (or reuses it) and returns the hosted onboarding link.
-   * A disconnected account is replaced by a new one.
+   * Connects the store to a gateway. Hosted onboarding (Stripe, sandbox) returns the provider's
+   * onboarding link (reusing an account in progress); form onboarding (Razorpay) submits the
+   * details and returns no link. A store has one account at a time: disconnect to switch.
    */
   async connect(
     store: StoreContext,
-    country: string,
+    input: ConnectAccountInput,
     actor: AuthUser,
     meta: RequestMeta,
   ): Promise<ProviderLink> {
-    const existing = await this.find(store.id);
-    if (
-      existing &&
-      existing.provider === this.provider.name &&
-      existing.status !== 'DISCONNECTED'
-    ) {
-      return this.onboardingLink(store.id);
-    }
+    const provider = this.providers.get(input.provider);
+    if (!provider) throw new BadRequestException('This payment provider is not available.');
     const details = await this.tenantDb.run(store.id, (tx) =>
       tx.store.findUniqueOrThrow({
         where: { id: store.id },
-        select: { name: true, contactEmail: true },
+        select: { name: true, contactEmail: true, currency: true },
       }),
     );
-    const { accountId } = await this.provider.createAccount({
+    if (provider.currencies && !provider.currencies.includes(details.currency)) {
+      throw new BadRequestException(
+        `${provider.label} settles in ${provider.currencies.join(', ')} only; this store sells in ${details.currency}.`,
+      );
+    }
+    const country = input.provider === 'razorpay' ? 'IN' : input.country;
+    if (!provider.countries.includes(country)) {
+      throw new BadRequestException(`${provider.label} is not available in ${country}.`);
+    }
+
+    const existing = await this.find(store.id);
+    if (existing && existing.status !== 'DISCONNECTED') {
+      if (existing.provider !== input.provider) {
+        throw new ConflictException(
+          'This store already has a payouts account. Disconnect it before switching providers.',
+        );
+      }
+      if (provider.onboarding === 'hosted') return this.onboardingLink(store.id);
+      throw new ConflictException('Payments are already set up with this provider.');
+    }
+
+    const created = await provider.createAccount({
       storeId: store.id,
       storeName: details.name,
       email: details.contactEmail,
       country,
       idempotencyKey: `connect-account-${store.id}-${existing?.accountId ?? 'first'}`,
+      business: input.provider === 'razorpay' ? input.business : undefined,
     });
+    const state = created.state;
     await this.tenantDb.run(store.id, async (tx) => {
-      const reset = {
-        provider: this.provider.name,
-        accountId,
-        status: 'ONBOARDING' as const,
-        chargesEnabled: false,
-        payoutsEnabled: false,
-        detailsSubmitted: false,
-        requirementsDue: [],
-        disabledReason: null,
+      const fields = {
+        provider: provider.name,
+        accountId: created.accountId,
+        status: state ? deriveStatus(state) : ('ONBOARDING' as const),
+        chargesEnabled: state?.chargesEnabled ?? false,
+        payoutsEnabled: state?.payoutsEnabled ?? false,
+        detailsSubmitted: state?.detailsSubmitted ?? false,
+        requirementsDue: state?.requirementsDue ?? [],
+        disabledReason: state?.disabledReason ?? null,
         country,
+        providerData: (created.providerData ?? {}) as Prisma.InputJsonValue,
       };
       const account = await tx.paymentAccount.upsert({
         where: { storeId: store.id },
-        create: { storeId: store.id, ...reset },
-        update: reset,
+        create: { storeId: store.id, ...fields },
+        update: fields,
       });
       await this.audit.record(tx, {
         storeId: store.id,
@@ -181,54 +215,82 @@ export class PaymentAccountsService {
         action: 'payments.account_created',
         entityType: 'payment_account',
         entityId: account.id,
-        data: { provider: this.provider.name, accountId, country },
+        data: { provider: provider.name, accountId: created.accountId, country },
         meta,
       });
     });
-    return this.onboardingLink(store.id);
+    return provider.onboarding === 'hosted' ? this.onboardingLink(store.id) : { url: null };
+  }
+
+  /** Stops taking payments through the current account so the store can connect another. */
+  async disconnect(store: StoreContext, actor: AuthUser, meta: RequestMeta): Promise<void> {
+    await this.tenantDb.run(store.id, async (tx) => {
+      const account = await tx.paymentAccount.findUnique({ where: { storeId: store.id } });
+      if (!account || account.status === 'DISCONNECTED') {
+        throw new NotFoundException('Set up payments first.');
+      }
+      await tx.paymentAccount.update({
+        where: { id: account.id },
+        data: { status: 'DISCONNECTED', chargesEnabled: false, payoutsEnabled: false },
+      });
+      await this.audit.record(tx, {
+        storeId: store.id,
+        actorUserId: actor.id,
+        action: 'payments.account_disconnected',
+        entityType: 'payment_account',
+        entityId: account.id,
+        data: { provider: account.provider, accountId: account.accountId },
+        meta,
+      });
+    });
   }
 
   async onboardingLink(storeId: string): Promise<ProviderLink> {
-    const account = await this.requireAccount(storeId);
+    const { account, provider } = await this.requireAccount(storeId);
     const base = `${this.env.ADMIN_PUBLIC_URL}/s/${storeId}/settings/payments`;
-    const url = await this.provider.createOnboardingLink(account.accountId, {
+    const url = await provider.createOnboardingLink(account.accountId, {
       storeId,
       returnUrl: `${base}?onboarding=returned`,
       // Stripe calls this when a link expires or was already used: mint a fresh one.
       refreshUrl: `${base}/onboarding`,
     });
+    if (!url) throw new ConflictException(`${provider.label} onboarding happens in this admin.`);
     return { url };
   }
 
   async dashboardLink(storeId: string): Promise<ProviderLink> {
-    const account = await this.requireAccount(storeId);
+    const { account, provider } = await this.requireAccount(storeId);
     if (!account.detailsSubmitted) {
       throw new ConflictException('Finish payments onboarding before opening the dashboard.');
     }
-    return { url: await this.provider.createDashboardLink(account.accountId, storeId) };
+    const url = await provider.createDashboardLink(account.accountId, storeId);
+    if (!url) throw new NotFoundException(`${provider.label} does not offer a dashboard link.`);
+    return { url };
   }
 
   /** Re-reads the account from the provider (the merchant just returned from onboarding). */
   async refresh(storeId: string): Promise<PaymentsOverview> {
-    const account = await this.requireAccount(storeId);
-    const state = await this.provider.retrieveAccount(account.accountId);
-    if (state) await this.applyState(this.provider.name, state);
+    const { account, provider } = await this.requireAccount(storeId);
+    const state = await provider.retrieveAccount(account.accountId, providerData(account));
+    if (state) await this.applyState(provider.name, state);
     return this.overview(storeId);
   }
 
   async acceptingPayments(tx: TenantTx, storeId: string): Promise<boolean> {
     const account = await tx.paymentAccount.findUnique({ where: { storeId } });
-    return account !== null && account.provider === this.provider.name && isChargeable(account);
+    return account !== null && this.isChargeable(account);
   }
 
   /** Checkout guard: the store's sales destination, or 409 when it cannot take payments. */
   async requireDestination(tx: TenantTx, storeId: string): Promise<PaymentDestination> {
     const account = await tx.paymentAccount.findUnique({ where: { storeId } });
-    if (!account || account.provider !== this.provider.name || !isChargeable(account)) {
-      throw new ConflictException(NOT_ACCEPTING);
-    }
+    if (!account || !this.isChargeable(account)) throw new ConflictException(NOT_ACCEPTING);
     const { plan } = await this.plans.subscriptionFor(storeId, tx);
-    return { accountId: account.accountId, feeBps: plan.transactionFeeBps };
+    return {
+      provider: account.provider,
+      accountId: account.accountId,
+      feeBps: plan.transactionFeeBps,
+    };
   }
 
   /** Applies a verified Connect webhook. Unknown accounts are ignored (logged). */
@@ -253,13 +315,14 @@ export class PaymentAccountsService {
       this.logger.warn(`Update for unknown connected account ${state.accountId}`);
       return;
     }
+    const disconnected = account.status === 'DISCONNECTED';
     await this.platformDb.paymentAccount.update({
       where: { id: account.id },
       data: {
         // A disconnected account stays disconnected; reconnecting creates a new account.
-        status: account.status === 'DISCONNECTED' ? 'DISCONNECTED' : deriveStatus(state),
-        chargesEnabled: account.status === 'DISCONNECTED' ? false : state.chargesEnabled,
-        payoutsEnabled: account.status === 'DISCONNECTED' ? false : state.payoutsEnabled,
+        status: disconnected ? 'DISCONNECTED' : deriveStatus(state),
+        chargesEnabled: disconnected ? false : state.chargesEnabled,
+        payoutsEnabled: disconnected ? false : state.payoutsEnabled,
         detailsSubmitted: state.detailsSubmitted,
         requirementsDue: state.requirementsDue.slice(0, 50),
         disabledReason: state.disabledReason,
@@ -268,50 +331,89 @@ export class PaymentAccountsService {
     });
   }
 
-  private async payouts(accountId: string): Promise<PaymentsOverview['payouts']> {
+  /** Gateways offered to a store: the ones that can settle its currency first. */
+  private gateways(currency: string): GatewayInfo[] {
+    const all = [...this.providers.values()].map((p) => ({
+      provider: p.name as GatewayName,
+      label: p.label,
+      onboarding: p.onboarding,
+      countries: [...p.countries],
+      currencies: p.currencies ? [...p.currencies] : null,
+      sandbox: p.name === 'mock',
+    }));
+    const fits = (g: GatewayInfo) => !g.currencies || g.currencies.includes(currency);
+    return [...all.filter(fits), ...all.filter((g) => !fits(g))];
+  }
+
+  private async payouts(account: PaymentAccount): Promise<PaymentsOverview['payouts']> {
+    const provider = this.providers.get(account.provider);
+    if (!provider) return null;
     try {
-      const payouts = await this.provider.listPayouts(accountId, 10);
+      const payouts = await provider.listPayouts(account.accountId, 10);
       return payouts?.map((p) => ({ ...p, arrivalDate: p.arrivalDate.toISOString() })) ?? null;
     } catch (error) {
-      this.logger.warn(`Could not list payouts for ${accountId}: ${String(error)}`);
+      this.logger.warn(`Could not list payouts for ${account.accountId}: ${String(error)}`);
       return null;
     }
+  }
+
+  private isChargeable(account: PaymentAccount): boolean {
+    return (
+      this.providers.has(account.provider) && account.status === 'ACTIVE' && account.chargesEnabled
+    );
   }
 
   private find(storeId: string): Promise<PaymentAccount | null> {
     return this.tenantDb.run(storeId, (tx) => tx.paymentAccount.findUnique({ where: { storeId } }));
   }
 
-  private async requireAccount(storeId: string): Promise<PaymentAccount> {
+  private async requireAccount(
+    storeId: string,
+  ): Promise<{ account: PaymentAccount; provider: ConnectProvider }> {
     const account = await this.find(storeId);
-    if (!account || account.provider !== this.provider.name || account.status === 'DISCONNECTED') {
+    const provider = account ? this.providers.get(account.provider) : undefined;
+    if (!account || !provider || account.status === 'DISCONNECTED') {
       throw new NotFoundException('Set up payments first.');
     }
-    return account;
+    return { account, provider };
+  }
+
+  private toDto(account: PaymentAccount): PaymentAccountDto {
+    const provider = this.providers.get(account.provider);
+    return {
+      provider: account.provider as GatewayName,
+      label: provider?.label ?? account.provider,
+      accountId: account.accountId,
+      status: account.status,
+      chargesEnabled: account.chargesEnabled,
+      payoutsEnabled: account.payoutsEnabled,
+      detailsSubmitted: account.detailsSubmitted,
+      requirementsDue: account.requirementsDue,
+      disabledReason: account.disabledReason,
+      country: account.country,
+      hasDashboard: provider?.hasDashboard ?? false,
+      gatewayEnabled: provider !== undefined,
+      updatedAt: account.updatedAt.toISOString(),
+    };
   }
 }
 
+/**
+ * ACTIVE once charges are enabled; RESTRICTED when the provider needs something from the
+ * merchant (outstanding requirements or a disabled reason); otherwise still ONBOARDING (which
+ * includes "submitted, in review").
+ */
 export function deriveStatus(state: ConnectedAccountState): PaymentAccountStatus {
   if (state.chargesEnabled) return 'ACTIVE';
-  if (state.detailsSubmitted) return 'RESTRICTED';
+  if (state.detailsSubmitted && (state.requirementsDue.length > 0 || state.disabledReason)) {
+    return 'RESTRICTED';
+  }
   return 'ONBOARDING';
 }
 
-function isChargeable(account: PaymentAccount): boolean {
-  return account.status === 'ACTIVE' && account.chargesEnabled;
-}
-
-function toDto(account: PaymentAccount): PaymentAccountDto {
-  return {
-    provider: account.provider,
-    accountId: account.accountId,
-    status: account.status,
-    chargesEnabled: account.chargesEnabled,
-    payoutsEnabled: account.payoutsEnabled,
-    detailsSubmitted: account.detailsSubmitted,
-    requirementsDue: account.requirementsDue,
-    disabledReason: account.disabledReason,
-    country: account.country,
-    updatedAt: account.updatedAt.toISOString(),
-  };
+function providerData(account: PaymentAccount): Record<string, string> {
+  const data = account.providerData;
+  return data && typeof data === 'object' && !Array.isArray(data)
+    ? (data as Record<string, string>)
+    : {};
 }

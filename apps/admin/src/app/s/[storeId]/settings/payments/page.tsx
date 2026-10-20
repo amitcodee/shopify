@@ -1,12 +1,11 @@
 import {
   formatMoney,
-  PAYOUT_COUNTRIES,
+  type PaymentAccount,
   type PaymentAccountStatus,
   type PaymentsOverview,
 } from '@repo/contracts';
 import Link from 'next/link';
 import { DisputeSummary } from '@/components/disputes';
-import { ActionForm, SelectField, SubmitButton } from '@/components/form';
 import {
   Alert,
   Badge,
@@ -19,8 +18,10 @@ import {
 } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
+import { ConfirmButton } from '../../confirm-button';
 import { SmallAction } from '../small-action';
-import { connectPaymentsAction, openPaymentsDashboardAction } from './actions';
+import { disconnectPaymentsAction, openPaymentsDashboardAction } from './actions';
+import { ConnectGateways } from './connect-gateways';
 
 export const metadata = { title: 'Payments · Merchant Admin' };
 
@@ -36,6 +37,14 @@ const countryName = new Intl.DisplayNames(['en'], { type: 'region' });
 /** Provider requirement codes like "individual.id_number" in plain words. */
 function requirementLabel(code: string): string {
   return (code.split('.').pop() ?? code).replaceAll('_', ' ');
+}
+
+function statusBadge(account: PaymentAccount) {
+  // Submitted with nothing outstanding: the provider is reviewing it.
+  if (account.status === 'ONBOARDING' && account.detailsSubmitted) {
+    return <Badge tone="blue">In review</Badge>;
+  }
+  return <Badge tone={STATUS[account.status].tone}>{STATUS[account.status].label}</Badge>;
 }
 
 export default async function PaymentsPage({
@@ -61,6 +70,8 @@ export default async function PaymentsPage({
   const money = (n: number) => formatMoney(n, summary.currency);
   const fee = `${(payments.transactionFeeBps / 100).toFixed(1)}%`;
   const connectable = !account || account.status === 'DISCONNECTED';
+  const hosted =
+    payments.gateways.find((g) => g.provider === account?.provider)?.onboarding !== 'form';
 
   return (
     <div className="space-y-6">
@@ -75,47 +86,48 @@ export default async function PaymentsPage({
           forms.
         </Alert>
       ) : null}
-      {returned && account?.status === 'ACTIVE' ? (
+      {(returned || query.onboarding === 'submitted') && account?.status === 'ACTIVE' ? (
         <Alert tone="success">Payments are set up. Your store can now accept orders.</Alert>
+      ) : null}
+      {query.onboarding === 'submitted' && account && account.status !== 'ACTIVE' ? (
+        <Alert tone="info">
+          Thanks! {account.label} is verifying your details. You&apos;ll be able to accept orders as
+          soon as it activates your account.
+        </Alert>
+      ) : null}
+      {account && !account.gatewayEnabled ? (
+        <Alert tone="error">
+          {account.label} is no longer offered on this platform. Disconnect it and set up another
+          provider to accept payments.
+        </Alert>
       ) : null}
 
       <Card
         title="Payouts account"
-        description={`Shoppers pay by card on a secure hosted page. Sales are paid out to your bank account minus a ${fee} platform fee on your plan.`}
-        actions={
-          account ? (
-            <Badge tone={STATUS[account.status].tone}>{STATUS[account.status].label}</Badge>
-          ) : (
-            <Badge>Not set up</Badge>
-          )
-        }
+        description={`Shoppers pay on a secure page hosted by your payment provider. Sales are paid out to your bank account minus a ${fee} platform fee on your plan.`}
+        actions={account ? statusBadge(account) : <Badge>Not set up</Badge>}
       >
         {connectable ? (
           canManage ? (
-            <ActionForm action={connectPaymentsAction.bind(null, storeId)}>
+            <div className="space-y-4">
               {account?.status === 'DISCONNECTED' ? (
                 <Alert tone="warning">
-                  Your payouts account was disconnected. Connect a new one to accept payments again.
+                  Your payouts account is disconnected. Set up a provider to accept payments again.
                 </Alert>
               ) : null}
-              <SelectField
-                name="country"
-                label="Country of your business"
-                defaultValue="US"
-                hint="This cannot be changed later."
-                options={PAYOUT_COUNTRIES.map((code) => ({
-                  value: code,
-                  label: countryName.of(code) ?? code,
-                }))}
+              <ConnectGateways
+                storeId={storeId}
+                gateways={payments.gateways}
+                currency={summary.currency}
               />
-              <SubmitButton>Set up payments</SubmitButton>
-            </ActionForm>
+            </div>
           ) : (
             <p className="text-sm text-slate-500">Only the store owner can set up payments.</p>
           )
         ) : account ? (
           <div className="space-y-4">
-            {account.status !== 'ACTIVE' ? (
+            {account.status !== 'ACTIVE' &&
+            !(account.status === 'ONBOARDING' && account.detailsSubmitted) ? (
               <Alert tone="warning">
                 {account.status === 'ONBOARDING'
                   ? 'Finish setting up payments to start accepting orders.'
@@ -131,7 +143,7 @@ export default async function PaymentsPage({
             ) : null}
             <DescriptionList
               items={[
-                { term: 'Provider', detail: payments.sandbox ? 'Sandbox' : 'Stripe' },
+                { term: 'Provider', detail: account.label },
                 { term: 'Account', detail: <code>{account.accountId}</code> },
                 {
                   term: 'Country',
@@ -139,13 +151,13 @@ export default async function PaymentsPage({
                     ? (countryName.of(account.country) ?? account.country)
                     : '—',
                 },
-                { term: 'Card payments', detail: account.chargesEnabled ? 'Enabled' : 'Disabled' },
+                { term: 'Payments', detail: account.chargesEnabled ? 'Enabled' : 'Disabled' },
                 { term: 'Payouts', detail: account.payoutsEnabled ? 'Enabled' : 'Paused' },
               ]}
             />
             {canManage ? (
               <div className="flex flex-wrap items-center gap-4">
-                {account.status !== 'ACTIVE' ? (
+                {account.status !== 'ACTIVE' && hosted ? (
                   <Link
                     href={`/s/${storeId}/settings/payments/onboarding`}
                     prefetch={false}
@@ -154,12 +166,17 @@ export default async function PaymentsPage({
                     Continue setup
                   </Link>
                 ) : null}
-                {account.detailsSubmitted ? (
+                {account.detailsSubmitted && account.hasDashboard ? (
                   <SmallAction
                     action={openPaymentsDashboardAction.bind(null, storeId)}
                     label="Open payouts dashboard"
                   />
                 ) : null}
+                <ConfirmButton
+                  action={disconnectPaymentsAction.bind(null, storeId)}
+                  label="Disconnect"
+                  confirmLabel={`Stop taking payments with ${account.label}`}
+                />
               </div>
             ) : null}
           </div>
@@ -226,7 +243,9 @@ export default async function PaymentsPage({
             <p className="text-sm text-slate-500">
               {payments.sandbox
                 ? 'The sandbox does not simulate payouts.'
-                : 'Payouts are not available right now. Try again later.'}
+                : account.hasDashboard
+                  ? 'Payouts are not available right now. Try again later.'
+                  : `${account.label} pays out to your bank account automatically and emails you each settlement.`}
             </p>
           ) : payments.payouts.length === 0 ? (
             <p className="text-sm text-slate-500">No payouts yet.</p>

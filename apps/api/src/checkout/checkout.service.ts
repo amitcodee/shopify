@@ -34,7 +34,7 @@ import { PlanLimits } from '../platform/plans.service.js';
 import { StoreUrls } from '../orders/store-urls.js';
 import { applicationFee } from '../payments/connect-provider.js';
 import { PaymentAccountsService } from '../payments/payment-accounts.service.js';
-import { ACTIVE_PAYMENT_PROVIDER, type PaymentProvider } from '../payments/payment-provider.js';
+import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-provider.js';
 import { CartService } from '../storefront/cart.service.js';
 import type { ShopContext } from '../storefront/store-resolver.js';
 import { hashToken } from '../auth/session.service.js';
@@ -80,7 +80,7 @@ export class CheckoutService {
     private readonly urls: StoreUrls,
     private readonly limits: PlanLimits,
     private readonly paymentAccounts: PaymentAccountsService,
-    @Inject(ACTIVE_PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
+    @Inject(PAYMENT_PROVIDERS) private readonly providers: Map<string, PaymentProvider>,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -189,7 +189,8 @@ export class CheckoutService {
       }
       // Paid orders need somewhere to settle: no stock is reserved for a store that cannot
       // take payments yet.
-      if (quote.pricing.total > 0) await this.paymentAccounts.requireDestination(tx, shop.id);
+      const destination =
+        quote.pricing.total > 0 ? await this.paymentAccounts.requireDestination(tx, shop.id) : null;
 
       const customer = customerId
         ? await tx.customer.findFirstOrThrow({ where: { id: customerId, storeId: shop.id } })
@@ -240,7 +241,7 @@ export class CheckoutService {
           accessTokenHash: hashToken(`pending:${input.idempotencyKey}`),
           checkoutKey: input.idempotencyKey,
           cartId: cartRow.id,
-          paymentProvider: this.provider.name,
+          paymentProvider: destination?.provider ?? 'none',
           note: input.note ?? null,
           expiresAt: new Date(Date.now() + this.env.ORDER_PAYMENT_TIMEOUT_MINUTES * 60_000),
           lines: {
@@ -312,7 +313,7 @@ export class CheckoutService {
   }
 
   async findMockPayment(shop: ShopContext, reference: string) {
-    if (this.provider.name !== 'mock') throw new NotFoundException();
+    if (!this.providers.has('mock')) throw new NotFoundException();
     const payment = await this.tenantDb.run(shop.id, (tx) =>
       tx.payment.findFirst({
         where: { storeId: shop.id, provider: 'mock', providerRef: reference },
@@ -441,9 +442,11 @@ export class CheckoutService {
       this.paymentAccounts.requireDestination(tx, shop.id),
     );
     const fee = applicationFee(order.total, destination.feeBps);
+    const provider = this.providers.get(destination.provider);
+    if (!provider) throw new BadGatewayException('The payment provider is unavailable.');
     let created;
     try {
-      created = await this.provider.createPayment({
+      created = await provider.createPayment({
         storeId: shop.id,
         orderId: order.id,
         orderNumber: order.number,
@@ -474,7 +477,7 @@ export class CheckoutService {
         data: {
           storeId: shop.id,
           orderId: order.id,
-          provider: this.provider.name,
+          provider: provider.name,
           providerRef: created.providerRef,
           amount: order.total,
           currency: order.currency,

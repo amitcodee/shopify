@@ -4,14 +4,11 @@ import { SkipThrottle } from '@nestjs/throttler';
 import type { IncomingHttpHeaders } from 'node:http';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
+import Stripe from 'stripe';
 import { Public } from '../auth/auth.guard.js';
 import { ENV, type Env } from '../config/env.js';
 import { OrdersCoreModule } from '../orders/orders-core.module.js';
-import {
-  ACTIVE_CONNECT_PROVIDER,
-  CONNECT_PROVIDERS,
-  type ConnectProvider,
-} from './connect-provider.js';
+import { CONNECT_PROVIDERS, type ConnectProvider } from './connect-provider.js';
 import { ConnectWebhooksService } from './connect-webhooks.service.js';
 import { MockConnectProvider } from './mock-connect.provider.js';
 import { MockPaymentProvider } from './mock-payment.provider.js';
@@ -20,12 +17,11 @@ import {
   PaymentAccountsController,
 } from './payment-accounts.controller.js';
 import { PaymentAccountsService } from './payment-accounts.service.js';
-import {
-  ACTIVE_PAYMENT_PROVIDER,
-  PAYMENT_PROVIDERS,
-  type PaymentProvider,
-} from './payment-provider.js';
+import { PAYMENT_PROVIDERS, type PaymentProvider } from './payment-provider.js';
 import { PaymentWebhooksService } from './payment-webhooks.service.js';
+import { type FetchLike, RazorpayClient } from './razorpay/razorpay-client.js';
+import { RazorpayConnectProvider } from './razorpay/razorpay-connect.provider.js';
+import { RazorpayPaymentProvider } from './razorpay/razorpay-payment.provider.js';
 import { StripeConnectProvider } from './stripe-connect.provider.js';
 import { StripePaymentProvider } from './stripe-payment.provider.js';
 
@@ -48,77 +44,62 @@ export class PaymentWebhooksController {
   }
 }
 
+export interface Gateways {
+  payments: Map<string, PaymentProvider>;
+  connect: Map<string, ConnectProvider>;
+}
+
+/**
+ * Builds the adapters for every gateway in PAYMENT_PROVIDERS (env validation guarantees their
+ * keys). Each store settles through the gateway it connected; webhooks are routed by name.
+ */
+export function createGateways(env: Env, options: { razorpayFetch?: FetchLike } = {}): Gateways {
+  const payments = new Map<string, PaymentProvider>();
+  const connect = new Map<string, ConnectProvider>();
+  for (const name of new Set(env.PAYMENT_PROVIDERS)) {
+    if (name === 'mock' && env.NODE_ENV !== 'production') {
+      payments.set('mock', new MockPaymentProvider(env.MOCK_PAYMENT_WEBHOOK_SECRET));
+      connect.set(
+        'mock',
+        new MockConnectProvider(env.MOCK_PAYMENT_WEBHOOK_SECRET, env.ADMIN_PUBLIC_URL),
+      );
+    }
+    if (name === 'stripe' && env.STRIPE_SECRET_KEY) {
+      const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+      payments.set('stripe', new StripePaymentProvider(stripe, env.STRIPE_WEBHOOK_SECRET ?? ''));
+      connect.set(
+        'stripe',
+        new StripeConnectProvider(stripe, env.STRIPE_CONNECT_WEBHOOK_SECRET ?? ''),
+      );
+    }
+    if (name === 'razorpay' && env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET) {
+      const client = new RazorpayClient(
+        env.RAZORPAY_KEY_ID,
+        env.RAZORPAY_KEY_SECRET,
+        options.razorpayFetch,
+      );
+      const secret = env.RAZORPAY_WEBHOOK_SECRET ?? '';
+      payments.set('razorpay', new RazorpayPaymentProvider(client, secret));
+      connect.set('razorpay', new RazorpayConnectProvider(client, secret));
+    }
+  }
+  if (payments.size === 0) throw new Error('No payment gateway is configured');
+  return { payments, connect };
+}
+
+export const GATEWAYS = Symbol('GATEWAYS');
+
 @Module({
   imports: [OrdersCoreModule],
   controllers: [PaymentWebhooksController, PaymentAccountsController, ConnectWebhooksController],
   providers: [
-    {
-      provide: PAYMENT_PROVIDERS,
-      inject: [ENV],
-      useFactory: (env: Env): Map<string, PaymentProvider> => {
-        const providers = new Map<string, PaymentProvider>();
-        if (env.NODE_ENV !== 'production') {
-          providers.set('mock', new MockPaymentProvider(env.MOCK_PAYMENT_WEBHOOK_SECRET));
-        }
-        if (env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET) {
-          providers.set(
-            'stripe',
-            StripePaymentProvider.create(env.STRIPE_SECRET_KEY, env.STRIPE_WEBHOOK_SECRET),
-          );
-        }
-        return providers;
-      },
-    },
-    {
-      provide: ACTIVE_PAYMENT_PROVIDER,
-      inject: [ENV, PAYMENT_PROVIDERS],
-      useFactory: (env: Env, providers: Map<string, PaymentProvider>): PaymentProvider => {
-        const provider = providers.get(env.PAYMENT_PROVIDER);
-        if (!provider)
-          throw new Error(`Payment provider "${env.PAYMENT_PROVIDER}" is not configured`);
-        return provider;
-      },
-    },
-    {
-      provide: CONNECT_PROVIDERS,
-      inject: [ENV],
-      useFactory: (env: Env): Map<string, ConnectProvider> => {
-        const providers = new Map<string, ConnectProvider>();
-        if (env.NODE_ENV !== 'production') {
-          providers.set(
-            'mock',
-            new MockConnectProvider(env.MOCK_PAYMENT_WEBHOOK_SECRET, env.ADMIN_PUBLIC_URL),
-          );
-        }
-        if (env.STRIPE_SECRET_KEY && env.STRIPE_CONNECT_WEBHOOK_SECRET) {
-          providers.set(
-            'stripe',
-            StripeConnectProvider.create(env.STRIPE_SECRET_KEY, env.STRIPE_CONNECT_WEBHOOK_SECRET),
-          );
-        }
-        return providers;
-      },
-    },
-    {
-      // Payouts always use the same provider as checkout.
-      provide: ACTIVE_CONNECT_PROVIDER,
-      inject: [ENV, CONNECT_PROVIDERS],
-      useFactory: (env: Env, providers: Map<string, ConnectProvider>): ConnectProvider => {
-        const provider = providers.get(env.PAYMENT_PROVIDER);
-        if (!provider)
-          throw new Error(`Connect provider "${env.PAYMENT_PROVIDER}" is not configured`);
-        return provider;
-      },
-    },
+    { provide: GATEWAYS, inject: [ENV], useFactory: (env: Env) => createGateways(env) },
+    { provide: PAYMENT_PROVIDERS, inject: [GATEWAYS], useFactory: (g: Gateways) => g.payments },
+    { provide: CONNECT_PROVIDERS, inject: [GATEWAYS], useFactory: (g: Gateways) => g.connect },
     PaymentWebhooksService,
     PaymentAccountsService,
     ConnectWebhooksService,
   ],
-  exports: [
-    PAYMENT_PROVIDERS,
-    ACTIVE_PAYMENT_PROVIDER,
-    PaymentWebhooksService,
-    PaymentAccountsService,
-  ],
+  exports: [PAYMENT_PROVIDERS, CONNECT_PROVIDERS, PaymentWebhooksService, PaymentAccountsService],
 })
 export class PaymentsModule {}

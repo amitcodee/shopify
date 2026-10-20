@@ -47,7 +47,7 @@ export default defineConfig({
         STOREFRONT_SHARED_SECRET: storefrontSecret,
         APP_ENCRYPTION_KEY: E2E_ENCRYPTION_KEY,
         STOREFRONT_ROOT_DOMAIN: `localhost:${PORTS.storefront}`,
-        PAYMENT_PROVIDER: 'mock',
+        PAYMENT_PROVIDERS: 'mock',
         PUBLIC_API_URL: apiUrl,
       },
     },

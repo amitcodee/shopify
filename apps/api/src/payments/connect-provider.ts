@@ -1,4 +1,5 @@
 import type { IncomingHttpHeaders } from 'node:http';
+import type { RazorpayBusinessDetails } from '@repo/contracts';
 
 /** A connected account as the provider reports it. */
 export interface ConnectedAccountState {
@@ -18,6 +19,16 @@ export interface CreateAccountInput {
   country: string;
   /** Same key → same account on retries; a reconnect after disconnection uses a new key. */
   idempotencyKey: string;
+  /** Form-onboarding providers (Razorpay Route): the merchant's business and bank details. */
+  business?: RazorpayBusinessDetails;
+}
+
+export interface CreatedAccount {
+  accountId: string;
+  /** Provider-specific ids kept with the account (e.g. Razorpay's product configuration id). */
+  providerData?: Record<string, string>;
+  /** Form-onboarding providers know the state right away. */
+  state?: ConnectedAccountState;
 }
 
 export interface ProviderPayout {
@@ -33,22 +44,36 @@ export type ConnectWebhookOutcome =
   | { kind: 'account_deauthorized'; eventId: string; type: string; accountId: string }
   | { kind: 'ignored'; eventId: string; type: string };
 
+/** How merchants onboard: the provider's hosted pages, or a form in our admin (pass-through). */
+export type OnboardingKind = 'hosted' | 'form';
+
 /**
- * Port for merchant payout accounts (Stripe Connect). Merchants complete identity and bank
- * details on the provider's hosted onboarding; we store only the account id and its status.
+ * Port for merchant payout accounts (Stripe Connect, Razorpay Route). We store only the account
+ * id, its status and provider ids; identity documents and bank details stay with the provider.
  */
 export interface ConnectProvider {
   readonly name: string;
-  createAccount(input: CreateAccountInput): Promise<{ accountId: string }>;
-  /** Single-use link to the hosted onboarding (or to continue it). */
+  readonly label: string;
+  readonly onboarding: OnboardingKind;
+  /** Countries a merchant can onboard from. */
+  readonly countries: readonly string[];
+  /** Store currencies the provider can settle; null = any. */
+  readonly currencies: readonly string[] | null;
+  /** Whether createDashboardLink can give merchants a dashboard login. */
+  readonly hasDashboard: boolean;
+  createAccount(input: CreateAccountInput): Promise<CreatedAccount>;
+  /** Single-use link to the hosted onboarding (or to continue it); null for form onboarding. */
   createOnboardingLink(
     accountId: string,
     urls: { storeId: string; returnUrl: string; refreshUrl: string },
-  ): Promise<string>;
+  ): Promise<string | null>;
   /** Current state; null when the provider cannot be queried and state arrives by webhook only. */
-  retrieveAccount(accountId: string): Promise<ConnectedAccountState | null>;
-  /** Link to the provider's dashboard for the merchant (payouts, bank account, tax forms). */
-  createDashboardLink(accountId: string, storeId: string): Promise<string>;
+  retrieveAccount(
+    accountId: string,
+    providerData: Record<string, string>,
+  ): Promise<ConnectedAccountState | null>;
+  /** Link to the provider's dashboard for the merchant; null when the provider offers none. */
+  createDashboardLink(accountId: string, storeId: string): Promise<string | null>;
   /** Latest payouts; null when the provider does not report payouts. */
   listPayouts(accountId: string, limit: number): Promise<ProviderPayout[] | null>;
   /** Verifies the signature and normalizes the event; throws InvalidWebhookError if invalid. */
@@ -56,7 +81,6 @@ export interface ConnectProvider {
 }
 
 export const CONNECT_PROVIDERS = Symbol('CONNECT_PROVIDERS');
-export const ACTIVE_CONNECT_PROVIDER = Symbol('ACTIVE_CONNECT_PROVIDER');
 
 /** Platform fee for an amount in minor units, rounded half up (never more than the amount). */
 export function applicationFee(amount: number, feeBps: number): number {
