@@ -1,0 +1,135 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import type { ReactNode } from 'react';
+import { requestHost } from '@/lib/api';
+import { getCart, getShop, isRootHost } from '@/lib/shop';
+import { themeStyle } from '@/lib/theme';
+import './globals.css';
+
+// Per-request rendering is required for the CSP nonce (see src/proxy.ts) to reach Next's scripts.
+export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const shop = await getShop();
+  return shop
+    ? {
+        title: { default: shop.name, template: `%s · ${shop.name}` },
+        description: `Shop ${shop.name}`,
+      }
+    : { title: 'Commerce Platform' };
+}
+
+const adminUrl = process.env.ADMIN_PUBLIC_URL ?? 'http://localhost:3100';
+
+function PlatformLanding() {
+  return (
+    <main className="mx-auto max-w-2xl px-6 py-24 text-center">
+      <p className="text-sm font-semibold uppercase tracking-widest text-indigo-600">
+        Commerce Platform
+      </p>
+      <h1 className="mt-4 text-4xl font-bold tracking-tight text-zinc-900">
+        Start your online store
+      </h1>
+      <p className="mt-4 text-lg text-zinc-600">
+        Create a store, add products, and start selling in minutes. Each store gets its own address.
+      </p>
+      <a
+        href={`${adminUrl}/signup`}
+        className="mt-8 inline-block rounded-md bg-zinc-900 px-5 py-3 text-sm font-semibold text-white hover:bg-zinc-700"
+      >
+        Create your store
+      </a>
+    </main>
+  );
+}
+
+function StoreNotFound() {
+  return (
+    <main className="mx-auto max-w-xl px-6 py-24 text-center">
+      <h1 className="text-2xl font-semibold text-zinc-900">Store not found</h1>
+      <p className="mt-2 text-zinc-600">This store does not exist or is currently unavailable.</p>
+    </main>
+  );
+}
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const host = await requestHost();
+  const shop = await getShop();
+
+  if (!shop) {
+    return (
+      <html lang="en">
+        <body className="min-h-screen bg-white text-zinc-900 antialiased">
+          {isRootHost(host) ? <PlatformLanding /> : <StoreNotFound />}
+        </body>
+      </html>
+    );
+  }
+
+  const cart = await getCart();
+  return (
+    <html lang="en">
+      <body
+        className="flex min-h-screen flex-col bg-white text-zinc-900 antialiased"
+        style={themeStyle(shop.theme)}
+      >
+        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:p-2">
+          Skip to content
+        </a>
+        {shop.theme.settings.announcement ? (
+          <p className="bg-accent px-4 py-2 text-center text-sm text-[var(--store-accent-contrast)]">
+            {shop.theme.settings.announcement}
+          </p>
+        ) : null}
+        <header className="border-b border-zinc-200">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-4">
+            <Link href="/" className="text-xl font-bold tracking-tight text-brand">
+              {shop.name}
+            </Link>
+            <nav aria-label="Collections" className="flex flex-1 flex-wrap gap-4 text-sm">
+              <Link href="/collections/all" className="text-zinc-700 hover:text-zinc-950">
+                Shop all
+              </Link>
+              {shop.collections.slice(0, 5).map((c) => (
+                <Link
+                  key={c.handle}
+                  href={`/collections/${c.handle}`}
+                  className="text-zinc-700 hover:text-zinc-950"
+                >
+                  {c.title}
+                </Link>
+              ))}
+            </nav>
+            <form action="/search" role="search" className="flex">
+              <label htmlFor="site-search" className="sr-only">
+                Search products
+              </label>
+              <input
+                id="site-search"
+                name="q"
+                type="search"
+                placeholder="Search"
+                className="w-40 rounded-md border border-zinc-300 px-3 py-1.5 text-sm sm:w-56"
+              />
+            </form>
+            <Link href="/account" className="text-sm text-zinc-700 hover:underline">
+              Account
+            </Link>
+            <Link href="/cart" className="text-sm font-medium text-zinc-900 hover:underline">
+              Cart ({cart?.itemCount ?? 0})
+            </Link>
+          </div>
+        </header>
+        <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+          {children}
+        </main>
+        <footer className="border-t border-zinc-200 py-8 text-center text-sm text-zinc-500">
+          © {new Date().getFullYear()} {shop.name} ·{' '}
+          <a href={`mailto:${shop.contactEmail}`} className="hover:underline">
+            {shop.contactEmail}
+          </a>
+        </footer>
+      </body>
+    </html>
+  );
+}

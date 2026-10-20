@@ -1,0 +1,75 @@
+# Reference production topology (single host). For each deploy/env/<service>.env.example copy it
+# to deploy/env/<service>.env and fill in real secrets, then
+# `docker compose -f deploy/docker-compose.prod.yml up -d`. Each service gets only its own secrets
+# (least privilege): only `migrate` sees the schema-owner credential, the Next.js apps see no
+# database credentials, and Caddy sees no application secrets.
+#
+#   Caddy (TLS) ─┬─ admin.<PLATFORM_DOMAIN>  → admin
+#                ├─ api.<PLATFORM_DOMAIN>    → api
+#                └─ any other host           → storefront (store subdomains + verified custom domains;
+#                                               certificates issued on demand only for hosts the API approves)
+name: commerce
+
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    env_file: env/postgres.env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres-init.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      retries: 20
+
+  migrate:
+    build: { context: .., target: migrate }
+    env_file: env/migrate.env
+    depends_on: { postgres: { condition: service_healthy } }
+    restart: 'no'
+
+  api:
+    env_file: env/api.env
+    restart: unless-stopped
+    build: { context: .., target: api }
+    environment: { RUN_JOBS: 'false' }
+    volumes: [media:/app/storage]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+
+  worker:
+    env_file: env/api.env
+    restart: unless-stopped
+    build: { context: .., target: api }
+    command: ['node', 'dist/worker.js']
+    volumes: [media:/app/storage]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+
+  admin:
+    env_file: env/admin.env
+    restart: unless-stopped
+    build: { context: .., target: admin }
+    environment: { API_URL: http://api:4000 }
+    depends_on: [api]
+
+  storefront:
+    env_file: env/storefront.env
+    restart: unless-stopped
+    build: { context: .., target: storefront }
+    environment: { API_URL: http://api:4000 }
+    depends_on: [api]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    env_file: env/caddy.env
+    ports: ['80:80', '443:443']
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on: [admin, api, storefront]
+
+volumes:
+  pgdata:
+  media:
+  caddy-data:

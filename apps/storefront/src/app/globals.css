@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand: var(--store-brand, #111827);
+  --color-brand-contrast: var(--store-brand-contrast, #ffffff);
+  --color-accent: var(--store-accent, #4f46e5);
+}
+
+body {
+  font-family: var(--store-font, ui-sans-serif, system-ui, sans-serif);
+}

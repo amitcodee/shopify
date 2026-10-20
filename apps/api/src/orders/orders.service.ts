@@ -1,0 +1,424 @@
+import {
+  BadGatewayException,
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import type {
+  cancelOrderInputSchema,
+  fulfillInputSchema,
+  OrderDetail,
+  OrderListItem,
+  OrderListQuery,
+  Paginated,
+  refundInputSchema,
+} from '@repo/contracts';
+import type { Prisma, TenantTx } from '@repo/db';
+import type { z } from 'zod';
+import { AuditService } from '../audit/audit.service.js';
+import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
+import { TenantDb } from '../database/database.module.js';
+import { OutboxService } from '../outbox/outbox.service.js';
+import {
+  orderCancelledEmail,
+  refundEmail,
+  shippingConfirmationEmail,
+} from '../outbox/templates.js';
+import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-provider.js';
+import { OrderLifecycle } from './order-lifecycle.service.js';
+
+const detailInclude = {
+  lines: true,
+  payments: { orderBy: { createdAt: 'asc' } },
+  refunds: { orderBy: { createdAt: 'asc' } },
+  fulfillments: { orderBy: { createdAt: 'asc' } },
+  events: { orderBy: { createdAt: 'asc' } },
+  customer: { select: { id: true, email: true, name: true } },
+} satisfies Prisma.OrderInclude;
+
+type OrderWithDetail = Prisma.OrderGetPayload<{ include: typeof detailInclude }>;
+
+function paidAmount(order: OrderWithDetail): number {
+  return order.payments.filter((p) => p.status === 'SUCCEEDED').reduce((s, p) => s + p.amount, 0);
+}
+
+function committedRefunds(order: OrderWithDetail): number {
+  return order.refunds.filter((r) => r.status !== 'FAILED').reduce((s, r) => s + r.amount, 0);
+}
+
+export function toListItem(
+  order: Prisma.OrderGetPayload<{ include: { lines: true; customer: { select: { name: true } } } }>,
+): OrderListItem {
+  return {
+    id: order.id,
+    number: order.number,
+    email: order.email,
+    customerName: order.customer?.name ?? null,
+    status: order.status,
+    financialStatus: order.financialStatus,
+    fulfillmentStatus: order.fulfillmentStatus,
+    currency: order.currency,
+    total: order.total,
+    itemCount: order.lines.reduce((s, l) => s + l.quantity, 0),
+    createdAt: order.createdAt.toISOString(),
+  };
+}
+
+@Injectable()
+export class OrdersService {
+  constructor(
+    private readonly tenantDb: TenantDb,
+    private readonly lifecycle: OrderLifecycle,
+    private readonly outbox: OutboxService,
+    private readonly audit: AuditService,
+    @Inject(PAYMENT_PROVIDERS) private readonly providers: Map<string, PaymentProvider>,
+  ) {}
+
+  async list(storeId: string, query: OrderListQuery): Promise<Paginated<OrderListItem>> {
+    const where: Prisma.OrderWhereInput = { storeId };
+    if (query.status) where.status = query.status;
+    if (query.financialStatus) where.financialStatus = query.financialStatus;
+    if (query.fulfillmentStatus) where.fulfillmentStatus = query.fulfillmentStatus;
+    if (query.q) {
+      const asNumber = Number(query.q.replace(/^#/, ''));
+      where.OR = [
+        { email: { contains: query.q, mode: 'insensitive' } },
+        ...(Number.isInteger(asNumber) && asNumber > 0 ? [{ number: asNumber }] : []),
+      ];
+    }
+    const [rows, total] = await this.tenantDb.run(storeId, (tx) =>
+      Promise.all([
+        tx.order.findMany({
+          where,
+          include: { lines: true, customer: { select: { name: true } } },
+          orderBy: { createdAt: 'desc' },
+          skip: (query.page - 1) * query.pageSize,
+          take: query.pageSize,
+        }),
+        tx.order.count({ where }),
+      ]),
+    );
+    return { items: rows.map(toListItem), page: query.page, pageSize: query.pageSize, total };
+  }
+
+  async get(storeId: string, orderId: string): Promise<OrderDetail> {
+    const order = await this.tenantDb.run(storeId, (tx) => this.find(tx, storeId, orderId));
+    return this.toDetail(order);
+  }
+
+  /**
+   * Refunds through the payment provider. The refund row is committed first (so concurrent
+   * refunds cannot exceed the paid amount), the provider is called outside the transaction,
+   * and the outcome is recorded afterwards.
+   */
+  async refund(
+    store: StoreContext,
+    orderId: string,
+    input: z.output<typeof refundInputSchema>,
+    actor: AuthUser,
+    meta: RequestMeta,
+  ): Promise<OrderDetail> {
+    const pending = await this.tenantDb.run(store.id, async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId}::uuid AND "storeId" = ${store.id}::uuid FOR UPDATE`;
+      const order = await this.find(tx, store.id, orderId);
+      if (order.financialStatus !== 'PAID' && order.financialStatus !== 'PARTIALLY_REFUNDED') {
+        throw new ConflictException('Only paid orders can be refunded.');
+      }
+      const refundable = paidAmount(order) - committedRefunds(order);
+      if (input.amount > refundable) {
+        throw new BadRequestException(`You can refund at most ${refundable} (minor units).`);
+      }
+      for (const item of input.restock) {
+        const line = order.lines.find((l) => l.id === item.lineId);
+        if (!line) throw new BadRequestException('Unknown order line.');
+        if (item.quantity > line.quantity - line.restockedQuantity) {
+          throw new BadRequestException(
+            `Cannot restock more than ${line.quantity - line.restockedQuantity} of ${line.title}.`,
+          );
+        }
+      }
+      const payment = order.payments.find((p) => p.status === 'SUCCEEDED');
+      if (!payment) throw new ConflictException('No successful payment to refund.');
+      const refund = await tx.refund.create({
+        data: {
+          storeId: store.id,
+          orderId,
+          paymentId: payment.id,
+          amount: input.amount,
+          reason: input.reason ?? null,
+          actorUserId: actor.id,
+        },
+      });
+      return { refund, payment, currency: order.currency };
+    });
+
+    const provider = this.providers.get(pending.payment.provider);
+    let result: Awaited<ReturnType<PaymentProvider['refund']>> | null = null;
+    try {
+      if (!provider) throw new Error(`Provider ${pending.payment.provider} unavailable`);
+      result = await provider.refund({
+        providerRef: pending.payment.providerRef,
+        providerPaymentId: pending.payment.providerPaymentId,
+        amount: input.amount,
+        currency: pending.currency,
+        idempotencyKey: `refund-${pending.refund.id}`,
+      });
+    } catch {
+      result = null;
+    }
+
+    await this.tenantDb.run(store.id, async (tx) => {
+      // Re-lock and re-read: concurrent refunds must not both restock the same units
+      // (restock clamps to what is still un-restocked on the freshly read lines).
+      await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId}::uuid AND "storeId" = ${store.id}::uuid FOR UPDATE`;
+      if (!result || result.status === 'FAILED') {
+        await tx.refund.update({
+          where: { id: pending.refund.id },
+          data: { status: 'FAILED', providerRef: result?.providerRef ?? null },
+        });
+        await this.lifecycle.event(
+          tx,
+          store.id,
+          orderId,
+          'refund_failed',
+          'Refund failed at the payment provider.',
+          { actorUserId: actor.id },
+        );
+        return;
+      }
+      await tx.refund.update({
+        where: { id: pending.refund.id },
+        data: { status: result.status, providerRef: result.providerRef },
+      });
+      const order = await this.find(tx, store.id, orderId);
+      const refunded = committedRefunds(order);
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          financialStatus: refunded >= paidAmount(order) ? 'REFUNDED' : 'PARTIALLY_REFUNDED',
+        },
+      });
+      if (input.restock.length > 0) {
+        await this.lifecycle.restock(
+          tx,
+          store.id,
+          order.lines,
+          new Map(input.restock.map((r) => [r.lineId, r.quantity])),
+          'RETURN',
+          actor.id,
+          orderId,
+        );
+      }
+      await this.lifecycle.event(
+        tx,
+        store.id,
+        orderId,
+        'refunded',
+        `Refunded ${input.amount} ${order.currency}.`,
+        {
+          actorUserId: actor.id,
+          data: { refundId: pending.refund.id, reason: input.reason ?? null },
+        },
+      );
+      await this.audit.record(tx, {
+        storeId: store.id,
+        actorUserId: actor.id,
+        action: 'order.refunded',
+        entityType: 'order',
+        entityId: orderId,
+        data: { amount: input.amount },
+        meta,
+      });
+      const shop = await tx.store.findUniqueOrThrow({ where: { id: store.id } });
+      await this.outbox.enqueueEmail(
+        tx,
+        store.id,
+        refundEmail(order.email, {
+          storeName: shop.name,
+          orderNumber: order.number,
+          amount: input.amount,
+          currency: order.currency,
+        }),
+      );
+    });
+
+    if (!result || result.status === 'FAILED') {
+      throw new BadGatewayException('The payment provider could not process the refund.');
+    }
+    return this.get(store.id, orderId);
+  }
+
+  async fulfill(
+    store: StoreContext,
+    orderId: string,
+    input: z.output<typeof fulfillInputSchema>,
+    actor: AuthUser,
+    meta: RequestMeta,
+  ): Promise<OrderDetail> {
+    await this.tenantDb.run(store.id, async (tx) => {
+      const order = await this.find(tx, store.id, orderId);
+      if (order.status !== 'OPEN')
+        throw new ConflictException('Only open (paid) orders can be fulfilled.');
+      if (order.fulfillmentStatus === 'FULFILLED')
+        throw new ConflictException('This order is already fulfilled.');
+      await tx.fulfillment.create({
+        data: {
+          storeId: store.id,
+          orderId,
+          trackingCompany: input.trackingCompany ?? null,
+          trackingNumber: input.trackingNumber ?? null,
+          trackingUrl: input.trackingUrl ?? null,
+          actorUserId: actor.id,
+        },
+      });
+      await tx.order.update({ where: { id: orderId }, data: { fulfillmentStatus: 'FULFILLED' } });
+      await this.lifecycle.event(tx, store.id, orderId, 'fulfilled', 'Order fulfilled.', {
+        actorUserId: actor.id,
+      });
+      await this.audit.record(tx, {
+        storeId: store.id,
+        actorUserId: actor.id,
+        action: 'order.fulfilled',
+        entityType: 'order',
+        entityId: orderId,
+        meta,
+      });
+      if (input.notifyCustomer) {
+        const shop = await tx.store.findUniqueOrThrow({ where: { id: store.id } });
+        await this.outbox.enqueueEmail(
+          tx,
+          store.id,
+          shippingConfirmationEmail(order.email, {
+            storeName: shop.name,
+            orderNumber: order.number,
+            trackingCompany: input.trackingCompany,
+            trackingNumber: input.trackingNumber,
+            trackingUrl: input.trackingUrl,
+          }),
+        );
+      }
+    });
+    return this.get(store.id, orderId);
+  }
+
+  async cancel(
+    store: StoreContext,
+    orderId: string,
+    input: z.output<typeof cancelOrderInputSchema>,
+    actor: AuthUser,
+    meta: RequestMeta,
+  ): Promise<OrderDetail> {
+    const order = await this.get(store.id, orderId);
+    if (order.status === 'CANCELLED')
+      throw new ConflictException('This order is already cancelled.');
+    if (order.fulfillmentStatus === 'FULFILLED') {
+      throw new ConflictException('Fulfilled orders cannot be cancelled. Issue a refund instead.');
+    }
+    if (input.refund && order.refundableAmount > 0) {
+      await this.refund(
+        store,
+        orderId,
+        { amount: order.refundableAmount, reason: 'Order cancelled', restock: [] },
+        actor,
+        meta,
+      );
+    }
+    await this.tenantDb.run(store.id, async (tx) => {
+      const cancelled = await this.lifecycle.cancelInTx(tx, store.id, orderId, {
+        reason: input.reason.toLowerCase(),
+        restock: input.restock,
+        actorUserId: actor.id,
+      });
+      await this.audit.record(tx, {
+        storeId: store.id,
+        actorUserId: actor.id,
+        action: 'order.cancelled',
+        entityType: 'order',
+        entityId: orderId,
+        data: { reason: input.reason, refunded: input.refund },
+        meta,
+      });
+      const shop = await tx.store.findUniqueOrThrow({ where: { id: store.id } });
+      await this.outbox.enqueueEmail(
+        tx,
+        store.id,
+        orderCancelledEmail(cancelled.email, {
+          storeName: shop.name,
+          orderNumber: cancelled.number,
+        }),
+      );
+    });
+    return this.get(store.id, orderId);
+  }
+
+  private async find(tx: TenantTx, storeId: string, orderId: string): Promise<OrderWithDetail> {
+    const order = await tx.order.findFirst({
+      where: { id: orderId, storeId },
+      include: detailInclude,
+    });
+    if (!order) throw new NotFoundException('Order not found.');
+    return order;
+  }
+
+  private toDetail(order: OrderWithDetail): OrderDetail {
+    return {
+      ...toListItem({ ...order, customer: order.customer ? { name: order.customer.name } : null }),
+      subtotal: order.subtotal,
+      discountTotal: order.discountTotal,
+      shippingTotal: order.shippingTotal,
+      taxTotal: order.taxTotal,
+      discountCode: order.discountCode,
+      shippingMethod: order.shippingMethod,
+      shippingAddress: order.shippingAddress as OrderDetail['shippingAddress'],
+      note: order.note,
+      paidAt: order.paidAt?.toISOString() ?? null,
+      cancelledAt: order.cancelledAt?.toISOString() ?? null,
+      cancelReason: order.cancelReason,
+      customer: order.customer,
+      lines: order.lines.map((l) => ({
+        id: l.id,
+        productId: l.productId,
+        variantId: l.variantId,
+        title: l.title,
+        variantTitle: l.variantTitle,
+        sku: l.sku,
+        unitPrice: l.unitPrice,
+        quantity: l.quantity,
+        discountTotal: l.discountTotal,
+        total: l.unitPrice * l.quantity - l.discountTotal,
+        restockedQuantity: l.restockedQuantity,
+        restockable: l.stockReserved ? l.quantity - l.restockedQuantity : 0,
+      })),
+      payments: order.payments.map((p) => ({
+        id: p.id,
+        provider: p.provider,
+        amount: p.amount,
+        status: p.status,
+        createdAt: p.createdAt.toISOString(),
+      })),
+      refunds: order.refunds.map((r) => ({
+        id: r.id,
+        amount: r.amount,
+        reason: r.reason,
+        status: r.status,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      fulfillments: order.fulfillments.map((f) => ({
+        id: f.id,
+        trackingCompany: f.trackingCompany,
+        trackingNumber: f.trackingNumber,
+        trackingUrl: f.trackingUrl,
+        createdAt: f.createdAt.toISOString(),
+      })),
+      events: order.events.map((e) => ({
+        id: e.id,
+        type: e.type,
+        message: e.message,
+        createdAt: e.createdAt.toISOString(),
+      })),
+      refundableAmount: Math.max(0, paidAmount(order) - committedRefunds(order)),
+    };
+  }
+}

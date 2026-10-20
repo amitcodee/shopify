@@ -1,0 +1,19 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Supply-chain hygiene: only install package versions published at least 1 day ago.
+minimumReleaseAge: 1440
+
+# pnpm 10 blocks dependency lifecycle scripts by default; allow only what we need.
+onlyBuiltDependencies:
+  - '@prisma/engines'
+  - '@swc/core'
+  - prisma
+  - esbuild
+  - sharp
+  - unrs-resolver
+
+# Deliberately blocked: install-time telemetry pulled in by swagger-ui.
+ignoredBuiltDependencies:
+  - '@scarf/scarf'

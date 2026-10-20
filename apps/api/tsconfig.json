@@ -1,0 +1,10 @@
+{
+  "extends": "@repo/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "noEmit": true,
+    "types": ["node", "multer"]
+  },
+  "include": ["src", "test"]
+}

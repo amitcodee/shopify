@@ -1,0 +1,42 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# turbo
+.turbo/
+
+# env & secrets — never commit real values; use .env.example
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# testing
+coverage/
+playwright-report/
+test-results/
+
+# logs & OS/editor files
+*.log
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# generated Prisma client
+packages/db/src/generated/
+
+# local uploads (dev storage adapter)
+storage/
+/e2e-results/
+
+# deploy secrets (per service); only *.env.example is tracked
+deploy/env/*.env

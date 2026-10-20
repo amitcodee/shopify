@@ -1,0 +1,25 @@
+{
+  "name": "shopify-saas",
+  "private": true,
+  "description": "Multi-tenant ecommerce SaaS platform",
+  "packageManager": "pnpm@10.34.7",
+  "engines": {
+    "node": ">=24.11.0 <25"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "check": "turbo run lint typecheck test build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "e2e": "turbo run build && playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "prettier": "3.9.10",
+    "turbo": "2.11.9"
+  }
+}

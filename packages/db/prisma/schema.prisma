@@ -1,0 +1,854 @@
+// Multi-tenant commerce schema.
+// Tenant-owned tables carry `storeId` and are protected by PostgreSQL row-level security
+// (policies live in the migration SQL). See docs/tenant-isolation.md.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+  runtime             = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Platform (global) ─────────────────────────────
+
+enum PlatformRole {
+  NONE
+  SUPPORT
+  SUPER_ADMIN
+}
+
+model User {
+  id               String       @id @default(uuid(7)) @db.Uuid
+  email            String       @unique
+  name             String
+  passwordHash     String
+  platformRole     PlatformRole @default(NONE)
+  emailVerifiedAt  DateTime?
+  disabledAt       DateTime?
+  /// TOTP secret, AES-256-GCM encrypted with APP_ENCRYPTION_KEY. Null when 2FA is off.
+  totpSecretEnc    String?
+  totpEnabledAt    DateTime?
+  /// Last accepted TOTP time step (prevents code replay).
+  totpLastStep     Int?
+  /// Consecutive failed sign-in attempts (password or 2FA code); reset on success.
+  failedLoginCount Int          @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  sessions    Session[]
+  memberships StoreMember[]
+  merchants   Merchant[]
+}
+
+model Session {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  /// SHA-256 of the opaque session token; the token itself is never stored.
+  tokenHash  String   @unique
+  userId     String   @db.Uuid
+  expiresAt  DateTime
+  lastUsedAt DateTime @default(now())
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Merchant {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  name        String
+  ownerUserId String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner  User    @relation(fields: [ownerUserId], references: [id])
+  stores Store[]
+
+  @@index([ownerUserId])
+}
+
+// ─────────────────────────────── Store & access ──────────────────────────────
+
+enum StoreStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum StoreRole {
+  OWNER
+  ADMIN
+  STAFF
+}
+
+model Store {
+  id              String      @id @default(uuid(7)) @db.Uuid
+  merchantId      String      @db.Uuid
+  name            String
+  /// Unique store handle used for `<subdomain>.<storefront root domain>`.
+  subdomain       String      @unique
+  contactEmail    String
+  currency        String      @default("USD") @db.Char(3)
+  timezone        String      @default("UTC")
+  status          StoreStatus @default(ACTIVE)
+  suspendedReason String?
+  /// Storefront theme preset and validated settings (see @repo/contracts themeSettingsSchema).
+  themePreset     String      @default("minimal")
+  themeSettings   Json        @default("{}")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  merchant      Merchant          @relation(fields: [merchantId], references: [id])
+  members       StoreMember[]
+  invitations   StoreInvitation[]
+  products      Product[]
+  collections   Collection[]
+  carts         Cart[]
+  customers     Customer[]
+  orders        Order[]
+  domains       Domain[]
+  shippingZones ShippingZone[]
+  taxRates      TaxRate[]
+  discounts     DiscountCode[]
+  subscription  Subscription?
+
+  @@index([merchantId])
+}
+
+model StoreMember {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  storeId     String    @db.Uuid
+  userId      String    @db.Uuid
+  role        StoreRole
+  /// Extra permissions for STAFF; OWNER/ADMIN permissions are implied by role.
+  permissions String[]  @default([])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, userId])
+  @@index([userId])
+}
+
+/// Tenant-scoped (RLS). Append-only record of admin actions.
+model AuditLog {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  storeId     String   @db.Uuid
+  actorUserId String?  @db.Uuid
+  action      String
+  entityType  String
+  entityId    String?
+  data        Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([storeId, createdAt])
+}
+
+/// Pending staff invitation (access-control table like StoreMember; global, guarded by the API).
+model StoreInvitation {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  storeId         String    @db.Uuid
+  email           String
+  role            StoreRole
+  permissions     String[]  @default([])
+  /// SHA-256 of the invitation token; the token is only shown to the inviter.
+  tokenHash       String    @unique
+  invitedByUserId String    @db.Uuid
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+}
+
+// ───────────────────────────── Catalog (tenant, RLS) ─────────────────────────────
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model Product {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  storeId        String        @db.Uuid
+  title          String
+  /// URL slug, unique per store.
+  handle         String
+  /// Plain text; rendered escaped (no merchant HTML reaches the storefront).
+  description    String        @default("")
+  status         ProductStatus @default(DRAFT)
+  vendor         String?
+  productType    String?
+  tags           String[]      @default([])
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  store       Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  options     ProductOption[]
+  variants    ProductVariant[]
+  images      ProductImage[]
+  collections CollectionProduct[]
+
+  @@unique([storeId, id])
+  @@unique([storeId, handle])
+  @@index([storeId, status, updatedAt])
+  @@index([tags], type: Gin)
+}
+
+model ProductOption {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  storeId   String   @db.Uuid
+  productId String   @db.Uuid
+  name      String
+  position  Int
+  values    String[]
+
+  product Product @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
+
+  @@unique([productId, position])
+}
+
+model ProductVariant {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  storeId           String   @db.Uuid
+  productId         String   @db.Uuid
+  /// "Small / Red", or "Default" for products without options.
+  title             String
+  /// Option values in the same order as the product's options.
+  options           String[] @default([])
+  sku               String?
+  barcode           String?
+  /// Minor units in the store currency.
+  price             Int
+  compareAtPrice    Int?
+  weightGrams       Int      @default(0)
+  requiresShipping  Boolean  @default(true)
+  taxable           Boolean  @default(true)
+  trackInventory    Boolean  @default(true)
+  allowBackorder    Boolean  @default(false)
+  inventoryQuantity Int      @default(0)
+  position          Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  product     Product               @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
+  adjustments InventoryAdjustment[]
+  cartLines   CartLine[]
+
+  @@unique([storeId, id])
+  @@unique([storeId, sku])
+  @@index([productId])
+}
+
+enum InventoryReason {
+  INITIAL
+  MANUAL
+  RESTOCK
+  CORRECTION
+  DAMAGED
+  ORDER
+  ORDER_CANCELLED
+  RETURN
+}
+
+/// Append-only ledger of stock movements.
+model InventoryAdjustment {
+  id            String          @id @default(uuid(7)) @db.Uuid
+  storeId       String          @db.Uuid
+  variantId     String          @db.Uuid
+  delta         Int
+  quantityAfter Int
+  reason        InventoryReason
+  note          String?
+  actorUserId   String?         @db.Uuid
+  referenceId   String?
+  createdAt     DateTime        @default(now())
+
+  variant ProductVariant @relation(fields: [storeId, variantId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([storeId, variantId, createdAt])
+}
+
+model ProductImage {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  storeId    String   @db.Uuid
+  productId  String   @db.Uuid
+  storageKey String
+  alt        String   @default("")
+  width      Int
+  height     Int
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  product Product @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([productId, position])
+}
+
+model Collection {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  storeId     String   @db.Uuid
+  title       String
+  handle      String
+  description String   @default("")
+  /// When set, the collection automatically contains ACTIVE products with this tag.
+  ruleTag     String?
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  store    Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  products CollectionProduct[]
+
+  @@unique([storeId, id])
+  @@unique([storeId, handle])
+}
+
+model CollectionProduct {
+  storeId      String @db.Uuid
+  collectionId String @db.Uuid
+  productId    String @db.Uuid
+  position     Int    @default(0)
+
+  collection Collection @relation(fields: [storeId, collectionId], references: [storeId, id], onDelete: Cascade)
+  product    Product    @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
+
+  @@id([collectionId, productId])
+  @@index([storeId, productId])
+}
+
+// ─────────────────────────────── Cart (tenant, RLS) ──────────────────────────────
+
+model Cart {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  storeId   String   @db.Uuid
+  /// SHA-256 of the cart token held in the shopper's HttpOnly cookie.
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  lines CartLine[]
+
+  @@unique([storeId, id])
+  @@index([storeId, updatedAt])
+  @@index([expiresAt])
+}
+
+model CartLine {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  storeId   String   @db.Uuid
+  cartId    String   @db.Uuid
+  variantId String   @db.Uuid
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart           @relation(fields: [storeId, cartId], references: [storeId, id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [storeId, variantId], references: [storeId, id], onDelete: Cascade)
+
+  @@unique([cartId, variantId])
+  @@index([variantId])
+}
+
+// ──────────────────────────── Customers (tenant, RLS) ────────────────────────────
+
+model Customer {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  storeId          String    @db.Uuid
+  email            String
+  name             String?
+  /// Null for guest customers (created at checkout without an account).
+  passwordHash     String?
+  acceptsMarketing Boolean   @default(false)
+  disabledAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  store    Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  sessions CustomerSession[]
+  tokens   CustomerToken[]
+  orders   Order[]
+
+  @@unique([storeId, id])
+  @@unique([storeId, email])
+}
+
+model CustomerSession {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  storeId    String   @db.Uuid
+  customerId String   @db.Uuid
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [storeId, customerId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+enum CustomerTokenPurpose {
+  ACTIVATE
+  RESET_PASSWORD
+}
+
+/// Single-use emailed tokens (account activation for guests, password reset).
+model CustomerToken {
+  id         String               @id @default(uuid(7)) @db.Uuid
+  storeId    String               @db.Uuid
+  customerId String               @db.Uuid
+  purpose    CustomerTokenPurpose
+  tokenHash  String               @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime             @default(now())
+
+  customer Customer @relation(fields: [storeId, customerId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+// ───────────────────────────── Orders (tenant, RLS) ──────────────────────────────
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  OPEN
+  CANCELLED
+}
+
+enum FinancialStatus {
+  PENDING
+  PAID
+  PARTIALLY_REFUNDED
+  REFUNDED
+  VOIDED
+}
+
+enum FulfillmentStatus {
+  UNFULFILLED
+  FULFILLED
+}
+
+/// Per-store sequential order numbers (1001, 1002, ...).
+model OrderCounter {
+  storeId String @id @db.Uuid
+  next    Int    @default(1001)
+}
+
+model Order {
+  id                String            @id @default(uuid(7)) @db.Uuid
+  storeId           String            @db.Uuid
+  number            Int
+  customerId        String?           @db.Uuid
+  email             String
+  status            OrderStatus       @default(PENDING_PAYMENT)
+  financialStatus   FinancialStatus   @default(PENDING)
+  fulfillmentStatus FulfillmentStatus @default(UNFULFILLED)
+  currency          String            @db.Char(3)
+  subtotal          Int
+  discountTotal     Int               @default(0)
+  shippingTotal     Int               @default(0)
+  taxTotal          Int               @default(0)
+  total             Int
+  discountCode      String?
+  shippingMethod    String?
+  shippingAddress   Json
+  /// SHA-256 of the order-status link token sent to the customer.
+  accessTokenHash   String            @unique
+  /// Client idempotency key for the checkout request.
+  checkoutKey       String
+  /// Cart that produced the order; emptied once payment succeeds.
+  cartId            String?           @db.Uuid
+  paymentProvider   String
+  note              String?
+  /// Unpaid orders release their reserved stock after this time.
+  expiresAt         DateTime?
+  paidAt            DateTime?
+  cancelledAt       DateTime?
+  cancelReason      String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer     Customer?     @relation(fields: [storeId, customerId], references: [storeId, id])
+  lines        OrderLine[]
+  payments     Payment[]
+  refunds      Refund[]
+  fulfillments Fulfillment[]
+  events       OrderEvent[]
+
+  @@unique([storeId, id])
+  @@unique([storeId, number])
+  @@unique([storeId, checkoutKey])
+  @@index([storeId, createdAt])
+  @@index([status, expiresAt])
+  @@index([storeId, customerId])
+  @@index([storeId, paidAt])
+}
+
+/// Snapshot of what was bought; survives product/variant changes and deletion.
+model OrderLine {
+  id                String  @id @default(uuid(7)) @db.Uuid
+  storeId           String  @db.Uuid
+  orderId           String  @db.Uuid
+  productId         String? @db.Uuid
+  variantId         String? @db.Uuid
+  title             String
+  variantTitle      String
+  sku               String?
+  unitPrice         Int
+  quantity          Int
+  /// Discount allocated to this line (minor units).
+  discountTotal     Int     @default(0)
+  taxable           Boolean
+  requiresShipping  Boolean
+  weightGrams       Int     @default(0)
+  /// Whether stock was reserved (tracked variant) so cancellations release it correctly.
+  stockReserved     Boolean @default(false)
+  restockedQuantity Int     @default(0)
+
+  order Order @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model Payment {
+  id                String        @id @default(uuid(7)) @db.Uuid
+  storeId           String        @db.Uuid
+  orderId           String        @db.Uuid
+  provider          String
+  /// Provider checkout/session reference.
+  providerRef       String
+  /// Provider charge/payment-intent id, needed for refunds.
+  providerPaymentId String?
+  amount            Int
+  currency          String        @db.Char(3)
+  status            PaymentStatus @default(PENDING)
+  checkoutUrl       String?
+  /// Sandbox only: where the mock payment page returns the shopper.
+  returnUrl         String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  order   Order    @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+  refunds Refund[]
+
+  @@unique([storeId, id])
+  @@unique([provider, providerRef])
+  @@index([orderId])
+}
+
+enum RefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model Refund {
+  id          String       @id @default(uuid(7)) @db.Uuid
+  storeId     String       @db.Uuid
+  orderId     String       @db.Uuid
+  paymentId   String       @db.Uuid
+  amount      Int
+  reason      String?
+  status      RefundStatus @default(PENDING)
+  providerRef String?
+  actorUserId String?      @db.Uuid
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  order   Order   @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+  payment Payment @relation(fields: [storeId, paymentId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model Fulfillment {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  storeId         String   @db.Uuid
+  orderId         String   @db.Uuid
+  trackingCompany String?
+  trackingNumber  String?
+  trackingUrl     String?
+  actorUserId     String?  @db.Uuid
+  createdAt       DateTime @default(now())
+
+  order Order @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+/// Append-only order timeline.
+model OrderEvent {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  storeId     String   @db.Uuid
+  orderId     String   @db.Uuid
+  type        String
+  message     String
+  data        Json?
+  actorUserId String?  @db.Uuid
+  createdAt   DateTime @default(now())
+
+  order Order @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+}
+
+// ─────────────────────────── Platform plumbing (global) ──────────────────────────
+
+/// Inbound webhook de-duplication (providers retry and may deliver twice).
+model WebhookEvent {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  provider    String
+  eventId     String
+  type        String
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  @@unique([provider, eventId])
+}
+
+enum OutboxStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+/// Transactional outbox: written in the same transaction as the business change, delivered by
+/// the worker. Global table (the worker serves all stores); tenantId is informational.
+model OutboxMessage {
+  id          String       @id @default(uuid(7)) @db.Uuid
+  tenantId    String?      @db.Uuid
+  type        String
+  payload     Json
+  status      OutboxStatus @default(PENDING)
+  attempts    Int          @default(0)
+  availableAt DateTime     @default(now())
+  lastError   String?
+  sentAt      DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([status, availableAt])
+}
+
+// ───────────────────────────── Domains (global routing) ──────────────────────────
+
+/// Custom storefront hostnames. Global (the store resolver looks up hostnames before any
+/// tenant is known); only reachable through store-scoped, guarded admin endpoints.
+model Domain {
+  id                String    @id @default(uuid(7)) @db.Uuid
+  storeId           String    @db.Uuid
+  /// Unique among *verified* domains only (partial index in migration), so unverified claims cannot squat a name.
+  hostname          String
+  /// Value the merchant publishes in a DNS TXT record to prove ownership.
+  verificationToken String
+  verifiedAt        DateTime?
+  isPrimary         Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, hostname])
+  @@index([hostname])
+}
+
+// ─────────────────────── Shipping, taxes, discounts (tenant, RLS) ────────────────
+
+model ShippingZone {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  storeId   String   @db.Uuid
+  name      String
+  /// ISO country codes; "*" means "rest of world".
+  countries String[]
+  createdAt DateTime @default(now())
+
+  store Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  rates ShippingRate[]
+
+  @@unique([storeId, id])
+}
+
+model ShippingRate {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  storeId        String   @db.Uuid
+  zoneId         String   @db.Uuid
+  name           String
+  price          Int
+  minSubtotal    Int?
+  maxSubtotal    Int?
+  minWeightGrams Int?
+  maxWeightGrams Int?
+  createdAt      DateTime @default(now())
+
+  zone ShippingZone @relation(fields: [storeId, zoneId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([zoneId])
+}
+
+model TaxRate {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  storeId           String   @db.Uuid
+  country           String   @db.Char(2)
+  /// Empty string = applies to the whole country; otherwise a region/state code.
+  region            String   @default("")
+  name              String
+  /// Basis points: 825 = 8.25%.
+  rateBps           Int
+  appliesToShipping Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, country, region])
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_SHIPPING
+}
+
+model DiscountCode {
+  id          String       @id @default(uuid(7)) @db.Uuid
+  storeId     String       @db.Uuid
+  /// Stored uppercase; matched case-insensitively.
+  code        String
+  type        DiscountType
+  /// Percent (1-100) for PERCENTAGE, minor units for FIXED_AMOUNT, 0 for FREE_SHIPPING.
+  value       Int
+  minSubtotal Int?
+  usageLimit  Int?
+  usedCount   Int          @default(0)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, code])
+}
+
+// ─────────────────────────── SaaS billing (platform, global) ─────────────────────
+
+model Plan {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  code              String   @unique
+  name              String
+  /// Monthly price in platform currency minor units (USD cents).
+  priceMonthly      Int
+  /// Null = unlimited.
+  maxProducts       Int?
+  maxStaff          Int?
+  maxOrdersPerMonth Int?
+  /// Platform fee on store sales, in basis points (informational until payouts exist).
+  transactionFeeBps Int      @default(0)
+  active            Boolean  @default(true)
+  isDefault         Boolean  @default(false)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+/// One subscription per store. Global platform table (billing is managed by the platform).
+model Subscription {
+  id                 String             @id @default(uuid(7)) @db.Uuid
+  storeId            String             @unique @db.Uuid
+  planId             String             @db.Uuid
+  status             SubscriptionStatus @default(TRIALING)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  trialEndsAt        DateTime?
+  /// Plan to switch to at the end of the current period (scheduled downgrade).
+  pendingPlanId      String?            @db.Uuid
+  provider           String             @default("mock")
+  providerRef        String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  store    Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  plan     Plan              @relation(fields: [planId], references: [id])
+  invoices PlatformInvoice[]
+}
+
+enum InvoiceStatus {
+  OPEN
+  PAID
+  VOID
+}
+
+model PlatformInvoice {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  storeId        String        @db.Uuid
+  subscriptionId String        @db.Uuid
+  planName       String
+  amount         Int
+  currency       String        @default("USD") @db.Char(3)
+  status         InvoiceStatus @default(OPEN)
+  periodStart    DateTime
+  periodEnd      DateTime
+  providerRef    String?
+  createdAt      DateTime      @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, createdAt])
+}
+
+/// Platform-wide switches (sign-ups open, support email, ...).
+model PlatformSetting {
+  key         String   @id
+  value       Json
+  updatedById String?  @db.Uuid
+  updatedAt   DateTime @updatedAt
+}
+
+/// Append-only log of platform-admin actions (separate from per-store audit logs).
+model PlatformAuditLog {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  actorUserId String   @db.Uuid
+  action      String
+  targetType  String
+  targetId    String?
+  data        Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
