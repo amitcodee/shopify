@@ -85,11 +85,13 @@ export async function signup(
   return session;
 }
 
+/** Creates a store with sandbox payments connected; pass `payments: false` to skip that. */
 export async function createStore(
   ctx: TestContext,
   token: string,
-  overrides: Partial<{ name: string; subdomain: string; currency: string }> = {},
+  overrides: Partial<{ name: string; subdomain: string; currency: string; payments: boolean }> = {},
 ): Promise<StoreSummary> {
+  const { payments = true, ...fields } = overrides;
   const res = await ctx
     .http()
     .post('/api/v1/admin/stores')
@@ -98,10 +100,27 @@ export async function createStore(
       name: 'Test Store',
       subdomain: `store-${randomUUID().slice(0, 8)}`,
       contactEmail: 'owner@example.com',
-      ...overrides,
+      ...fields,
     });
   expect(res.status, JSON.stringify(res.body)).toBe(201);
-  return res.body as StoreSummary;
+  const store = res.body as StoreSummary;
+  if (payments) await enablePayments(ctx, store.id, token);
+  return store;
+}
+
+/** Connects a sandbox payout account and completes its onboarding. */
+export async function enablePayments(
+  ctx: TestContext,
+  storeId: string,
+  token: string,
+  outcome: 'complete' | 'restricted' = 'complete',
+): Promise<void> {
+  const auth = { Authorization: `Bearer ${token}` };
+  const base = `/api/v1/admin/stores/${storeId}/payments`;
+  const connect = await ctx.http().post(`${base}/account`).set(auth).send({ country: 'US' });
+  expect(connect.status, JSON.stringify(connect.body)).toBe(200);
+  const done = await ctx.http().post(`${base}/sandbox-onboarding`).set(auth).send({ outcome });
+  expect(done.status, JSON.stringify(done.body)).toBe(200);
 }
 
 /** Signs up a fresh merchant with one store. */

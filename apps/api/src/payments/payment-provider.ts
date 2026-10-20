@@ -11,6 +11,8 @@ export interface CreatePaymentInput {
   successUrl: string;
   cancelUrl: string;
   idempotencyKey: string;
+  /** The store's connected account receives the sale minus the platform fee. */
+  destination: { accountId: string; applicationFee: number };
 }
 
 export interface CreatedPayment {
@@ -39,6 +41,8 @@ export interface RefundRequest {
   amount: number;
   currency: string;
   idempotencyKey: string;
+  /** Destination charge: pull the refund back from the connected account (and refund the fee). */
+  reverseTransfer: boolean;
 }
 
 export interface RefundResult {

@@ -78,6 +78,23 @@ async function main(): Promise<void> {
 
   await new PlansService(db).subscriptionFor(store.id);
   await seedCatalog(db, store.id);
+  // Sandbox payouts account so the demo store can take (simulated) payments right away.
+  if ((process.env.PAYMENT_PROVIDER ?? 'mock') === 'mock') {
+    await db.paymentAccount.upsert({
+      where: { storeId: store.id },
+      update: {},
+      create: {
+        storeId: store.id,
+        provider: 'mock',
+        accountId: 'acct_mock_demo',
+        status: 'ACTIVE',
+        chargesEnabled: true,
+        payoutsEnabled: true,
+        detailsSubmitted: true,
+        country: 'US',
+      },
+    });
+  }
 
   console.log('Seed complete:');
   console.log(`  super-admin  ${ADMIN.email} / ${ADMIN.password}`);

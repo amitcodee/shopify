@@ -164,6 +164,7 @@ export class OrdersService {
         amount: input.amount,
         currency: pending.currency,
         idempotencyKey: `refund-${pending.refund.id}`,
+        reverseTransfer: pending.payment.destinationAccountId !== null,
       });
     } catch {
       result = null;

@@ -24,6 +24,7 @@ export default async function PlatformOverviewPage() {
         />
         <Stat label="Merchants / users" value={`${o.merchants} / ${o.users}`} />
         <Stat label="Paid orders (30d)" value={o.paidOrders30d} />
+        <Stat label="Stores accepting payments" value={o.storesAcceptingPayments} />
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Stores by plan">
@@ -45,6 +46,20 @@ export default async function PlatformOverviewPage() {
                 <tr key={g.currency}>
                   <Td>{g.currency}</Td>
                   <Td>{formatMoney(g.amount, g.currency)}</Td>
+                </tr>
+              ))}
+            </Table>
+          )}
+        </Card>
+        <Card title="Platform transaction fees (30d)">
+          {o.fees30d.length === 0 ? (
+            <p className="text-sm text-slate-500">No fees collected yet.</p>
+          ) : (
+            <Table head={['Currency', 'Fees']}>
+              {o.fees30d.map((f) => (
+                <tr key={f.currency}>
+                  <Td>{f.currency}</Td>
+                  <Td>{formatMoney(f.amount, f.currency)}</Td>
                 </tr>
               ))}
             </Table>

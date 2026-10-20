@@ -32,6 +32,8 @@ import { TenantDb } from '../database/database.module.js';
 import { OrderLifecycle } from '../orders/order-lifecycle.service.js';
 import { PlanLimits } from '../platform/plans.service.js';
 import { StoreUrls } from '../orders/store-urls.js';
+import { applicationFee } from '../payments/connect-provider.js';
+import { PaymentAccountsService } from '../payments/payment-accounts.service.js';
 import { ACTIVE_PAYMENT_PROVIDER, type PaymentProvider } from '../payments/payment-provider.js';
 import { CartService } from '../storefront/cart.service.js';
 import type { ShopContext } from '../storefront/store-resolver.js';
@@ -77,6 +79,7 @@ export class CheckoutService {
     private readonly lifecycle: OrderLifecycle,
     private readonly urls: StoreUrls,
     private readonly limits: PlanLimits,
+    private readonly paymentAccounts: PaymentAccountsService,
     @Inject(ACTIVE_PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
     @Inject(ENV) private readonly env: Env,
   ) {}
@@ -108,6 +111,7 @@ export class CheckoutService {
             }
           : null,
         warnings: cart.warnings,
+        acceptingPayments: await this.paymentAccounts.acceptingPayments(tx, shop.id),
       };
     });
   }
@@ -183,6 +187,9 @@ export class CheckoutService {
           quote.discount?.message ?? 'This discount code is not valid.',
         );
       }
+      // Paid orders need somewhere to settle: no stock is reserved for a store that cannot
+      // take payments yet.
+      if (quote.pricing.total > 0) await this.paymentAccounts.requireDestination(tx, shop.id);
 
       const customer = customerId
         ? await tx.customer.findFirstOrThrow({ where: { id: customerId, storeId: shop.id } })
@@ -430,6 +437,10 @@ export class CheckoutService {
     order: { id: string; number: number; total: number; currency: string; email: string },
   ): Promise<CheckoutResult> {
     const origin = this.urls.originForHost(host);
+    const destination = await this.tenantDb.run(shop.id, (tx) =>
+      this.paymentAccounts.requireDestination(tx, shop.id),
+    );
+    const fee = applicationFee(order.total, destination.feeBps);
     let created;
     try {
       created = await this.provider.createPayment({
@@ -442,6 +453,7 @@ export class CheckoutService {
         successUrl: `${this.statusUrl(host, order.id)}?from=checkout`,
         cancelUrl: `${origin}/checkout?cancelled=1`,
         idempotencyKey: `checkout-${order.id}`,
+        destination: { accountId: destination.accountId, applicationFee: fee },
       });
     } catch (error) {
       this.logger.error(`Payment session failed for order ${order.id}: ${String(error)}`);
@@ -468,6 +480,8 @@ export class CheckoutService {
           currency: order.currency,
           checkoutUrl: created.checkoutUrl,
           returnUrl: created.returnUrl ?? null,
+          destinationAccountId: destination.accountId,
+          applicationFee: fee,
         },
       }),
     );

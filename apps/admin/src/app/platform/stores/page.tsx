@@ -64,7 +64,17 @@ export default async function PlatformStoresPage({
         <EmptyState title="No stores found" />
       ) : (
         <>
-          <Table head={['Store', 'Owner', 'Plan', 'Usage', 'Status', canAct ? 'Actions' : '']}>
+          <Table
+            head={[
+              'Store',
+              'Owner',
+              'Plan',
+              'Usage',
+              'Payments',
+              'Status',
+              canAct ? 'Actions' : '',
+            ]}
+          >
             {stores.items.map((s) => (
               <tr key={s.id}>
                 <Td>
@@ -83,6 +93,17 @@ export default async function PlatformStoresPage({
                 <Td className="text-xs">
                   {s.usage.products} products · {s.usage.staff} staff · {s.usage.ordersThisMonth}{' '}
                   orders/mo
+                </Td>
+                <Td>
+                  {s.paymentsStatus === 'ACTIVE' ? (
+                    <Badge tone="green">Active</Badge>
+                  ) : s.paymentsStatus === 'RESTRICTED' ? (
+                    <Badge tone="red">Restricted</Badge>
+                  ) : s.paymentsStatus ? (
+                    <Badge tone="yellow">{s.paymentsStatus.toLowerCase()}</Badge>
+                  ) : (
+                    <Badge>Not set up</Badge>
+                  )}
                 </Td>
                 <Td>
                   {s.status === 'ACTIVE' ? (

@@ -43,7 +43,8 @@ export async function verifyEmail(page: Page, email: string) {
   await expect(page).toHaveURL(/\/onboarding$/);
 }
 
-export async function createStore(page: Page, name: string) {
+/** Creates a store and (unless `payments: false`) sets up sandbox payments through the UI. */
+export async function createStore(page: Page, name: string, { payments = true } = {}) {
   const subdomain = `shop-${uniqueSuffix()}`;
   await page.getByLabel('Store name').fill(name);
   await page.getByLabel('Store address').fill(subdomain);
@@ -51,5 +52,18 @@ export async function createStore(page: Page, name: string) {
   await expect(page.getByRole('heading', { name: `Welcome to ${name}` })).toBeVisible();
   const storeId = /\/s\/([0-9a-f-]{36})/.exec(page.url())?.[1];
   if (!storeId) throw new Error(`Unexpected URL after store creation: ${page.url()}`);
+  if (payments) {
+    await enablePayments(page, storeId);
+    await page.goto(`${ADMIN_URL}/s/${storeId}`);
+  }
   return { subdomain, storeId };
+}
+
+/** Settings → Payments → sandbox onboarding, ending with an active payouts account. */
+export async function enablePayments(page: Page, storeId: string) {
+  await page.goto(`${ADMIN_URL}/s/${storeId}/settings/payments`);
+  await page.getByRole('button', { name: 'Set up payments' }).click();
+  await expect(page.getByRole('heading', { name: 'Sandbox onboarding' })).toBeVisible();
+  await page.getByRole('button', { name: 'Complete onboarding' }).click();
+  await expect(page.getByText('Payments are set up.')).toBeVisible();
 }

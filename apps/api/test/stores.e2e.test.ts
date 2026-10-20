@@ -22,7 +22,11 @@ describe('Stores (merchant onboarding)', () => {
 
   it('creates a store with the creator as OWNER and records an audit entry', async () => {
     const session = await signup(ctx);
-    const store = await createStore(ctx, session.token, { subdomain: 'Acme-Shop', name: 'Acme' });
+    const store = await createStore(ctx, session.token, {
+      subdomain: 'Acme-Shop',
+      name: 'Acme',
+      payments: false,
+    });
 
     expect(store).toMatchObject({ name: 'Acme', subdomain: 'acme-shop', role: 'OWNER' });
 

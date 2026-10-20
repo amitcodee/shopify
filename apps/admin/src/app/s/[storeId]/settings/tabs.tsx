@@ -17,6 +17,7 @@ const TABS: Tab[] = [
   { label: 'Shipping', path: '/shipping', permission: 'settings:read' },
   { label: 'Taxes', path: '/taxes', permission: 'settings:read' },
   { label: 'Staff', path: '/staff', permission: 'settings:read' },
+  { label: 'Payments', path: '/payments', permission: 'settings:read' },
   { label: 'Plan & billing', path: '/billing', permission: 'settings:read' },
   { label: 'Audit log', path: '/audit-log', permission: 'settings:read' },
 ];

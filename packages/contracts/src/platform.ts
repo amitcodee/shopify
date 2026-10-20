@@ -94,6 +94,10 @@ export const platformOverviewSchema = z.object({
   paidOrders30d: z.number().int(),
   /** Gross merchandise volume per currency in the last 30 days. */
   gmv30d: z.array(z.object({ currency: z.string(), amount: z.number().int() })),
+  /** Platform transaction fees collected on paid orders in the last 30 days, per currency. */
+  fees30d: z.array(z.object({ currency: z.string(), amount: z.number().int() })),
+  /** Stores whose payout account can accept payments. */
+  storesAcceptingPayments: z.number().int(),
   planBreakdown: z.array(z.object({ plan: z.string(), stores: z.number().int() })),
 });
 export type PlatformOverview = z.infer<typeof platformOverviewSchema>;
@@ -107,6 +111,8 @@ export const platformStoreSchema = z.object({
   ownerEmail: z.string(),
   plan: z.string(),
   subscriptionStatus: subscriptionStatusSchema,
+  /** Payout account status, or null when the store has not connected one. */
+  paymentsStatus: z.enum(['ONBOARDING', 'ACTIVE', 'RESTRICTED', 'DISCONNECTED']).nullable(),
   usage: usageSchema,
   createdAt: z.iso.datetime(),
 });

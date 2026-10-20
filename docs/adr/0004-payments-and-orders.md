@@ -41,7 +41,7 @@ change) delivered by a worker with `FOR UPDATE SKIP LOCKED` and exponential back
 
 ## Known limitations / next steps
 
-- Platform-level Stripe account: paying out to merchants requires **Stripe Connect** (each
-  store connects its own account; application fees for platform revenue).
+- ~~Platform-level Stripe account~~ — superseded by [ADR 0006](0006-stripe-connect-payouts.md):
+  sales are Stripe Connect destination charges to each store's account, minus the plan fee.
 - One payment per order; partial captures and multiple tenders are out of scope.
 - 3-D Secure / SCA is handled by Stripe Checkout itself.

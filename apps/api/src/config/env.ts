@@ -22,6 +22,7 @@ const SECRET_KEYS = [
   'MOCK_PAYMENT_WEBHOOK_SECRET',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_CONNECT_WEBHOOK_SECRET',
   'POSTMARK_SERVER_TOKEN',
 ] as const;
 
@@ -61,6 +62,8 @@ const envSchema = z
     MOCK_PAYMENT_WEBHOOK_SECRET: z.string().min(16).default('mock-sandbox-webhook-secret'),
     STRIPE_SECRET_KEY: z.string().startsWith('sk_').optional(),
     STRIPE_WEBHOOK_SECRET: z.string().startsWith('whsec_').optional(),
+    /** Signing secret of the Connect webhook endpoint (events from merchants' accounts). */
+    STRIPE_CONNECT_WEBHOOK_SECRET: z.string().startsWith('whsec_').optional(),
     /** Unpaid orders release reserved stock after this many minutes. */
     ORDER_PAYMENT_TIMEOUT_MINUTES: z.coerce.number().int().min(5).max(1440).default(30),
     /** Run background jobs (outbox delivery, order expiry) inside this process. */
@@ -77,12 +80,13 @@ const envSchema = z
   .superRefine((env, ctx) => {
     if (
       env.PAYMENT_PROVIDER === 'stripe' &&
-      (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET)
+      (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET || !env.STRIPE_CONNECT_WEBHOOK_SECRET)
     ) {
       ctx.addIssue({
         code: 'custom',
         path: ['STRIPE_SECRET_KEY'],
-        message: 'Stripe needs STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET',
+        message:
+          'Stripe needs STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and STRIPE_CONNECT_WEBHOOK_SECRET',
       });
     }
     if (env.NODE_ENV === 'production' && env.PAYMENT_PROVIDER === 'mock') {

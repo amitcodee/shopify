@@ -47,7 +47,6 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
 | Rate limits are per API process (in-memory).                                                                 | Single instance today; move throttler storage to Redis or the proxy before scaling out (deployment checklist). |
 | `pnpm audit`: 1 high advisory (`braces` via `eslint-config-next`).                                           | Development/lint-time only, not shipped in any runtime image.                                                  |
 | Container images were not built locally (no Docker on the development machine).                              | The standalone builds were booted natively; CI must build the images before the first release.                 |
-| Merchant payouts require Stripe Connect (not implemented).                                                   | Real merchants must not be onboarded before it exists (ADR 0004).                                              |
 
 ## Follow-ups closed after the review
 
@@ -57,3 +56,11 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   cannot verify. Creating a store requires a verified email (HTTP 403); signed-in users can
   request a new link (3 per 10 minutes). Tests: `auth.e2e` — "email verification",
   `admin-onboarding.spec` — "must confirm their email".
+- **2026-10-20 — merchant payouts with Stripe Connect** (was an accepted risk blocking real
+  merchants). Express connected account per store with hosted onboarding; destination charges
+  with `on_behalf_of` and the plan fee as `application_fee_amount`; refunds reverse the transfer.
+  Checkout returns 409 before reserving stock unless the store's account can take charges.
+  Connect webhooks have their own signing secret and endpoint, are de-duplicated, and a
+  deauthorized account is never revived. `PaymentAccount` is under forced RLS; only owners
+  manage payouts ([ADR 0006](adr/0006-stripe-connect-payouts.md)). Tests: `payments.e2e`,
+  `stripe-connect.provider.test`, `payments.spec`.

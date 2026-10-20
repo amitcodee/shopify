@@ -106,19 +106,20 @@ model Store {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  merchant      Merchant          @relation(fields: [merchantId], references: [id])
-  members       StoreMember[]
-  invitations   StoreInvitation[]
-  products      Product[]
-  collections   Collection[]
-  carts         Cart[]
-  customers     Customer[]
-  orders        Order[]
-  domains       Domain[]
-  shippingZones ShippingZone[]
-  taxRates      TaxRate[]
-  discounts     DiscountCode[]
-  subscription  Subscription?
+  merchant       Merchant          @relation(fields: [merchantId], references: [id])
+  members        StoreMember[]
+  invitations    StoreInvitation[]
+  products       Product[]
+  collections    Collection[]
+  carts          Cart[]
+  customers      Customer[]
+  orders         Order[]
+  domains        Domain[]
+  shippingZones  ShippingZone[]
+  taxRates       TaxRate[]
+  discounts      DiscountCode[]
+  subscription   Subscription?
+  paymentAccount PaymentAccount?
 
   @@index([merchantId])
 }
@@ -539,22 +540,26 @@ enum PaymentStatus {
 }
 
 model Payment {
-  id                String        @id @default(uuid(7)) @db.Uuid
-  storeId           String        @db.Uuid
-  orderId           String        @db.Uuid
-  provider          String
+  id                   String        @id @default(uuid(7)) @db.Uuid
+  storeId              String        @db.Uuid
+  orderId              String        @db.Uuid
+  provider             String
   /// Provider checkout/session reference.
-  providerRef       String
+  providerRef          String
   /// Provider charge/payment-intent id, needed for refunds.
-  providerPaymentId String?
-  amount            Int
-  currency          String        @db.Char(3)
-  status            PaymentStatus @default(PENDING)
-  checkoutUrl       String?
+  providerPaymentId    String?
+  amount               Int
+  currency             String        @db.Char(3)
+  status               PaymentStatus @default(PENDING)
+  checkoutUrl          String?
   /// Sandbox only: where the mock payment page returns the shopper.
-  returnUrl         String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  returnUrl            String?
+  /// Connected account that receives the sale (destination charge); null for legacy payments.
+  destinationAccountId String?
+  /// Platform transaction fee taken from this payment (minor units, plan fee at checkout time).
+  applicationFee       Int           @default(0)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
   order   Order    @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
   refunds Refund[]
@@ -562,6 +567,36 @@ model Payment {
   @@unique([storeId, id])
   @@unique([provider, providerRef])
   @@index([orderId])
+}
+
+enum PaymentAccountStatus {
+  ONBOARDING
+  ACTIVE
+  RESTRICTED
+  DISCONNECTED
+}
+
+/// The store's connected payout account (Stripe Connect Express, or the sandbox). Shoppers can
+/// only check out once it can accept charges; sales settle to it minus the plan's platform fee.
+model PaymentAccount {
+  id               String               @id @default(uuid(7)) @db.Uuid
+  storeId          String               @unique @db.Uuid
+  provider         String
+  /// Provider account id (e.g. acct_…).
+  accountId        String
+  status           PaymentAccountStatus @default(ONBOARDING)
+  chargesEnabled   Boolean              @default(false)
+  payoutsEnabled   Boolean              @default(false)
+  detailsSubmitted Boolean              @default(false)
+  requirementsDue  String[]             @default([])
+  disabledReason   String?
+  country          String?              @db.Char(2)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, accountId])
 }
 
 enum RefundStatus {

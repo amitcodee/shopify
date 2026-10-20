@@ -43,6 +43,7 @@ export default defineConfig({
         NODE_ENV: 'test',
         API_PORT: String(PORTS.api),
         CORS_ORIGINS: `http://localhost:${PORTS.admin}`,
+        ADMIN_PUBLIC_URL: `http://localhost:${PORTS.admin}`,
         STOREFRONT_SHARED_SECRET: storefrontSecret,
         APP_ENCRYPTION_KEY: E2E_ENCRYPTION_KEY,
         STOREFRONT_ROOT_DOMAIN: `localhost:${PORTS.storefront}`,

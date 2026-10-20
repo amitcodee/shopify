@@ -57,6 +57,8 @@ export const checkoutPreviewSchema = checkoutTotalsSchema.extend({
     .object({ code: z.string(), applied: z.boolean(), message: z.string().optional() })
     .nullable(),
   warnings: z.array(z.string()),
+  /** False until the store has connected a payout account that can take payments. */
+  acceptingPayments: z.boolean(),
 });
 export type CheckoutPreview = z.infer<typeof checkoutPreviewSchema>;
 

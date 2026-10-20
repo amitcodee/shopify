@@ -40,5 +40,8 @@ for findings, fixes and accepted risks. Differences from the v0 plan above:
 - **T5:** no rich text at all in v1 (plain-text descriptions), themes are data-only.
 - **T6:** only one verified claim per hostname; unverified claims never block or route.
 - **T9:** discount usage is counted at payment; unpaid orders per email are capped.
+- **T7 (2026-10-20):** payouts settle to each store's Stripe Connect account; Connect webhooks
+  use a separate endpoint and signing secret, and the platform fee is fixed server-side at
+  checkout from the store's plan (ADR 0006).
 - **T11:** no URL-fetch features exist, so no SSRF surface.
 - **T12:** per-IP limits are per process (accepted until horizontal scaling).

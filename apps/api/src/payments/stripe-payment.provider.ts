@@ -14,8 +14,9 @@ import {
  * Stripe Checkout adapter (use test-mode keys in development). Shoppers pay on Stripe's hosted
  * page; the order is marked paid only from a verified `checkout.session.completed` webhook.
  *
- * Note: this charges on the platform's Stripe account. Paying out to merchants requires
- * Stripe Connect (each store connects its own account) — see docs/adr/0004-payments.md.
+ * Sales are Connect destination charges: settled to the store's connected account
+ * (`on_behalf_of`, so the merchant is the settlement merchant and their descriptor shows on the
+ * statement) minus the plan's platform fee (`application_fee_amount`) — see ADR 0006.
  */
 export class StripePaymentProvider implements PaymentProvider {
   readonly name = 'stripe';
@@ -52,7 +53,14 @@ export class StripePaymentProvider implements PaymentProvider {
         success_url: input.successUrl,
         cancel_url: input.cancelUrl,
         metadata,
-        payment_intent_data: { metadata },
+        payment_intent_data: {
+          metadata,
+          on_behalf_of: input.destination.accountId,
+          transfer_data: { destination: input.destination.accountId },
+          ...(input.destination.applicationFee > 0
+            ? { application_fee_amount: input.destination.applicationFee }
+            : {}),
+        },
       },
       { idempotencyKey: input.idempotencyKey },
     );
@@ -108,7 +116,13 @@ export class StripePaymentProvider implements PaymentProvider {
   async refund(request: RefundRequest): Promise<RefundResult> {
     if (!request.providerPaymentId) throw new Error('Missing Stripe payment intent for refund');
     const refund = await this.stripe.refunds.create(
-      { payment_intent: request.providerPaymentId, amount: request.amount },
+      {
+        payment_intent: request.providerPaymentId,
+        amount: request.amount,
+        ...(request.reverseTransfer
+          ? { reverse_transfer: true, refund_application_fee: true }
+          : {}),
+      },
       { idempotencyKey: request.idempotencyKey },
     );
     const status =

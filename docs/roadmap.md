@@ -69,6 +69,6 @@ Each phase ends with: lint, type check, tests, build all green; docs/threat mode
 ## Post-v1 follow-ups
 
 - ✅ Merchant sign-up email verification (2026-10-20): signed 24-hour link, required before creating a store.
-- Stripe Connect payouts (required before onboarding real merchants, ADR 0004).
+- ✅ Stripe Connect payouts (2026-10-20): Express accounts, destination charges with platform fees, Payments settings page ([ADR 0006](adr/0006-stripe-connect-payouts.md)).
 - Shared rate-limit/lockout storage before running more than one API instance.
 - Email-based account unlock.

@@ -4,10 +4,11 @@ import {
   type InventoryItem,
   type OrderListItem,
   type Paginated,
+  type PaymentsOverview,
 } from '@repo/contracts';
 import Link from 'next/link';
 import { SalesChart } from '@/components/sales-chart';
-import { Card, PageHeader, Table, Td } from '@/components/ui';
+import { Alert, Card, PageHeader, Table, Td } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
 
@@ -44,7 +45,7 @@ export default async function StoreOverview({
   const base = `/s/${storeId}`;
   const can = (p: (typeof store.permissions)[number]) => store.permissions.includes(p);
 
-  const [analytics, toFulfill, lowStock] = await Promise.all([
+  const [analytics, toFulfill, lowStock, payments] = await Promise.all([
     can('analytics:read')
       ? api<Analytics>(`/admin/stores/${storeId}/analytics`, { query: { days } })
       : null,
@@ -58,6 +59,7 @@ export default async function StoreOverview({
           query: { pageSize: 1, lowStock: 'true' },
         })
       : null,
+    can('settings:read') ? api<PaymentsOverview>(`/admin/stores/${storeId}/payments`) : null,
   ]);
   const money = (n: number) => formatMoney(n, store.currency);
 
@@ -83,6 +85,18 @@ export default async function StoreOverview({
           ) : null
         }
       />
+
+      {payments && !payments.acceptingPayments ? (
+        <div className="mb-6">
+          <Alert tone="warning">
+            Your store can&apos;t accept orders yet.{' '}
+            <Link className="font-medium underline" href={`${base}/settings/payments`}>
+              Set up payments
+            </Link>{' '}
+            to start selling.
+          </Alert>
+        </div>
+      ) : null}
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {analytics ? (

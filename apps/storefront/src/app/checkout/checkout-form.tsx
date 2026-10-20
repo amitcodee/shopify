@@ -281,10 +281,18 @@ export function CheckoutForm({
         {preview.warnings.length > 0 ? (
           <p className="text-xs text-amber-800">{preview.warnings.join(' ')}</p>
         ) : null}
-        <Submit pendingLabel="Placing order…">Continue to payment</Submit>
-        <p className="text-center text-xs text-zinc-500">
-          You’ll complete payment on a secure payment page.
-        </p>
+        {preview.acceptingPayments || preview.total === 0 ? (
+          <>
+            <Submit pendingLabel="Placing order…">Continue to payment</Submit>
+            <p className="text-center text-xs text-zinc-500">
+              You’ll complete payment on a secure payment page.
+            </p>
+          </>
+        ) : (
+          <p role="status" className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+            This store isn’t accepting payments yet. Please check back soon.
+          </p>
+        )}
       </aside>
     </form>
   );

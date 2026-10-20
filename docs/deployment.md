@@ -49,7 +49,8 @@ The API refuses to start in production when:
 - `PAYMENT_PROVIDER=mock` or `DNS_VERIFIER=mock`;
 - `STOREFRONT_PROTOCOL` is not `https`, or `PUBLIC_API_URL` / `ADMIN_PUBLIC_URL` are not https;
 - `STOREFRONT_SHARED_SECRET` / `APP_ENCRYPTION_KEY` are missing or shorter than 32 characters;
-- Stripe is selected without `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`;
+- Stripe is selected without `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and
+  `STRIPE_CONNECT_WEBHOOK_SECRET`;
 - `EMAIL_TRANSPORT` is `mailbox` (production needs `postmark` + `POSTMARK_SERVER_TOKEN`);
 - any secret still contains a `CHANGE_ME` placeholder (in every environment).
 
@@ -62,4 +63,8 @@ Also verify by hand:
 - [ ] Rate limits are per process (in-memory). With several API instances, move the throttler
       storage to Redis (ADR 0003) or enforce limits at the proxy.
 - [ ] Off-site backups and a restore drill are scheduled (runbook).
-- [ ] Merchant payouts: Stripe Connect is required before onboarding real merchants (ADR 0004).
+- [ ] Stripe Connect is enabled on the platform account (Express, platform-controlled fees and
+      losses), branding is set for hosted onboarding, and a Connect webhook endpoint ("events on
+      connected accounts": `account.updated`, `account.application.deauthorized`) points at
+      `/api/v1/webhooks/connect/stripe` with its secret in `STRIPE_CONNECT_WEBHOOK_SECRET`
+      (ADR 0006).

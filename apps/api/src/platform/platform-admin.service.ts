@@ -61,19 +61,26 @@ export class PlatformAdminService {
   async overview(): Promise<PlatformOverview> {
     await this.plans.ensureDefaults(this.db);
     const since = addDays(new Date(), -30);
-    const [stores, active, users, merchants, subscriptions, gmv, paidOrders] = await Promise.all([
-      this.db.store.count(),
-      this.db.store.count({ where: { status: 'ACTIVE' } }),
-      this.db.user.count(),
-      this.db.merchant.count(),
-      this.db.subscription.findMany({ include: { plan: true } }),
-      this.db.order.groupBy({
-        by: ['currency'],
-        where: { paidAt: { gte: since } },
-        _sum: { total: true },
-      }),
-      this.db.order.count({ where: { paidAt: { gte: since } } }),
-    ]);
+    const [stores, active, users, merchants, subscriptions, gmv, paidOrders, fees, accepting] =
+      await Promise.all([
+        this.db.store.count(),
+        this.db.store.count({ where: { status: 'ACTIVE' } }),
+        this.db.user.count(),
+        this.db.merchant.count(),
+        this.db.subscription.findMany({ include: { plan: true } }),
+        this.db.order.groupBy({
+          by: ['currency'],
+          where: { paidAt: { gte: since } },
+          _sum: { total: true },
+        }),
+        this.db.order.count({ where: { paidAt: { gte: since } } }),
+        this.db.payment.groupBy({
+          by: ['currency'],
+          where: { status: 'SUCCEEDED', order: { paidAt: { gte: since } } },
+          _sum: { applicationFee: true },
+        }),
+        this.db.paymentAccount.count({ where: { status: 'ACTIVE', chargesEnabled: true } }),
+      ]);
     const breakdown = new Map<string, number>();
     for (const s of subscriptions)
       breakdown.set(s.plan.name, (breakdown.get(s.plan.name) ?? 0) + 1);
@@ -86,6 +93,8 @@ export class PlatformAdminService {
         .reduce((sum, s) => sum + s.plan.priceMonthly, 0),
       paidOrders30d: paidOrders,
       gmv30d: gmv.map((g) => ({ currency: g.currency, amount: g._sum.total ?? 0 })),
+      fees30d: fees.map((f) => ({ currency: f.currency, amount: f._sum.applicationFee ?? 0 })),
+      storesAcceptingPayments: accepting,
       planBreakdown: [...breakdown.entries()].map(([plan, count]) => ({ plan, stores: count })),
     };
   }
@@ -108,6 +117,7 @@ export class PlatformAdminService {
         include: {
           merchant: { include: { owner: { select: { email: true } } } },
           subscription: { include: { plan: true } },
+          paymentAccount: { select: { status: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip: (query.page - 1) * query.pageSize,
@@ -149,6 +159,7 @@ export class PlatformAdminService {
         ownerEmail: s.merchant.owner.email,
         plan: s.subscription?.plan.name ?? 'Starter',
         subscriptionStatus: s.subscription?.status ?? 'TRIALING',
+        paymentsStatus: s.paymentAccount?.status ?? null,
         usage: {
           products: count(products, s.id),
           staff: count(members, s.id),
