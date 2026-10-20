@@ -44,4 +44,4 @@ for findings, fixes and accepted risks. Differences from the v0 plan above:
   use a separate endpoint and signing secret, and the platform fee is fixed server-side at
   checkout from the store's plan (ADR 0006).
 - **T11:** no URL-fetch features exist, so no SSRF surface.
-- **T12:** per-IP limits are per process (accepted until horizontal scaling).
+- **T12:** per-IP limits are shared by all API instances (PostgreSQL counters, 2026-10-20).

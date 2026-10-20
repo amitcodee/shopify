@@ -64,6 +64,8 @@ const envSchema = z
     STRIPE_WEBHOOK_SECRET: z.string().startsWith('whsec_').optional(),
     /** Signing secret of the Connect webhook endpoint (events from merchants' accounts). */
     STRIPE_CONNECT_WEBHOOK_SECRET: z.string().startsWith('whsec_').optional(),
+    /** Where rate-limit counters live: PostgreSQL (shared by all instances) or process memory. */
+    RATE_LIMIT_STORE: z.enum(['postgres', 'memory']).default('postgres'),
     /** Unpaid orders release reserved stock after this many minutes. */
     ORDER_PAYMENT_TIMEOUT_MINUTES: z.coerce.number().int().min(5).max(1440).default(30),
     /** Run background jobs (outbox delivery, order expiry) inside this process. */

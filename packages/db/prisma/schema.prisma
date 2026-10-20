@@ -887,3 +887,15 @@ model PlatformAuditLog {
 
   @@index([createdAt])
 }
+
+/// Shared rate-limit counters (fixed windows) so limits hold across API instances.
+/// UNLOGGED: losing counters in a database crash is acceptable.
+model RateLimitBucket {
+  /// "<throttler name>:<hashed tracker key>"
+  key          String    @id
+  hits         Int
+  windowEndsAt DateTime
+  blockedUntil DateTime?
+
+  @@index([windowEndsAt])
+}

@@ -36,6 +36,7 @@ trusts it only from `TRUST_PROXY`).
    in front of `/api/v1/media` and consider short-TTL caching of catalog API responses keyed by
    host (`StorefrontCatalogService`), invalidated on product writes.
 3. **Horizontal scale:** API and storefront are stateless; run N instances behind the proxy.
-   Move rate limiting to Redis (shared counters) when running more than one API instance.
+   Rate limiting already uses shared PostgreSQL counters (one upsert per request); if that write
+   shows up in profiles, move the counters to Redis or the proxy.
 4. **Database:** use a connection pooler (PgBouncer in transaction mode works with the
    transaction-local `set_config`) when instance count grows.

@@ -41,12 +41,11 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
 
 ## Accepted risks
 
-| Risk                                                                                                         | Why accepted / mitigation                                                                                      |
-| ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| The lockout message reveals that an account exists, and an attacker can lock a known account for 15 minutes. | Usability over secrecy; per-IP throttling bounds the rate; lock is short. Revisit with email-based unlock.     |
-| Rate limits are per API process (in-memory).                                                                 | Single instance today; move throttler storage to Redis or the proxy before scaling out (deployment checklist). |
-| `pnpm audit`: 1 high advisory (`braces` via `eslint-config-next`).                                           | Development/lint-time only, not shipped in any runtime image.                                                  |
-| Container images were not built locally (no Docker on the development machine).                              | The standalone builds were booted natively; CI must build the images before the first release.                 |
+| Risk                                                                                                         | Why accepted / mitigation                                                                                  |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| The lockout message reveals that an account exists, and an attacker can lock a known account for 15 minutes. | Usability over secrecy; per-IP throttling bounds the rate; lock is short. Revisit with email-based unlock. |
+| `pnpm audit`: 1 high advisory (`braces` via `eslint-config-next`).                                           | Development/lint-time only, not shipped in any runtime image.                                              |
+| Container images were not built locally (no Docker on the development machine).                              | The standalone builds were booted natively; CI must build the images before the first release.             |
 
 ## Follow-ups closed after the review
 
@@ -64,3 +63,10 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   deauthorized account is never revived. `PaymentAccount` is under forced RLS; only owners
   manage payouts ([ADR 0006](adr/0006-stripe-connect-payouts.md)). Tests: `payments.e2e`,
   `stripe-connect.provider.test`, `payments.spec`.
+- **2026-10-20 — shared rate limits** (was an accepted risk). Throttler counters live in an
+  UNLOGGED PostgreSQL table updated by one atomic upsert per request (fixed windows, database
+  clock), so limits hold across API instances; stale rows are swept by the daily cleanup job.
+  While adding it we found that raw SQL using `now()` disagreed with Prisma's UTC timestamps when
+  the database server was not in UTC (a 15-minute lockout lasted 5h45m on an IST server); every
+  connection now runs with `TimeZone=UTC`. Tests: `rate-limit.e2e`, `hardening.e2e` (lockout
+  upper bound).

@@ -5,10 +5,12 @@ import { AuditModule } from './audit/audit.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CatalogModule } from './catalog/catalog.module.js';
 import { CommerceModule } from './commerce/commerce.module.js';
+import { PostgresThrottlerStorage } from './common/postgres-throttler.storage.js';
 import { ProblemDetailsFilter } from './common/problem-details.filter.js';
 import { ConfigModule } from './config/config.module.js';
 import type { Env } from './config/env.js';
-import { DatabaseModule } from './database/database.module.js';
+import type { PrismaClient } from '@repo/db';
+import { DatabaseModule, PLATFORM_DB } from './database/database.module.js';
 import { EmailModule } from './email/email.module.js';
 import { HealthModule } from './health/health.module.js';
 import { PlatformAdminModule } from './platform/platform-admin.module.js';
@@ -26,10 +28,17 @@ export class AppModule {
       module: AppModule,
       imports: [
         ConfigModule.register(env),
-        ThrottlerModule.forRoot({
-          throttlers: [{ ttl: 60_000, limit: 300 }],
-          // Integration tests sign up many users from one IP.
-          skipIf: () => env.NODE_ENV === 'test',
+        ThrottlerModule.forRootAsync({
+          imports: [DatabaseModule],
+          inject: [PLATFORM_DB],
+          useFactory: (db: PrismaClient) => ({
+            throttlers: [{ ttl: 60_000, limit: 300 }],
+            // Integration tests sign up many users from one IP.
+            skipIf: () => env.NODE_ENV === 'test',
+            // Shared across instances by default; per-process memory only when opted in.
+            storage:
+              env.RATE_LIMIT_STORE === 'memory' ? undefined : new PostgresThrottlerStorage(db),
+          }),
         }),
         DatabaseModule,
         AuditModule,

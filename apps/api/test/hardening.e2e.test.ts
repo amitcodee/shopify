@@ -130,6 +130,7 @@ describe('Phase 8 hardening', () => {
       expect(locked.body.detail).toMatch(/Too many failed sign-in attempts/);
       const user = await ctx.platform.user.findUniqueOrThrow({ where: { email } });
       expect(user.lockedUntil!.getTime()).toBeGreaterThan(Date.now() + 14 * 60_000);
+      expect(user.lockedUntil!.getTime()).toBeLessThan(Date.now() + 16 * 60_000);
 
       await ctx.platform.user.update({
         where: { email },

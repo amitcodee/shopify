@@ -60,8 +60,9 @@ Also verify by hand:
 - [ ] `TRUST_PROXY` matches the network your proxy runs in (so per-client rate limits work).
 - [ ] Stripe webhooks point at `https://api.<platform>/api/v1/webhooks/payments/stripe` and
       `/api/v1/webhooks/billing`; test them with the Stripe CLI in test mode first.
-- [ ] Rate limits are per process (in-memory). With several API instances, move the throttler
-      storage to Redis (ADR 0003) or enforce limits at the proxy.
+- [ ] Rate limits are shared through PostgreSQL (`RATE_LIMIT_STORE=postgres`, the default), so
+      they hold across API instances; keep `trust proxy` pointing at the real proxy so per-IP
+      keys use the client address.
 - [ ] Off-site backups and a restore drill are scheduled (runbook).
 - [ ] Stripe Connect is enabled on the platform account (Express, platform-controlled fees and
       losses), branding is set for hosted onboarding, and a Connect webhook endpoint ("events on
