@@ -67,6 +67,23 @@ export const orderLineSchema = z.object({
   restockable: z.number().int(),
 });
 
+export const disputeStatusSchema = z.enum(['NEEDS_RESPONSE', 'UNDER_REVIEW', 'WON', 'LOST']);
+export type DisputeStatus = z.infer<typeof disputeStatusSchema>;
+
+/** A chargeback raised by the shopper's bank, mirrored from the payment provider. */
+export const disputeSchema = z.object({
+  id: z.uuid(),
+  orderId: z.uuid(),
+  orderNumber: z.number().int(),
+  amount: z.number().int(),
+  currency: z.string(),
+  reason: z.string().nullable(),
+  status: disputeStatusSchema,
+  evidenceDueBy: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+});
+export type Dispute = z.infer<typeof disputeSchema>;
+
 export const orderDetailSchema = orderListItemSchema.extend({
   subtotal: z.number().int(),
   discountTotal: z.number().int(),
@@ -99,6 +116,7 @@ export const orderDetailSchema = orderListItemSchema.extend({
       createdAt: z.iso.datetime(),
     }),
   ),
+  disputes: z.array(disputeSchema),
   fulfillments: z.array(
     z.object({
       id: z.uuid(),

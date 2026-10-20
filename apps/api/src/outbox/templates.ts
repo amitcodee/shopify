@@ -148,3 +148,18 @@ export function customerLinkEmail(
     ),
   };
 }
+
+export function disputeEmail(
+  to: string,
+  data: { storeName: string; orderNumber: number; message: string; orderUrl: string },
+): EmailMessage {
+  return {
+    to,
+    subject: `[${data.storeName}] Chargeback update on order #${data.orderNumber}`,
+    text: `${data.message}\n\nOpen the order: ${data.orderUrl}`,
+    html: layout(
+      data.storeName,
+      `<p>${escapeHtml(data.message)}</p><p><a href="${escapeHtml(data.orderUrl)}">Open order #${data.orderNumber}</a></p>`,
+    ),
+  };
+}

@@ -320,4 +320,53 @@ describe('Payments (Connect payout accounts)', () => {
     await ctx.http().post(`${admin}/payments/account/onboarding-link`).set(auth).expect(404);
     await ctx.http().post(`${admin}/payments/account/refresh`).set(auth).expect(404);
   });
+
+  it('mirrors chargebacks onto the order, notifies the store, and counts lost ones', async () => {
+    const { sf, store, session, auth, admin, variantId } = await setup();
+    await enablePayments(ctx, store.id, session.token);
+    const placed = await checkout(sf, variantId);
+    await payMock(sf, placed.body.paymentUrl as string);
+    const orderId = (await ctx.http().get(`${admin}/orders`).set(auth).expect(200)).body.items[0]
+      .id as string;
+    const dispute = (status: string) =>
+      ctx.http().post(`${admin}/payments/sandbox-dispute`).set(auth).send({ orderId, status });
+
+    const opened = await dispute('NEEDS_RESPONSE').expect(200);
+    expect(opened.body.openDisputes).toBe(1);
+    expect(opened.body.disputes[0]).toMatchObject({
+      orderId,
+      amount: 10_000,
+      status: 'NEEDS_RESPONSE',
+      reason: 'fraudulent',
+    });
+    // The same status twice is one timeline entry.
+    await dispute('NEEDS_RESPONSE').expect(200);
+
+    const order = (await ctx.http().get(`${admin}/orders/${orderId}`).set(auth).expect(200)).body;
+    expect(order.disputes).toHaveLength(1);
+    expect(order.disputes[0].evidenceDueBy).not.toBeNull();
+    const events = await ctx.platform.orderEvent.findMany({
+      where: { orderId, type: { startsWith: 'dispute_' } },
+    });
+    expect(events.map((e) => e.type)).toEqual(['dispute_needs_response']);
+    const queued = await ctx.platform.outboxMessage.findMany({ where: { tenantId: store.id } });
+    expect(
+      queued.some((m) => JSON.stringify(m.payload).includes('Chargeback update on order')),
+    ).toBe(true);
+
+    const lost = await dispute('LOST').expect(200);
+    expect(lost.body.openDisputes).toBe(0);
+    expect(lost.body.summary).toMatchObject({ gross: 10_000, chargebacks: 10_000 });
+    expect(lost.body.summary.net).toBe(10_000 - 200 - 10_000);
+
+    // Another store cannot dispute (or see) this order.
+    const other = await setup();
+    await enablePayments(ctx, other.store.id, other.session.token);
+    await ctx
+      .http()
+      .post(`${other.admin}/payments/sandbox-dispute`)
+      .set(other.auth)
+      .send({ orderId, status: 'WON' })
+      .expect(404);
+  });
 });

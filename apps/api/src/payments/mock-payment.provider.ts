@@ -6,6 +6,7 @@ import {
   InvalidWebhookError,
   type PaymentProvider,
   type RefundRequest,
+  type DisputeStatus,
   type RefundResult,
   type WebhookOutcome,
 } from './payment-provider.js';
@@ -18,6 +19,12 @@ interface MockEvent {
   reference: string;
   amount: number;
   currency: string;
+}
+
+interface MockDisputeEvent {
+  id: string;
+  type: 'dispute.updated';
+  dispute: { id: string; charge: string; amount: number; currency: string; status: DisputeStatus };
 }
 
 /**
@@ -53,6 +60,23 @@ export class MockPaymentProvider implements PaymentProvider {
     return { body, signature: this.sign(body) };
   }
 
+  /** Builds the webhook the sandbox "bank" sends when a shopper disputes a charge. */
+  buildDisputeWebhook(
+    chargeId: string,
+    disputeId: string,
+    status: DisputeStatus,
+    amount: number,
+    currency: string,
+  ) {
+    const event: MockDisputeEvent = {
+      id: `evt_${randomUUID()}`,
+      type: 'dispute.updated',
+      dispute: { id: disputeId, charge: chargeId, amount, currency, status },
+    };
+    const body = Buffer.from(JSON.stringify(event));
+    return { body, signature: this.sign(body) };
+  }
+
   parseWebhook(rawBody: Buffer, headers: IncomingHttpHeaders): WebhookOutcome {
     const given = headers[MOCK_SIGNATURE_HEADER];
     const signature = Array.isArray(given) ? given[0] : given;
@@ -61,7 +85,27 @@ export class MockPaymentProvider implements PaymentProvider {
     if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
       throw new InvalidWebhookError('Invalid mock webhook signature');
     }
-    const event = JSON.parse(rawBody.toString('utf8')) as MockEvent;
+    const parsed = JSON.parse(rawBody.toString('utf8')) as MockEvent | MockDisputeEvent;
+    if (parsed.type === 'dispute.updated') {
+      const { dispute } = parsed;
+      return {
+        kind: 'dispute',
+        eventId: parsed.id,
+        type: parsed.type,
+        providerPaymentId: dispute.charge,
+        dispute: {
+          id: dispute.id,
+          amount: dispute.amount,
+          currency: dispute.currency,
+          reason: 'fraudulent',
+          status: dispute.status,
+          // Sandbox disputes give a week to respond, like most card networks.
+          evidenceDueBy:
+            dispute.status === 'NEEDS_RESPONSE' ? new Date(Date.now() + 7 * 86_400_000) : null,
+        },
+      };
+    }
+    const event = parsed;
     if (event.type === 'payment.succeeded') {
       return {
         kind: 'payment_succeeded',

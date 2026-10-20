@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { describe, expect, it } from 'vitest';
 import { InvalidWebhookError } from './payment-provider.js';
-import { StripePaymentProvider } from './stripe-payment.provider.js';
+import { StripePaymentProvider, stripeDisputeStatus } from './stripe-payment.provider.js';
 
 const WEBHOOK_SECRET = 'whsec_test_secret_for_unit_tests';
 const stripe = new Stripe('sk_test_dummy');
@@ -59,6 +59,43 @@ describe('StripePaymentProvider.parseWebhook (offline)', () => {
       data: { object: {} },
     });
     expect(provider.parseWebhook(other.body, other.headers).kind).toBe('ignored');
+  });
+
+  it('maps charge disputes to the disputed payment intent', () => {
+    const { body, headers } = signedEvent({
+      id: 'evt_d1',
+      object: 'event',
+      type: 'charge.dispute.created',
+      data: {
+        object: {
+          id: 'dp_1',
+          object: 'dispute',
+          amount: 4200,
+          currency: 'usd',
+          reason: 'product_not_received',
+          status: 'needs_response',
+          payment_intent: 'pi_123',
+          evidence_details: { due_by: 1_800_000_000 },
+        },
+      },
+    });
+    expect(provider.parseWebhook(body, headers)).toEqual({
+      kind: 'dispute',
+      eventId: 'evt_d1',
+      type: 'charge.dispute.created',
+      providerPaymentId: 'pi_123',
+      dispute: {
+        id: 'dp_1',
+        amount: 4200,
+        currency: 'USD',
+        reason: 'product_not_received',
+        status: 'NEEDS_RESPONSE',
+        evidenceDueBy: new Date(1_800_000_000_000),
+      },
+    });
+    expect(stripeDisputeStatus('warning_closed')).toBe('WON');
+    expect(stripeDisputeStatus('lost')).toBe('LOST');
+    expect(stripeDisputeStatus('warning_under_review')).toBe('UNDER_REVIEW');
   });
 
   it('rejects tampered payloads', () => {

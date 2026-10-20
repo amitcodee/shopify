@@ -58,9 +58,15 @@ test('shopper checks out and pays in the sandbox; merchant fulfils and refunds',
   await expect(merchant.getByText('Refund issued.')).toBeVisible();
   await expect(merchant.getByText('Partially refunded').first()).toBeVisible();
 
+  // The customer's bank disputes the charge (sandbox).
+  await merchant.getByRole('button', { name: 'Simulate chargeback' }).click();
+  await expect(merchant.getByText(/opened a chargeback on this order/)).toBeVisible();
+  await expect(merchant.getByText('Needs response')).toBeVisible();
+
   // The dashboard reflects the sale.
   await merchant.getByRole('link', { name: 'Overview' }).click();
   await expect(merchant.getByText('Net sales (30d)')).toBeVisible();
+  await expect(merchant.getByText('A customer disputed a payment.')).toBeVisible();
   await expect(merchant.getByText('$18.00').first()).toBeVisible();
 
   // Shopper's status page now shows the shipment.

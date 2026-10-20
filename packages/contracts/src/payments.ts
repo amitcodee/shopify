@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { disputeSchema, disputeStatusSchema } from './orders.js';
 
 /**
  * Countries where merchants can connect a payout account (Stripe Connect Express availability,
@@ -64,7 +65,9 @@ export const salesSummarySchema = z.object({
   gross: z.number().int(),
   platformFees: z.number().int(),
   refunds: z.number().int(),
-  /** gross − platform fees − refunds (before the payment provider's own processing fees). */
+  /** Chargebacks lost in the period (funds returned to the shopper's bank). */
+  chargebacks: z.number().int(),
+  /** gross − fees − refunds − chargebacks (before the payment provider's own processing fees). */
   net: z.number().int(),
 });
 export type SalesSummary = z.infer<typeof salesSummarySchema>;
@@ -79,6 +82,9 @@ export const paymentsOverviewSchema = z.object({
   /** Platform fee on each sale from the store's plan, in basis points. */
   transactionFeeBps: z.number().int(),
   summary: salesSummarySchema,
+  /** Disputes that still need the merchant's response or a decision. */
+  openDisputes: z.number().int(),
+  disputes: z.array(disputeSchema),
   /** Latest payouts reported by the provider; null when the provider cannot list them. */
   payouts: z.array(payoutSchema).nullable(),
 });
@@ -93,4 +99,9 @@ export type ProviderLink = z.infer<typeof providerLinkSchema>;
 
 export const sandboxOnboardingInputSchema = z.strictObject({
   outcome: z.enum(['complete', 'restricted']),
+});
+
+export const sandboxDisputeInputSchema = z.strictObject({
+  orderId: z.uuid(),
+  status: disputeStatusSchema,
 });

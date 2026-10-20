@@ -3,11 +3,14 @@ import type { OrderLine, Prisma, PrismaClient, TenantTx } from '@repo/db';
 import { DiscountRules } from '../commerce/commerce-rules.js';
 import { PLATFORM_DB, TenantDb } from '../database/database.module.js';
 import { OutboxService } from '../outbox/outbox.service.js';
+import { formatMoney } from '@repo/contracts';
 import {
+  disputeEmail,
   merchantNewOrderEmail,
   orderConfirmationEmail,
   type OrderEmailData,
 } from '../outbox/templates.js';
+import type { DisputeUpdate } from '../payments/payment-provider.js';
 import { StoreUrls } from './store-urls.js';
 
 type OrderWithLines = Prisma.OrderGetPayload<{ include: { lines: true } }>;
@@ -137,6 +140,77 @@ export class OrderLifecycle {
       data: { restocked: options.restock },
     });
     return updated;
+  }
+
+  /**
+   * Mirrors a provider dispute (chargeback) onto the order: upserts the Dispute, and on every
+   * status change writes a timeline event and emails the store. Idempotent per status.
+   */
+  async applyDispute(storeId: string, paymentId: string, update: DisputeUpdate): Promise<void> {
+    await this.tenantDb.run(storeId, async (tx) => {
+      const payment = await tx.payment.findUniqueOrThrow({
+        where: { id: paymentId },
+        include: { order: true },
+      });
+      const existing = await tx.dispute.findUnique({
+        where: {
+          provider_providerDisputeId: { provider: payment.provider, providerDisputeId: update.id },
+        },
+      });
+      if (existing?.status === update.status) return;
+      const fields = {
+        amount: update.amount,
+        currency: update.currency,
+        reason: update.reason,
+        status: update.status,
+        evidenceDueBy: update.evidenceDueBy,
+      };
+      if (existing) {
+        await tx.dispute.update({ where: { id: existing.id }, data: fields });
+      } else {
+        await tx.dispute.create({
+          data: {
+            storeId,
+            orderId: payment.orderId,
+            paymentId,
+            provider: payment.provider,
+            providerDisputeId: update.id,
+            ...fields,
+          },
+        });
+      }
+
+      const amount = formatMoney(update.amount, update.currency);
+      const message =
+        update.status === 'WON'
+          ? `Chargeback of ${amount} resolved in your favour.`
+          : update.status === 'LOST'
+            ? `Chargeback of ${amount} lost: the funds were returned to the customer.`
+            : update.status === 'UNDER_REVIEW'
+              ? `Chargeback of ${amount} is under review by the card network.`
+              : `Chargeback of ${amount} opened${update.reason ? ` (${update.reason.replaceAll('_', ' ')})` : ''}. Respond with evidence in your payment provider's dashboard${update.evidenceDueBy ? ` by ${update.evidenceDueBy.toISOString().slice(0, 10)}` : ''}.`;
+      await this.event(
+        tx,
+        storeId,
+        payment.orderId,
+        `dispute_${update.status.toLowerCase()}`,
+        message,
+        {
+          data: { disputeId: update.id, amount: update.amount, status: update.status },
+        },
+      );
+      const store = await tx.store.findUniqueOrThrow({ where: { id: storeId } });
+      await this.outbox.enqueueEmail(
+        tx,
+        storeId,
+        disputeEmail(store.contactEmail, {
+          storeName: store.name,
+          orderNumber: payment.order.number,
+          message,
+          orderUrl: this.urls.adminOrderUrl(storeId, payment.orderId),
+        }),
+      );
+    });
   }
 
   /** Applies a verified "payment succeeded" from the provider. Idempotent. */

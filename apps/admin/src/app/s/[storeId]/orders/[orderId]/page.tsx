@@ -2,11 +2,13 @@ import { formatMoney, minorToDecimalString, type OrderDetail } from '@repo/contr
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ActionForm, CheckboxField, Field, SubmitButton } from '@/components/form';
-import { Card, formatDateTime, PageHeader, Table, Td } from '@/components/ui';
+import { DisputeSummary } from '@/components/disputes';
+import { Alert, Card, formatDateTime, PageHeader, Table, Td } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { getStore } from '@/lib/session';
 import { ConfirmButton } from '../../confirm-button';
-import { cancelOrderAction, fulfillAction, refundAction } from '../actions';
+import { SmallAction } from '../../settings/small-action';
+import { cancelOrderAction, fulfillAction, refundAction, sandboxDisputeAction } from '../actions';
 import { FinancialBadge, FulfillmentBadge, OrderStatusBadge } from '../badges';
 
 export default async function OrderPage({
@@ -25,6 +27,7 @@ export default async function OrderPage({
   }
   const money = (n: number) => formatMoney(n, order.currency);
   const canWrite = store.permissions.includes('orders:write');
+  const sandboxPaid = order.payments.some((p) => p.provider === 'mock' && p.status === 'SUCCEEDED');
   const a = order.shippingAddress;
 
   return (
@@ -41,6 +44,15 @@ export default async function OrderPage({
           </div>
         }
       />
+      {order.disputes.some((d) => d.status === 'NEEDS_RESPONSE') ? (
+        <div className="mb-6">
+          <Alert tone="error">
+            The customer&apos;s bank opened a chargeback on this order. Submit evidence in your
+            payment provider&apos;s dashboard before the deadline, or the funds are returned to the
+            customer.
+          </Alert>
+        </div>
+      ) : null}
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           <Card title="Items">
@@ -289,6 +301,29 @@ export default async function OrderPage({
                 {r.reason ? `· ${r.reason}` : ''}
               </p>
             ))}
+            {order.disputes.map((d) => (
+              <p key={d.id} className="text-sm text-slate-700">
+                Chargeback <DisputeSummary dispute={d} />
+              </p>
+            ))}
+            {canWrite && sandboxPaid ? (
+              <div className="mt-3 flex flex-wrap gap-4 border-t border-slate-100 pt-3">
+                <span className="text-xs text-slate-500">Sandbox:</span>
+                {(['NEEDS_RESPONSE', 'WON', 'LOST'] as const).map((status) => (
+                  <SmallAction
+                    key={status}
+                    action={sandboxDisputeAction.bind(null, storeId, orderId, status)}
+                    label={
+                      status === 'NEEDS_RESPONSE'
+                        ? 'Simulate chargeback'
+                        : status === 'WON'
+                          ? 'Win chargeback'
+                          : 'Lose chargeback'
+                    }
+                  />
+                ))}
+              </div>
+            ) : null}
           </Card>
           {canWrite && order.status !== 'CANCELLED' && order.fulfillmentStatus !== 'FULFILLED' ? (
             <Card title="Cancel order">

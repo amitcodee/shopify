@@ -62,7 +62,10 @@ revenue per currency and how many stores can accept payments.
 
 - Production needs `STRIPE_CONNECT_WEBHOOK_SECRET` (the API refuses to start without it when
   `PAYMENT_PROVIDER=stripe`) and Connect enabled on the platform's Stripe account.
-- The platform carries dispute and negative-balance risk for connected accounts. Disputes are
-  not yet surfaced in the admin (next step: `charge.dispute.*` webhooks → order timeline).
+- The platform carries dispute and negative-balance risk for connected accounts. Disputes
+  (`charge.dispute.created/updated/closed` on the platform endpoint) are mirrored into `Dispute`
+  rows (store-scoped, RLS), written to the order timeline and emailed to the store; the order page,
+  Payments page and home show open chargebacks and evidence deadlines, and lost chargebacks reduce
+  net sales. Evidence is still submitted in the provider's dashboard.
 - Payment rows created before this change have `destinationAccountId = null` and are refunded
   without transfer reversal.

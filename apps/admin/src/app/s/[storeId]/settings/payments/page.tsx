@@ -5,6 +5,7 @@ import {
   type PaymentsOverview,
 } from '@repo/contracts';
 import Link from 'next/link';
+import { DisputeSummary } from '@/components/disputes';
 import { ActionForm, SelectField, SubmitButton } from '@/components/form';
 import {
   Alert,
@@ -166,12 +167,13 @@ export default async function PaymentsPage({
       </Card>
 
       <Card title={`Last ${summary.days} days`} description={`${summary.paidOrders} paid orders`}>
-        <dl className="grid gap-4 sm:grid-cols-4">
+        <dl className="grid gap-4 sm:grid-cols-5">
           {(
             [
               ['Gross sales', summary.gross],
               ['Platform fees', -summary.platformFees],
               ['Refunds', -summary.refunds],
+              ['Chargebacks', -summary.chargebacks],
               ['Net', summary.net],
             ] as const
           ).map(([label, value]) => (
@@ -184,6 +186,38 @@ export default async function PaymentsPage({
         <p className="mt-3 text-xs text-slate-500">
           Net is before the payment provider&apos;s processing fees, which the platform covers.
         </p>
+      </Card>
+
+      <Card
+        title="Chargebacks"
+        description={
+          payments.openDisputes > 0
+            ? `${payments.openDisputes} open: respond in your payment provider's dashboard before the deadline.`
+            : "Disputes raised by customers' banks appear here."
+        }
+      >
+        {payments.disputes.length === 0 ? (
+          <p className="text-sm text-slate-500">No chargebacks.</p>
+        ) : (
+          <Table head={['Order', 'Opened', 'Details']}>
+            {payments.disputes.map((d) => (
+              <tr key={d.id}>
+                <Td>
+                  <Link
+                    className="font-medium text-indigo-600 hover:underline"
+                    href={`/s/${storeId}/orders/${d.orderId}`}
+                  >
+                    #{d.orderNumber}
+                  </Link>
+                </Td>
+                <Td>{new Date(d.createdAt).toLocaleDateString()}</Td>
+                <Td>
+                  <DisputeSummary dispute={d} />
+                </Td>
+              </tr>
+            ))}
+          </Table>
+        )}
       </Card>
 
       {account ? (

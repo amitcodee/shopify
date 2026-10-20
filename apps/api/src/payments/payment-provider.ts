@@ -33,7 +33,26 @@ export type WebhookOutcome =
       currency: string;
     }
   | { kind: 'payment_failed'; eventId: string; type: string; providerRef: string }
+  | {
+      kind: 'dispute';
+      eventId: string;
+      type: string;
+      /** The disputed charge (same id we store as Payment.providerPaymentId). */
+      providerPaymentId: string;
+      dispute: DisputeUpdate;
+    }
   | { kind: 'ignored'; eventId: string; type: string };
+
+export type DisputeStatus = 'NEEDS_RESPONSE' | 'UNDER_REVIEW' | 'WON' | 'LOST';
+
+export interface DisputeUpdate {
+  id: string;
+  amount: number;
+  currency: string;
+  reason: string | null;
+  status: DisputeStatus;
+  evidenceDueBy: Date | null;
+}
 
 export interface RefundRequest {
   providerRef: string;

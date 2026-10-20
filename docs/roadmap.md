@@ -72,3 +72,4 @@ Each phase ends with: lint, type check, tests, build all green; docs/threat mode
 - ✅ Stripe Connect payouts (2026-10-20): Express accounts, destination charges with platform fees, Payments settings page ([ADR 0006](adr/0006-stripe-connect-payouts.md)).
 - ✅ Shared rate limits (2026-10-20): PostgreSQL counters, so limits hold across API instances.
 - ✅ Account recovery (2026-10-20): emailed unlock links on lockout, merchant forgot/reset password.
+- ✅ Chargebacks (2026-10-20): provider dispute webhooks mirrored to orders, store emails, admin views.

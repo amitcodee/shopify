@@ -6,6 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type { Dispute as DisputeDto } from '@repo/contracts';
 import type {
   cancelOrderInputSchema,
   fulfillInputSchema,
@@ -15,7 +16,7 @@ import type {
   Paginated,
   refundInputSchema,
 } from '@repo/contracts';
-import type { Prisma, TenantTx } from '@repo/db';
+import type { Dispute as DisputeRow, Prisma, TenantTx } from '@repo/db';
 import type { z } from 'zod';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
@@ -33,6 +34,7 @@ const detailInclude = {
   lines: true,
   payments: { orderBy: { createdAt: 'asc' } },
   refunds: { orderBy: { createdAt: 'asc' } },
+  disputes: { orderBy: { createdAt: 'asc' } },
   fulfillments: { orderBy: { createdAt: 'asc' } },
   events: { orderBy: { createdAt: 'asc' } },
   customer: { select: { id: true, email: true, name: true } },
@@ -406,6 +408,7 @@ export class OrdersService {
         status: r.status,
         createdAt: r.createdAt.toISOString(),
       })),
+      disputes: order.disputes.map((d) => toDisputeDto(d, order.number)),
       fulfillments: order.fulfillments.map((f) => ({
         id: f.id,
         trackingCompany: f.trackingCompany,
@@ -422,4 +425,18 @@ export class OrdersService {
       refundableAmount: Math.max(0, paidAmount(order) - committedRefunds(order)),
     };
   }
+}
+
+export function toDisputeDto(d: DisputeRow, orderNumber: number): DisputeDto {
+  return {
+    id: d.id,
+    orderId: d.orderId,
+    orderNumber,
+    amount: d.amount,
+    currency: d.currency,
+    reason: d.reason,
+    status: d.status,
+    evidenceDueBy: d.evidenceDueBy?.toISOString() ?? null,
+    createdAt: d.createdAt.toISOString(),
+  };
 }

@@ -63,3 +63,21 @@ export async function cancelOrderAction(storeId: string, orderId: string): Promi
   });
   revalidatePath(path(storeId, orderId));
 }
+
+/** Sandbox only: the shopper's "bank" opens or decides a chargeback on the order. */
+export async function sandboxDisputeAction(
+  storeId: string,
+  orderId: string,
+  status: 'NEEDS_RESPONSE' | 'WON' | 'LOST',
+): Promise<FormState> {
+  try {
+    await api(`/admin/stores/${storeId}/payments/sandbox-dispute`, {
+      method: 'POST',
+      body: { orderId, status },
+    });
+  } catch (error) {
+    return toFormState(error);
+  }
+  revalidatePath(path(storeId, orderId));
+  return { success: 'Done.' };
+}

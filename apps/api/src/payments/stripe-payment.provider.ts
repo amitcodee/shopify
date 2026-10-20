@@ -6,6 +6,7 @@ import {
   InvalidWebhookError,
   type PaymentProvider,
   type RefundRequest,
+  type DisputeStatus,
   type RefundResult,
   type WebhookOutcome,
 } from './payment-provider.js';
@@ -100,6 +101,31 @@ export class StripePaymentProvider implements PaymentProvider {
           currency: (session.currency ?? '').toUpperCase(),
         };
       }
+      case 'charge.dispute.created':
+      case 'charge.dispute.updated':
+      case 'charge.dispute.closed': {
+        const dispute = event.data.object;
+        const intent =
+          typeof dispute.payment_intent === 'string'
+            ? dispute.payment_intent
+            : (dispute.payment_intent?.id ?? null);
+        if (!intent) return { kind: 'ignored', eventId: event.id, type: event.type };
+        const dueBy = dispute.evidence_details?.due_by;
+        return {
+          kind: 'dispute',
+          eventId: event.id,
+          type: event.type,
+          providerPaymentId: intent,
+          dispute: {
+            id: dispute.id,
+            amount: dispute.amount,
+            currency: dispute.currency.toUpperCase(),
+            reason: dispute.reason ?? null,
+            status: stripeDisputeStatus(dispute.status),
+            evidenceDueBy: dueBy ? new Date(dueBy * 1000) : null,
+          },
+        };
+      }
       case 'checkout.session.expired':
       case 'checkout.session.async_payment_failed':
         return {
@@ -132,5 +158,22 @@ export class StripePaymentProvider implements PaymentProvider {
           ? 'FAILED'
           : 'PENDING';
     return { providerRef: refund.id, status };
+  }
+}
+
+/** Stripe's dispute and inquiry ("warning_*") states mapped onto ours. */
+export function stripeDisputeStatus(status: string): DisputeStatus {
+  switch (status) {
+    case 'won':
+    case 'warning_closed':
+    case 'prevented':
+      return 'WON';
+    case 'lost':
+      return 'LOST';
+    case 'under_review':
+    case 'warning_under_review':
+      return 'UNDER_REVIEW';
+    default:
+      return 'NEEDS_RESPONSE';
   }
 }

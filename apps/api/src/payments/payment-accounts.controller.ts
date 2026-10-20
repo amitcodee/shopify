@@ -19,6 +19,7 @@ import {
   connectAccountInputSchema,
   type PaymentsOverview,
   type ProviderLink,
+  sandboxDisputeInputSchema,
   sandboxOnboardingInputSchema,
 } from '@repo/contracts';
 import type { Request } from 'express';
@@ -32,7 +33,9 @@ import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.gua
 import { ACTIVE_CONNECT_PROVIDER, type ConnectProvider } from './connect-provider.js';
 import { ConnectWebhooksService } from './connect-webhooks.service.js';
 import { MockConnectProvider } from './mock-connect.provider.js';
-import { MOCK_SIGNATURE_HEADER } from './mock-payment.provider.js';
+import { MOCK_SIGNATURE_HEADER, MockPaymentProvider } from './mock-payment.provider.js';
+import { PAYMENT_PROVIDERS, type PaymentProvider } from './payment-provider.js';
+import { PaymentWebhooksService } from './payment-webhooks.service.js';
 import { PaymentAccountsService } from './payment-accounts.service.js';
 
 /** Store payments: payout account onboarding, status, sales summary and payouts. */
@@ -46,6 +49,8 @@ export class PaymentAccountsController {
     private readonly webhooks: ConnectWebhooksService,
     private readonly tenantDb: TenantDb,
     @Inject(ACTIVE_CONNECT_PROVIDER) private readonly provider: ConnectProvider,
+    @Inject(PAYMENT_PROVIDERS) private readonly payments: Map<string, PaymentProvider>,
+    private readonly paymentWebhooks: PaymentWebhooksService,
   ) {}
 
   @Get()
@@ -91,6 +96,36 @@ export class PaymentAccountsController {
   @RequirePermission('settings:read')
   refresh(@CurrentStore() store: StoreContext): Promise<PaymentsOverview> {
     return this.accounts.refresh(store.id);
+  }
+
+  /** Sandbox only: simulates the shopper's bank opening or deciding a chargeback on an order. */
+  @Post('sandbox-dispute')
+  @HttpCode(200)
+  @RequirePermission('orders:write')
+  @ApiZodBody(sandboxDisputeInputSchema)
+  async sandboxDispute(
+    @CurrentStore() store: StoreContext,
+    @Body(new ZodPipe(sandboxDisputeInputSchema)) body: z.output<typeof sandboxDisputeInputSchema>,
+  ): Promise<PaymentsOverview> {
+    const mock = this.payments.get('mock');
+    if (!(mock instanceof MockPaymentProvider)) throw new NotFoundException();
+    const payment = await this.tenantDb.run(store.id, (tx) =>
+      tx.payment.findFirst({
+        where: { storeId: store.id, orderId: body.orderId, provider: 'mock', status: 'SUCCEEDED' },
+      }),
+    );
+    if (!payment?.providerPaymentId) throw new NotFoundException('No sandbox payment to dispute.');
+    const hook = mock.buildDisputeWebhook(
+      payment.providerPaymentId,
+      `dp_mock_${payment.id}`,
+      body.status,
+      payment.amount,
+      payment.currency,
+    );
+    await this.paymentWebhooks.handle('mock', hook.body, {
+      [MOCK_SIGNATURE_HEADER]: hook.signature,
+    });
+    return this.accounts.overview(store.id);
   }
 
   /** Sandbox only: simulates the provider finishing (or restricting) onboarding. */

@@ -10,6 +10,7 @@ import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { ENV, type Env } from '../config/env.js';
 import { PLATFORM_DB, TenantDb } from '../database/database.module.js';
+import { toDisputeDto } from '../orders/orders.service.js';
 import { PlansService } from '../platform/plans.service.js';
 import {
   ACTIVE_CONNECT_PROVIDER,
@@ -52,7 +53,7 @@ export class PaymentAccountsService {
         this.plans.subscriptionFor(storeId, tx),
         tx.store.findUniqueOrThrow({ where: { id: storeId }, select: { currency: true } }),
       ]);
-      const [paid, refunds] = await Promise.all([
+      const [paid, refunds, lost, openDisputes, disputes] = await Promise.all([
         tx.payment.aggregate({
           where: {
             storeId,
@@ -72,13 +73,36 @@ export class PaymentAccountsService {
           },
           _sum: { amount: true },
         }),
+        tx.dispute.aggregate({
+          where: { storeId, status: 'LOST', currency: store.currency, updatedAt: { gte: since } },
+          _sum: { amount: true },
+        }),
+        tx.dispute.count({
+          where: { storeId, status: { in: ['NEEDS_RESPONSE', 'UNDER_REVIEW'] } },
+        }),
+        tx.dispute.findMany({
+          where: { storeId },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: { order: { select: { number: true } } },
+        }),
       ]);
-      return { account, subscription, currency: store.currency, paid, refunds };
+      return {
+        account,
+        subscription,
+        currency: store.currency,
+        paid,
+        refunds,
+        lost,
+        openDisputes,
+        disputes,
+      };
     });
 
     const gross = data.paid._sum.amount ?? 0;
     const platformFees = data.paid._sum.applicationFee ?? 0;
     const refunded = data.refunds._sum.amount ?? 0;
+    const chargebacks = data.lost._sum.amount ?? 0;
     const account =
       data.account && data.account.provider === this.provider.name ? data.account : null;
     return {
@@ -94,8 +118,11 @@ export class PaymentAccountsService {
         gross,
         platformFees,
         refunds: refunded,
-        net: gross - platformFees - refunded,
+        chargebacks,
+        net: gross - platformFees - refunded - chargebacks,
       },
+      openDisputes: data.openDisputes,
+      disputes: data.disputes.map((d) => toDisputeDto(d, d.order.number)),
       payouts: account ? await this.payouts(account.accountId) : null,
     };
   }

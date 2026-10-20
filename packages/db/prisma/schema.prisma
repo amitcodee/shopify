@@ -494,6 +494,7 @@ model Order {
   lines        OrderLine[]
   payments     Payment[]
   refunds      Refund[]
+  disputes     Dispute[]
   fulfillments Fulfillment[]
   events       OrderEvent[]
 
@@ -561,11 +562,46 @@ model Payment {
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
 
-  order   Order    @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
-  refunds Refund[]
+  order    Order     @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+  refunds  Refund[]
+  disputes Dispute[]
 
   @@unique([storeId, id])
   @@unique([provider, providerRef])
+  @@index([orderId])
+  /// Dispute webhooks identify the charge, not our checkout session.
+  @@index([provider, providerPaymentId])
+}
+
+enum DisputeStatus {
+  /// The merchant should submit evidence in the provider's dashboard before the due date.
+  NEEDS_RESPONSE
+  UNDER_REVIEW
+  WON
+  LOST
+}
+
+/// A chargeback/dispute raised by the shopper's bank, mirrored from the payment provider.
+model Dispute {
+  id                String        @id @default(uuid(7)) @db.Uuid
+  storeId           String        @db.Uuid
+  orderId           String        @db.Uuid
+  paymentId         String        @db.Uuid
+  provider          String
+  providerDisputeId String
+  amount            Int
+  currency          String        @db.Char(3)
+  reason            String?
+  status            DisputeStatus
+  evidenceDueBy     DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  order   Order   @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+  payment Payment @relation(fields: [storeId, paymentId], references: [storeId, id], onDelete: Cascade)
+
+  @@unique([provider, providerDisputeId])
+  @@index([storeId, status])
   @@index([orderId])
 }
 

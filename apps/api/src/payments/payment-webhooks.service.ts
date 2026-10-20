@@ -48,7 +48,17 @@ export class PaymentWebhooksService {
     if (inserted.count === 0) return { received: true, duplicate: true };
 
     try {
-      if (outcome.kind !== 'ignored') {
+      if (outcome.kind === 'dispute') {
+        const payment = await this.db.payment.findFirst({
+          where: { provider: providerName, providerPaymentId: outcome.providerPaymentId },
+          select: { id: true, storeId: true },
+        });
+        if (!payment) {
+          this.logger.warn(`Dispute ${outcome.dispute.id} for unknown charge`);
+        } else {
+          await this.lifecycle.applyDispute(payment.storeId, payment.id, outcome.dispute);
+        }
+      } else if (outcome.kind !== 'ignored') {
         const payment = await this.db.payment.findUnique({
           where: {
             provider_providerRef: { provider: providerName, providerRef: outcome.providerRef },

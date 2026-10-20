@@ -86,6 +86,18 @@ export default async function StoreOverview({
         }
       />
 
+      {payments && payments.openDisputes > 0 ? (
+        <div className="mb-6">
+          <Alert tone="error">
+            {payments.openDisputes === 1
+              ? 'A customer disputed a payment.'
+              : `${payments.openDisputes} payments are disputed.`}{' '}
+            <Link className="font-medium underline" href={`${base}/settings/payments`}>
+              Review chargebacks
+            </Link>
+          </Alert>
+        </div>
+      ) : null}
       {payments && !payments.acceptingPayments ? (
         <div className="mb-6">
           <Alert tone="warning">
