@@ -134,6 +134,7 @@ model Store {
   apiTokens      ApiToken[]
   blogPosts      BlogPost[]
   segments       CustomerSegment[]
+  locations      Location[]
   webhooks       WebhookSubscription[]
   subscription   Subscription?
   paymentAccount PaymentAccount?
@@ -272,6 +273,7 @@ model ProductVariant {
   product     Product               @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
   adjustments InventoryAdjustment[]
   cartLines   CartLine[]
+  levels      InventoryLevel[]
 
   @@unique([storeId, id])
   @@unique([storeId, sku])
@@ -287,6 +289,8 @@ enum InventoryReason {
   ORDER
   ORDER_CANCELLED
   RETURN
+  /// Moved between locations (total unchanged).
+  TRANSFER
 }
 
 /// Append-only ledger of stock movements.
@@ -300,6 +304,8 @@ model InventoryAdjustment {
   note          String?
   actorUserId   String?         @db.Uuid
   referenceId   String?
+  /// Location whose stock changed (null for adjustments made before locations existed).
+  locationId    String?         @db.Uuid
   createdAt     DateTime        @default(now())
 
   variant ProductVariant @relation(fields: [storeId, variantId], references: [storeId, id], onDelete: Cascade)
@@ -685,6 +691,8 @@ model OrderLine {
   stockReserved     Boolean @default(false)
   /// Gift card denomination: paying the order issues one card per unit.
   isGiftCard        Boolean @default(false)
+  /// Location the line's stock was taken from (where restocks go back to).
+  locationId        String? @db.Uuid
   restockedQuantity Int     @default(0)
 
   order Order @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
@@ -1295,4 +1303,42 @@ model ReturnLine {
 
   @@unique([returnId, orderLineId])
   @@index([orderLineId])
+}
+
+/// Where stock is kept (warehouse, shop, ...). Orders take stock from active locations in
+/// priority order; the default location receives stock when no location is given.
+model Location {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  storeId   String   @db.Uuid
+  name      String
+  address   String   @default("")
+  isDefault Boolean  @default(false)
+  active    Boolean  @default(true)
+  /// Lower numbers are used first when allocating an order.
+  priority  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store  Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  levels InventoryLevel[]
+
+  @@unique([storeId, id])
+  @@unique([storeId, name])
+  @@index([storeId, priority])
+}
+
+/// Stock of one variant at one location. ProductVariant.inventoryQuantity is the sum over
+/// locations, kept in step by the inventory code in the same transaction.
+model InventoryLevel {
+  storeId    String   @db.Uuid
+  variantId  String   @db.Uuid
+  locationId String   @db.Uuid
+  available  Int      @default(0)
+  updatedAt  DateTime @updatedAt
+
+  variant  ProductVariant @relation(fields: [storeId, variantId], references: [storeId, id], onDelete: Cascade)
+  location Location       @relation(fields: [storeId, locationId], references: [storeId, id], onDelete: Cascade)
+
+  @@id([variantId, locationId])
+  @@index([storeId, locationId])
 }

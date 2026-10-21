@@ -39,9 +39,9 @@ Conventions: UUID primary keys; `store_id uuid not null` on every tenant table (
 | `BlogPost`                    | store_id, id, title, handle (unique per store), excerpt, body (plain text), author, tags[], published_at (null = draft, future = scheduled)                     |
 | `StorePolicy`                 | store_id + kind (`REFUND`/`PRIVACY`/`TERMS`/`SHIPPING`/`CONTACT`), body                                                                                         |
 | `Menu`                        | store_id + handle (`main`/`footer`), items json (typed links validated on write and read)                                                                       |
-| `InventoryLocation`           | store_id, id, name, address                                                                                                                                     |
-| `InventoryLevel`              | store_id, variant_id, location_id, available, reserved — unique(variant_id, location_id)                                                                        |
-| `InventoryAdjustment`         | store_id, variant_id, location_id, delta, reason, ref, actor                                                                                                    |
+| `Location`                    | store_id, id, name, address, priority (lower ships first), is_default (one per store), active                                                                   |
+| `InventoryLevel`              | store_id, variant_id, location_id, available — `ProductVariant.inventory_quantity` is their sum, kept in step in the same transaction                           |
+| `InventoryAdjustment`         | store_id, variant_id, location_id, delta, quantity_after (variant total), reason (incl. `TRANSFER`), reference, actor — append-only                             |
 
 ## Customers, carts, orders
 

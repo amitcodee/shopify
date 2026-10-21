@@ -1,5 +1,6 @@
 import {
   type InventoryItem,
+  type Location,
   LOW_STOCK_THRESHOLD,
   manualInventoryReasons,
   type Paginated,
@@ -9,7 +10,7 @@ import { ActionForm, SubmitButton } from '@/components/form';
 import { Badge, EmptyState, PageHeader, Pagination, Table, Td } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
-import { adjustInventoryAction } from './actions';
+import { adjustInventoryAction, transferInventoryAction } from './actions';
 
 export default async function InventoryPage({
   params,
@@ -22,9 +23,14 @@ export default async function InventoryPage({
   const { q, lowStock, page } = await searchParams;
   const store = await getStore(storeId);
   const canWrite = store.permissions.includes('products:write');
-  const inventory = await api<Paginated<InventoryItem>>(`/admin/stores/${storeId}/inventory`, {
-    query: { q, lowStock, page: Number(page) || 1 },
-  });
+  const [inventory, locations] = await Promise.all([
+    api<Paginated<InventoryItem>>(`/admin/stores/${storeId}/inventory`, {
+      query: { q, lowStock, page: Number(page) || 1 },
+    }),
+    api<Location[]>(`/admin/stores/${storeId}/locations`),
+  ]);
+  const multiLocation = locations.length > 1;
+  const locationName = new Map(locations.map((l) => [l.id, l.name]));
   const base = `/s/${storeId}/inventory`;
 
   return (
@@ -89,6 +95,13 @@ export default async function InventoryPage({
                   ) : (
                     <span className="text-slate-400">Not tracked</span>
                   )}
+                  {multiLocation && item.trackInventory ? (
+                    <p className="mt-1 text-xs text-slate-500">
+                      {item.levels
+                        .map((l) => `${locationName.get(l.locationId) ?? '?'}: ${l.available}`)
+                        .join(' · ')}
+                    </p>
+                  ) : null}
                 </Td>
                 <Td>
                   {canWrite && item.trackInventory ? (
@@ -122,8 +135,62 @@ export default async function InventoryPage({
                           </option>
                         ))}
                       </select>
+                      {multiLocation ? (
+                        <>
+                          <label className="sr-only" htmlFor={`l-${item.variantId}`}>
+                            Location for {item.productTitle} {item.variantTitle}
+                          </label>
+                          <select
+                            id={`l-${item.variantId}`}
+                            name="locationId"
+                            defaultValue={locations.find((l) => l.isDefault)?.id}
+                            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                          >
+                            {locations.map((l) => (
+                              <option key={l.id} value={l.id}>
+                                {l.name}
+                              </option>
+                            ))}
+                          </select>
+                        </>
+                      ) : null}
                       <SubmitButton variant="secondary">Apply</SubmitButton>
                     </ActionForm>
+                  ) : null}
+                  {canWrite && item.trackInventory && multiLocation ? (
+                    <details className="mt-2 text-xs">
+                      <summary className="cursor-pointer text-indigo-600">Move stock</summary>
+                      <ActionForm
+                        action={transferInventoryAction.bind(null, storeId, item.variantId)}
+                        className="mt-2 flex flex-wrap items-center gap-2"
+                      >
+                        {(['from', 'to'] as const).map((side, i) => (
+                          <select
+                            key={side}
+                            name={side}
+                            aria-label={`Move ${side} location for ${item.productTitle} ${item.variantTitle}`}
+                            defaultValue={locations[i]?.id}
+                            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                          >
+                            {locations.map((l) => (
+                              <option key={l.id} value={l.id}>
+                                {side} {l.name}
+                              </option>
+                            ))}
+                          </select>
+                        ))}
+                        <input
+                          name="quantity"
+                          inputMode="numeric"
+                          required
+                          pattern="[0-9]+"
+                          aria-label={`Units to move for ${item.productTitle} ${item.variantTitle}`}
+                          placeholder="Qty"
+                          className="w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        />
+                        <SubmitButton variant="secondary">Move</SubmitButton>
+                      </ActionForm>
+                    </details>
                   ) : null}
                 </Td>
               </tr>

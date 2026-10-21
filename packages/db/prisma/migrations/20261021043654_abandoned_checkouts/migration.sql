@@ -13,8 +13,11 @@ ALTER TABLE "Store" ADD COLUMN     "abandonedCheckoutDelayHours" INTEGER DEFAULT
 -- CreateIndex
 CREATE INDEX "Order_status_recoveryStatus_createdAt_idx" ON "Order"("status", "recoveryStatus", "createdAt");
 
--- Checkouts that expired before this release are not emailed retroactively.
+-- Checkouts that expired before this release are not emailed retroactively. Forced RLS also
+-- binds the table owner, so lift it for this one statement (the migration runs as the owner).
+ALTER TABLE "Order" NO FORCE ROW LEVEL SECURITY;
 UPDATE "Order" SET "recoveryStatus" = 'SKIPPED' WHERE "status" = 'CANCELLED';
+ALTER TABLE "Order" FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE "Store" ADD CONSTRAINT "Store_abandonedCheckoutDelayHours_range"
   CHECK ("abandonedCheckoutDelayHours" IS NULL OR "abandonedCheckoutDelayHours" BETWEEN 1 AND 72);

@@ -25,6 +25,7 @@ import { uniqueHandle } from './handles.js';
 import { productDetailInclude, toProductDto, variantTitle } from './product-mapper.js';
 import { PlanLimits } from '../platform/plans.service.js';
 import { WebhookEmitter } from '../webhooks/webhooks.service.js';
+import { changeLevel, defaultLocation } from './inventory-levels.js';
 
 type VariantInput = ProductInputParsed['variants'][number];
 
@@ -393,17 +394,22 @@ export class ProductsService {
     const variant = await tx.productVariant.create({
       data: { storeId, productId, ...variantData(v, position), inventoryQuantity: initial },
     });
-    if (initial !== 0) {
-      await tx.inventoryAdjustment.create({
-        data: {
-          storeId,
-          variantId: variant.id,
-          delta: initial,
-          quantityAfter: initial,
-          reason: 'INITIAL',
-          actorUserId: actor.id,
-        },
-      });
+    if (v.trackInventory) {
+      const location = await defaultLocation(tx, storeId);
+      await changeLevel(tx, storeId, variant.id, location.id, initial);
+      if (initial !== 0) {
+        await tx.inventoryAdjustment.create({
+          data: {
+            storeId,
+            variantId: variant.id,
+            delta: initial,
+            quantityAfter: initial,
+            reason: 'INITIAL',
+            actorUserId: actor.id,
+            locationId: location.id,
+          },
+        });
+      }
     }
   }
 

@@ -13,6 +13,7 @@ export const inventoryReasonSchema = z.enum([
   ...manualInventoryReasons,
   'ORDER',
   'ORDER_CANCELLED',
+  'TRANSFER',
 ]);
 
 export const inventoryAdjustInputSchema = z
@@ -23,6 +24,8 @@ export const inventoryAdjustInputSchema = z
     setTo: z.number().int().min(0).max(1_000_000).optional(),
     reason: z.enum(manualInventoryReasons).default('MANUAL'),
     note: z.string().trim().max(500).optional(),
+    /** Location whose stock changes; the default location when omitted. */
+    locationId: z.uuid().optional(),
   })
   .refine((v) => (v.delta === undefined) !== (v.setTo === undefined), {
     message: 'Provide either delta or setTo',
@@ -38,7 +41,9 @@ export const inventoryItemSchema = z.object({
   sku: z.string().nullable(),
   trackInventory: z.boolean(),
   allowBackorder: z.boolean(),
+  /** Total across locations. */
   inventoryQuantity: z.number().int(),
+  levels: z.array(z.object({ locationId: z.uuid(), available: z.number().int() })),
 });
 export type InventoryItem = z.infer<typeof inventoryItemSchema>;
 export const inventoryListSchema = paginated(inventoryItemSchema);
@@ -56,8 +61,42 @@ export const inventoryAdjustmentSchema = z.object({
   quantityAfter: z.number().int(),
   reason: inventoryReasonSchema,
   note: z.string().nullable(),
+  locationName: z.string().nullable(),
   createdAt: z.iso.datetime(),
 });
 export type InventoryAdjustment = z.infer<typeof inventoryAdjustmentSchema>;
 
 export const LOW_STOCK_THRESHOLD = 5;
+
+export const locationInputSchema = z.strictObject({
+  name: z.string().trim().min(1, 'Name the location').max(100),
+  address: z.string().trim().max(300).default(''),
+  active: z.boolean().default(true),
+  priority: z.number().int().min(0).max(1000).default(0),
+  isDefault: z.boolean().default(false),
+});
+export type LocationInput = z.input<typeof locationInputSchema>;
+
+export const locationSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  address: z.string(),
+  active: z.boolean(),
+  priority: z.number().int(),
+  isDefault: z.boolean(),
+  /** Units on hand across all variants. */
+  unitsOnHand: z.number().int(),
+});
+export type Location = z.infer<typeof locationSchema>;
+
+export const inventoryTransferInputSchema = z
+  .strictObject({
+    fromLocationId: z.uuid(),
+    toLocationId: z.uuid(),
+    quantity: z.number().int().min(1).max(1_000_000),
+    note: z.string().trim().max(500).optional(),
+  })
+  .refine((v) => v.fromLocationId !== v.toLocationId, {
+    message: 'Choose two different locations',
+    path: ['toLocationId'],
+  });

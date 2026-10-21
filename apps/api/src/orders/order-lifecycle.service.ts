@@ -2,6 +2,7 @@ import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import type { OrderLine, Prisma, PrismaClient, TenantTx } from '@repo/db';
 import { DiscountRules } from '../commerce/commerce-rules.js';
 import { PLATFORM_DB, TenantDb } from '../database/database.module.js';
+import { allocate, changeLevel, defaultLocation } from '../catalog/inventory-levels.js';
 import { GiftCardLedger } from '../gift-cards/gift-card-ledger.js';
 import { WebhookEmitter } from '../webhooks/webhooks.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
@@ -95,6 +96,11 @@ export class OrderLifecycle {
       const row = rows[0];
       if (!row)
         throw new ConflictException(`${line.title} just sold out. Please review your cart.`);
+      const locationId = await allocate(tx, storeId, line.variantId, line.quantity);
+      await tx.orderLine.updateMany({
+        where: { orderId, storeId, variantId: line.variantId },
+        data: { locationId },
+      });
       await tx.inventoryAdjustment.create({
         data: {
           storeId,
@@ -103,6 +109,7 @@ export class OrderLifecycle {
           quantityAfter: row.inventoryQuantity,
           reason: 'ORDER',
           referenceId: orderId,
+          locationId,
         },
       });
     }
@@ -129,6 +136,9 @@ export class OrderLifecycle {
         RETURNING "inventoryQuantity"`;
       const row = updated[0];
       if (row) {
+        // Back to where it was taken from (or the default location for older orders).
+        const locationId = line.locationId ?? (await defaultLocation(tx, storeId)).id;
+        await changeLevel(tx, storeId, line.variantId, locationId, qty);
         await tx.inventoryAdjustment.create({
           data: {
             storeId,
@@ -138,6 +148,7 @@ export class OrderLifecycle {
             reason,
             actorUserId,
             referenceId: orderId,
+            locationId,
           },
         });
       }

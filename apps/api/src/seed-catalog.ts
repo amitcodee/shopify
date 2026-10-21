@@ -136,6 +136,9 @@ async function placeholderImage(title: string, color: string): Promise<Buffer> {
 
 /** Demo catalog for the seeded store; skipped when the store already has products. */
 export async function seedCatalog(db: PrismaClient, storeId: string): Promise<void> {
+  const location =
+    (await db.location.findFirst({ where: { storeId, isDefault: true } })) ??
+    (await db.location.create({ data: { storeId, name: 'Main location', isDefault: true } }));
   if ((await db.product.count({ where: { storeId } })) > 0) return;
   const storage = new LocalDiskStorage(process.env.STORAGE_DIR ?? 'storage');
   const productIds: Record<string, string> = {};
@@ -178,6 +181,9 @@ export async function seedCatalog(db: PrismaClient, storeId: string): Promise<vo
           position,
         },
       });
+      await db.inventoryLevel.create({
+        data: { storeId, variantId: variant.id, locationId: location.id, available: p.stock },
+      });
       await db.inventoryAdjustment.create({
         data: {
           storeId,
@@ -185,6 +191,7 @@ export async function seedCatalog(db: PrismaClient, storeId: string): Promise<vo
           delta: p.stock,
           quantityAfter: p.stock,
           reason: 'INITIAL',
+          locationId: location.id,
         },
       });
     }

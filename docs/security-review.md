@@ -153,3 +153,10 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   open or closed return; the order row is locked while a return is created so two requests
   cannot claim the same units. Refunds go through the existing refund path (amount checks,
   provider/manual/gift-card split, restock clamping). Tests: `returns.e2e`, `account.spec`.
+- **2026-10-21 — inventory locations; migration backfills under RLS.** Location and level rows
+  are under forced RLS. While adding the backfill we found that forced RLS also binds the table
+  owner, so data updates in migrations silently matched no tenant rows; the abandoned-checkout
+  migration (not yet released) and the location backfill now lift `FORCE` for their statements
+  and restore it. Sales lock the variant row before allocating across locations, so concurrent
+  orders cannot oversell a location. Tests: `locations.e2e` (total = sum of locations after every
+  operation), `locations.spec`.
