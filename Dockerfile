@@ -27,6 +27,9 @@ FROM node:24-bookworm-slim AS api
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /out/api ./
+# Created here (owned by node) so a fresh named volume mounted at /app/storage inherits a
+# writable directory; otherwise Docker creates it as root and media uploads fail.
+RUN mkdir -p /app/storage && chown node:node /app/storage
 USER node
 EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=3s CMD node -e "fetch('http://127.0.0.1:'+(process.env.API_PORT||4000)+'/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

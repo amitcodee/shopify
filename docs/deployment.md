@@ -23,14 +23,16 @@ Reference files: `Dockerfile` (targets `api`, `admin`, `storefront`, `migrate`),
 `deploy/env/*.env.example` (one file per service — least privilege: only `migrate` gets the
 schema-owner credential, the Next.js apps get no database credentials), `.github/workflows/ci.yml`.
 
-> Verification status: the standalone Next.js build and `pnpm deploy` bundle of the API were
-> built and booted natively on Windows during Phase 8. The container images themselves were
-> **not built locally** (Docker is not installed on the development machine); CI or a Docker
-> host must build them before the first release.
+> Verification: the CI `images` job (`scripts/ci-compose-smoke.sh`) builds every image and boots
+> this compose topology (without Caddy) with throwaway secrets on each push: migrations apply,
+> `/api/v1/health/ready` passes, the worker's heartbeat health check passes, both Next.js apps
+> render, and the media volume is writable by the `node` user. Docker is not installed on the
+> development machine, so this job is the only place the images are built. Check it is green
+> before a release.
 
 ## Release procedure
 
-1. CI green on the commit (`pnpm check`, audit, Playwright).
+1. CI green on the commit (`pnpm check`, audit, Playwright, production image smoke test).
 2. Build images: `docker compose -f deploy/docker-compose.prod.yml build`.
 3. **Backup** the database (see runbook) and confirm the dump verifies.
 4. Run migrations: `docker compose … run --rm migrate`. Migrations are additive by policy;

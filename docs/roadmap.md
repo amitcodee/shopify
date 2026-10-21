@@ -74,3 +74,4 @@ Each phase ends with: lint, type check, tests, build all green; docs/threat mode
 - ✅ Account recovery (2026-10-20): emailed unlock links on lockout, merchant forgot/reset password.
 - ✅ Chargebacks (2026-10-20): provider dispute webhooks mirrored to orders, store emails, admin views.
 - ✅ Multiple gateways + Razorpay (2026-10-20): per-store gateway choice; Razorpay Payment Links + Route payouts ([ADR 0007](adr/0007-payment-gateways-razorpay.md)).
+- ✅ Release hardening (2026-10-21): CI builds and boots the production images; dependency audit clean at `high`.

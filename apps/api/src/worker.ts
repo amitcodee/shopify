@@ -3,11 +3,16 @@
  * process in production with RUN_JOBS=false on the API instances; in development the API runs
  * these jobs in-process.
  */
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ConsoleLogger, Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { loadEnv } from './config/env.js';
+
+/** Touched every 30 seconds; read by the worker's container health check. */
+const WORKER_HEARTBEAT_FILE = join(tmpdir(), 'worker-heartbeat');
 
 async function bootstrap(): Promise<void> {
   if (existsSync('.env')) process.loadEnvFile('.env');
@@ -17,8 +22,11 @@ async function bootstrap(): Promise<void> {
   });
   app.enableShutdownHooks();
   Logger.log('Worker running', 'Worker');
-  // Keep the process alive; jobs run on unref'd timers.
-  setInterval(() => undefined, 1 << 30);
+  // Keep the process alive (jobs run on unref'd timers) and prove the event loop is not stuck:
+  // the container health check fails once this file is older than two minutes.
+  const heartbeat = () => writeFileSync(WORKER_HEARTBEAT_FILE, new Date().toISOString());
+  heartbeat();
+  setInterval(heartbeat, 30_000);
 }
 
 void bootstrap();

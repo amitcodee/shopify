@@ -41,11 +41,9 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
 
 ## Accepted risks
 
-| Risk                                                                            | Why accepted / mitigation                                                                                                                               |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The lockout message reveals that an account exists.                             | Usability over secrecy; per-IP throttling bounds the rate. Since 2026-10-20 the owner is emailed an unlock link, so a lockout no longer keeps them out. |
-| `pnpm audit`: 1 high advisory (`braces` via `eslint-config-next`).              | Development/lint-time only, not shipped in any runtime image.                                                                                           |
-| Container images were not built locally (no Docker on the development machine). | The standalone builds were booted natively; CI must build the images before the first release.                                                          |
+| Risk                                                | Why accepted / mitigation                                                                                                                               |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The lockout message reveals that an account exists. | Usability over secrecy; per-IP throttling bounds the rate. Since 2026-10-20 the owner is emailed an unlock link, so a lockout no longer keeps them out. |
 
 ## Follow-ups closed after the review
 
@@ -83,3 +81,11 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   only ids and status are kept. The platform fee is the untransferred remainder of each Payment
   Link, fixed server-side at checkout ([ADR 0007](adr/0007-payment-gateways-razorpay.md)).
   Tests: `razorpay.test`, `razorpay.e2e`.
+- **2026-10-21 — dependency audit and image builds** (were accepted risks). The `braces` advisory
+  has no patched release; `@next/eslint-plugin-next`'s pinned `fast-glob` is overridden with
+  `tinyglobby` (same `globSync` call, no `braces`), and CI now fails on any high advisory in all
+  dependencies, not only critical runtime ones. CI builds the production images and boots the
+  compose topology (`scripts/ci-compose-smoke.sh`). This found two deployment bugs, now
+  fixed: the worker inherited the API's port health check and would always report unhealthy
+  (it now has a heartbeat file check), and `/app/storage` did not exist in the API image, so
+  a fresh media volume was root-owned and uploads would fail for the `node` user.

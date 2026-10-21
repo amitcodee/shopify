@@ -17,3 +17,9 @@ onlyBuiltDependencies:
 # Deliberately blocked: install-time telemetry pulled in by swagger-ui.
 ignoredBuiltDependencies:
   - '@scarf/scarf'
+
+# @next/eslint-plugin-next pins fast-glob 3.3.1 -> micromatch -> braces, which has an unpatched
+# high advisory (GHSA-vfj7-8cjw-p6xm). The plugin only calls `globSync(pattern, { onlyDirectories })`
+# when `settings.next.rootDir` is set (we never set it); tinyglobby offers the same call without braces.
+overrides:
+  '@next/eslint-plugin-next>fast-glob': 'npm:tinyglobby@0.2.17'

@@ -42,6 +42,17 @@ services:
     restart: unless-stopped
     build: { context: .., target: api }
     command: ['node', 'dist/worker.js']
+    # The image's health check probes the API port, which the worker does not open; check the
+    # heartbeat file the worker touches every 30 seconds instead.
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "const s=require('fs').statSync(require('os').tmpdir()+'/worker-heartbeat');process.exit(Date.now()-s.mtimeMs<120000?0:1)"
+      interval: 30s
+      timeout: 3s
+      start_period: 30s
     volumes: [media:/app/storage]
     depends_on: { migrate: { condition: service_completed_successfully } }
 
