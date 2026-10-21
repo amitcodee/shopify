@@ -79,3 +79,27 @@ test('a password-protected store shows a password page until the visitor enters 
   await visitor.goto(storefrontUrl(subdomain, '/collections/all'));
   await expect(visitor.getByRole('heading', { name: 'All products' })).toBeVisible();
 });
+
+test('merchant publishes a blog post that shoppers can read', async ({ page, browser }) => {
+  await signUp(page);
+  const { subdomain } = await createStore(page, 'Journal Co', { payments: false });
+  await page.getByRole('link', { name: 'Online store' }).first().click();
+  await page.getByRole('link', { name: 'Blog' }).click();
+  await page.getByRole('link', { name: 'Write post' }).click();
+  await page.getByLabel('Title', { exact: true }).fill('How we roast');
+  await page.getByLabel('Excerpt').fill('Behind the scenes.');
+  await page.getByLabel('Content').fill('Slowly.\n\nWith care.');
+  await page.getByLabel('Tags').fill('coffee, process');
+  await page.getByLabel('Visibility').selectOption('published');
+  await page.getByRole('button', { name: 'Create post' }).click();
+  await expect(page.getByLabel('URL handle')).toHaveValue('how-we-roast');
+
+  const shopper = await browser.newPage();
+  await shopper.goto(storefrontUrl(subdomain, '/blog'));
+  await expect(shopper.getByText('Behind the scenes.')).toBeVisible();
+  await shopper.getByRole('link', { name: 'How we roast' }).click();
+  await expect(shopper.getByRole('heading', { name: 'How we roast' })).toBeVisible();
+  await expect(shopper.getByText('With care.')).toBeVisible();
+  await shopper.getByRole('link', { name: 'coffee' }).click();
+  await expect(shopper.getByRole('heading', { name: 'Blog · coffee' })).toBeVisible();
+});

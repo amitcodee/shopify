@@ -83,3 +83,4 @@ Each phase ends with: lint, type check, tests, build all green; docs/threat mode
 - ✅ Product CSV import/export (2026-10-21): Shopify-style columns, one row per variant; import creates new products through the normal validation and plan limits, skips existing handles and reports problems by row.
 - ✅ Developer platform (2026-10-21): store-scoped Admin API access tokens and signed outbound webhooks with retries and SSRF protection ([ADR 0008](adr/0008-developer-platform.md)).
 - ✅ Storefront password page (2026-10-21): pre-launch stores require a password; the API itself refuses catalog, cart and checkout without the access token.
+- ✅ Blog (2026-10-21): posts with drafts, scheduled publishing, authors, excerpts and tags at `/blog`; menu link type and sitemap entries.

@@ -132,6 +132,7 @@ model Store {
   draftOrders    DraftOrder[]
   giftCards      GiftCard[]
   apiTokens      ApiToken[]
+  blogPosts      BlogPost[]
   webhooks       WebhookSubscription[]
   subscription   Subscription?
   paymentAccount PaymentAccount?
@@ -366,6 +367,28 @@ model Page {
 
   @@unique([storeId, id])
   @@unique([storeId, handle])
+}
+
+/// Blog article (one blog per store, at /blog). Plain text only, like pages.
+model BlogPost {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  storeId     String    @db.Uuid
+  title       String
+  handle      String
+  excerpt     String    @default("")
+  body        String    @default("")
+  author      String    @default("")
+  tags        String[]  @default([])
+  /// Null while a draft; visible on the storefront from this time on.
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, id])
+  @@unique([storeId, handle])
+  @@index([storeId, publishedAt])
 }
 
 enum PolicyKind {

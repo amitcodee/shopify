@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
+  type BlogPost,
+  blogPostInputSchema,
   type Menu,
   type MenuHandle,
   menuHandleSchema,
@@ -28,6 +30,7 @@ import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { UuidParam } from '../common/uuid-param.pipe.js';
 import { ApiZodBody, ZodPipe } from '../common/zod.js';
 import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
+import { BlogService } from './blog.service.js';
 import { OnlineStoreService } from './online-store.service.js';
 
 type PageBody = z.output<typeof pageInputSchema>;
@@ -38,7 +41,10 @@ type PageBody = z.output<typeof pageInputSchema>;
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId')
 export class OnlineStoreController {
-  constructor(private readonly onlineStore: OnlineStoreService) {}
+  constructor(
+    private readonly onlineStore: OnlineStoreService,
+    private readonly blog: BlogService,
+  ) {}
 
   @Get('pages')
   @RequirePermission('settings:read')
@@ -90,6 +96,58 @@ export class OnlineStoreController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<void> {
     return this.onlineStore.removePage(store.id, id, user, meta);
+  }
+
+  @Get('blog-posts')
+  @RequirePermission('settings:read')
+  listPosts(@CurrentStore() store: StoreContext): Promise<BlogPost[]> {
+    return this.blog.list(store.id);
+  }
+
+  @Post('blog-posts')
+  @RequirePermission('themes:write')
+  @ApiZodBody(blogPostInputSchema)
+  createPost(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodPipe(blogPostInputSchema)) body: z.output<typeof blogPostInputSchema>,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<BlogPost> {
+    return this.blog.create(store.id, body, user, meta);
+  }
+
+  @Get('blog-posts/:postId')
+  @RequirePermission('settings:read')
+  getPost(
+    @CurrentStore() store: StoreContext,
+    @Param('postId', UuidParam) id: string,
+  ): Promise<BlogPost> {
+    return this.blog.get(store.id, id);
+  }
+
+  @Put('blog-posts/:postId')
+  @RequirePermission('themes:write')
+  @ApiZodBody(blogPostInputSchema)
+  updatePost(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @Param('postId', UuidParam) id: string,
+    @Body(new ZodPipe(blogPostInputSchema)) body: z.output<typeof blogPostInputSchema>,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<BlogPost> {
+    return this.blog.update(store.id, id, body, user, meta);
+  }
+
+  @Delete('blog-posts/:postId')
+  @HttpCode(204)
+  @RequirePermission('themes:write')
+  removePost(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @Param('postId', UuidParam) id: string,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<void> {
+    return this.blog.remove(store.id, id, user, meta);
   }
 
   @Get('policies')

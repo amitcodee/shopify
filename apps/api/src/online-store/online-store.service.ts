@@ -325,6 +325,8 @@ export class OnlineStoreService {
           return internal('/collections/all');
         case 'search':
           return internal('/search');
+        case 'blog':
+          return internal('/blog');
         case 'collection':
           return live.collection.has(link.handle) ? internal(`/collections/${link.handle}`) : [];
         case 'product':

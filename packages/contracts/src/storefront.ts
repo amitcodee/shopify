@@ -149,6 +149,7 @@ export const storefrontSitemapSchema = z.object({
   products: z.array(sitemapEntrySchema),
   collections: z.array(sitemapEntrySchema),
   pages: z.array(sitemapEntrySchema),
+  posts: z.array(sitemapEntrySchema),
   policies: z.array(z.string()),
 });
 export type StorefrontSitemap = z.infer<typeof storefrontSitemapSchema>;

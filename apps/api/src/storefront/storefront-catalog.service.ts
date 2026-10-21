@@ -127,7 +127,7 @@ export class StorefrontCatalogService {
   sitemap(shop: ShopContext): Promise<StorefrontSitemap> {
     return this.tenantDb.run(shop.id, async (tx) => {
       const select = { handle: true, updatedAt: true } as const;
-      const [products, collections, pages, policies] = await Promise.all([
+      const [products, collections, pages, policies, posts] = await Promise.all([
         tx.product.findMany({
           where: { storeId: shop.id, status: 'ACTIVE' },
           orderBy: { updatedAt: 'desc' },
@@ -141,6 +141,12 @@ export class StorefrontCatalogService {
         }),
         tx.page.findMany({ where: { storeId: shop.id, published: true }, select, take: 1000 }),
         tx.storePolicy.findMany({ where: { storeId: shop.id }, select: { kind: true } }),
+        tx.blogPost.findMany({
+          where: { storeId: shop.id, publishedAt: { not: null, lte: new Date() } },
+          orderBy: { publishedAt: 'desc' },
+          select,
+          take: 1000,
+        }),
       ]);
       const entry = (r: { handle: string; updatedAt: Date }) => ({
         handle: r.handle,
@@ -150,6 +156,7 @@ export class StorefrontCatalogService {
         products: products.map(entry),
         collections: collections.map(entry),
         pages: pages.map(entry),
+        posts: posts.map(entry),
         policies: policies.map((p) => p.kind.toLowerCase()),
       };
     });

@@ -64,6 +64,7 @@ export default async function NavigationPage({ params }: { params: Promise<{ sto
         { value: 'home', label: 'Home page' },
         { value: 'catalog', label: 'All products' },
         { value: 'search', label: 'Search' },
+        { value: 'blog', label: 'Blog' },
         { value: 'url', label: 'Custom URL…' },
       ],
     },

@@ -64,6 +64,7 @@ export const menuLinkSchema = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('home') }),
   z.strictObject({ type: z.literal('catalog') }),
   z.strictObject({ type: z.literal('search') }),
+  z.strictObject({ type: z.literal('blog') }),
   z.strictObject({ type: z.literal('collection'), handle: handleSchema }),
   z.strictObject({ type: z.literal('product'), handle: handleSchema }),
   z.strictObject({ type: z.literal('page'), handle: handleSchema }),
@@ -128,4 +129,46 @@ export const storefrontAccessInputSchema = z.strictObject({
   enabled: z.boolean(),
   password: z.string().trim().min(4, 'Use at least 4 characters').max(100).optional(),
   message: z.string().trim().max(500).default(''),
+});
+
+export const blogPostInputSchema = z.strictObject({
+  title: z.string().trim().min(1, 'Enter a title').max(200),
+  handle: handleSchema.optional(),
+  excerpt: z.string().trim().max(500).default(''),
+  body: bodySchema.default(''),
+  author: z.string().trim().max(100).default(''),
+  tags: z
+    .array(z.string().trim().toLowerCase().min(1).max(40))
+    .max(20)
+    .default([])
+    .transform((t) => [...new Set(t)]),
+  /** Publish now, schedule (a future time), or keep as a draft (null). */
+  publishedAt: z.iso.datetime().nullable().default(null),
+});
+export type BlogPostInput = z.input<typeof blogPostInputSchema>;
+
+export const blogPostSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  handle: z.string(),
+  excerpt: z.string(),
+  body: z.string(),
+  author: z.string(),
+  tags: z.array(z.string()),
+  publishedAt: z.iso.datetime().nullable(),
+  status: z.enum(['draft', 'scheduled', 'published']),
+  updatedAt: z.iso.datetime(),
+});
+export type BlogPost = z.infer<typeof blogPostSchema>;
+
+export const storefrontBlogPostSchema = blogPostSchema
+  .omit({ id: true, updatedAt: true, status: true })
+  .extend({
+    publishedAt: z.iso.datetime(),
+  });
+export type StorefrontBlogPost = z.infer<typeof storefrontBlogPostSchema>;
+
+export const blogListQuerySchema = z.strictObject({
+  tag: z.string().trim().toLowerCase().max(40).optional(),
+  page: z.coerce.number().int().min(1).max(1000).default(1),
 });

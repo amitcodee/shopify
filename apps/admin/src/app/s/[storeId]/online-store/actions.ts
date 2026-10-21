@@ -1,6 +1,7 @@
 'use server';
 
 import {
+  type BlogPost,
   type MenuHandle,
   type MenuItem,
   type MenuLink,
@@ -88,6 +89,7 @@ function parseLink(target: string, url: string): MenuLink | null {
     case 'home':
     case 'catalog':
     case 'search':
+    case 'blog':
       return { type };
     case 'collection':
     case 'product':
@@ -164,4 +166,57 @@ export async function saveStorefrontAccessAction(
   }
   revalidatePath(`/s/${storeId}/online-store/password`);
   return { success: 'Saved.' };
+}
+
+function postBody(formData: FormData) {
+  const published = formData.get('visibility') === 'published';
+  const when = optionalString(formData, 'publishedAt');
+  return {
+    title: requiredString(formData, 'title'),
+    handle: optionalString(formData, 'handle'),
+    excerpt: requiredString(formData, 'excerpt'),
+    body: requiredString(formData, 'body'),
+    author: requiredString(formData, 'author'),
+    tags: requiredString(formData, 'tags')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean),
+    // datetime-local has no zone; the form labels it as UTC.
+    publishedAt: published
+      ? when
+        ? new Date(`${when}:00Z`).toISOString()
+        : new Date().toISOString()
+      : null,
+  };
+}
+
+export async function savePostAction(
+  storeId: string,
+  postId: string | null,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  let saved: BlogPost;
+  try {
+    saved = postId
+      ? await api<BlogPost>(`/admin/stores/${storeId}/blog-posts/${postId}`, {
+          method: 'PUT',
+          body: postBody(formData),
+        })
+      : await api<BlogPost>(`/admin/stores/${storeId}/blog-posts`, {
+          method: 'POST',
+          body: postBody(formData),
+        });
+  } catch (error) {
+    return toFormState(error, formData);
+  }
+  revalidatePath(`/s/${storeId}/online-store/blog`);
+  if (!postId) redirect(`/s/${storeId}/online-store/blog/${saved.id}`);
+  return { success: 'Post saved.' };
+}
+
+export async function deletePostAction(storeId: string, postId: string) {
+  await api(`/admin/stores/${storeId}/blog-posts/${postId}`, { method: 'DELETE' });
+  revalidatePath(`/s/${storeId}/online-store/blog`);
+  redirect(`/s/${storeId}/online-store/blog`);
 }

@@ -15,6 +15,9 @@ import {
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import {
   addToCartInputSchema,
+  blogListQuerySchema,
+  type Paginated,
+  type StorefrontBlogPost,
   type Cart,
   type CreatedCart,
   type Policy,
@@ -39,6 +42,7 @@ import type { z } from 'zod';
 import { Public } from '../auth/auth.guard.js';
 import { UuidParam } from '../common/uuid-param.pipe.js';
 import { ApiZodBody, ZodPipe } from '../common/zod.js';
+import { BlogService } from '../online-store/blog.service.js';
 import { OnlineStoreService } from '../online-store/online-store.service.js';
 import { CartService } from './cart.service.js';
 import { StorefrontCatalogService } from './storefront-catalog.service.js';
@@ -63,6 +67,7 @@ export class StorefrontController {
     private readonly catalog: StorefrontCatalogService,
     private readonly carts: CartService,
     private readonly onlineStore: OnlineStoreService,
+    private readonly blog: BlogService,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -113,6 +118,22 @@ export class StorefrontController {
   @Get('pages/:handle')
   page(@CurrentShop() shop: ShopContext, @Param('handle') handle: string): Promise<StorefrontPage> {
     return this.onlineStore.storefrontPage(shop.id, handle.slice(0, 120));
+  }
+
+  @Get('blog')
+  blogPosts(
+    @CurrentShop() shop: ShopContext,
+    @Query(new ZodPipe(blogListQuerySchema)) query: z.output<typeof blogListQuerySchema>,
+  ): Promise<Paginated<StorefrontBlogPost>> {
+    return this.blog.storefrontList(shop.id, query);
+  }
+
+  @Get('blog/:handle')
+  blogPost(
+    @CurrentShop() shop: ShopContext,
+    @Param('handle') handle: string,
+  ): Promise<StorefrontBlogPost> {
+    return this.blog.storefrontPost(shop.id, handle.slice(0, 120));
   }
 
   @Get('policies/:kind')

@@ -319,4 +319,70 @@ describe('Online store: pages, policies, navigation', () => {
     await sf('get', '/products').expect(200);
     expect((await sf('get', '/shop').expect(200)).body.locked).toBe(false);
   });
+
+  it('publishes blog posts: drafts and scheduled posts stay hidden', async () => {
+    const { merchant, admin, sf } = await setup();
+    const post = (body: object) =>
+      ctx.http().post(`${admin}/blog-posts`).set(merchant.auth).send(body).expect(201);
+    const now = new Date(Date.now() - 60_000).toISOString();
+    const live = await post({
+      title: 'Spring collection',
+      excerpt: 'New mugs',
+      body: 'Hello.\n\nWorld.',
+      author: 'Sam',
+      tags: ['News', 'mugs'],
+      publishedAt: now,
+    });
+    await post({ title: 'Draft idea' });
+    await post({
+      title: 'Next month',
+      publishedAt: new Date(Date.now() + 86_400_000).toISOString(),
+    });
+    await post({
+      title: 'Older',
+      tags: ['news'],
+      publishedAt: new Date(Date.now() - 86_400_000).toISOString(),
+    });
+
+    const list = await sf('get', '/blog').expect(200);
+    expect(list.body.items.map((p: { title: string }) => p.title)).toEqual([
+      'Spring collection',
+      'Older',
+    ]);
+    expect(list.body.items[0]).toMatchObject({
+      handle: 'spring-collection',
+      author: 'Sam',
+      tags: ['news', 'mugs'],
+    });
+    const tagged = await sf('get', '/blog?tag=mugs').expect(200);
+    expect(tagged.body.total).toBe(1);
+    await sf('get', '/blog/draft-idea').expect(404);
+    await sf('get', '/blog/next-month').expect(404);
+    expect((await sf('get', '/blog/spring-collection').expect(200)).body.body).toBe(
+      'Hello.\n\nWorld.',
+    );
+
+    // Unpublishing hides it again; the admin still lists every post.
+    await ctx
+      .http()
+      .put(`${admin}/blog-posts/${live.body.id}`)
+      .set(merchant.auth)
+      .send({ title: 'Spring collection', publishedAt: null })
+      .expect(200);
+    await sf('get', '/blog/spring-collection').expect(404);
+    const all = await ctx.http().get(`${admin}/blog-posts`).set(merchant.auth).expect(200);
+    expect(all.body).toHaveLength(4);
+
+    await ctx
+      .http()
+      .put(`${admin}/menus/main`)
+      .set(merchant.auth)
+      .send({ items: [{ title: 'Journal', link: { type: 'blog' } }] })
+      .expect(200);
+    expect((await sf('get', '/shop').expect(200)).body.menus.main).toEqual([
+      { title: 'Journal', href: '/blog', external: false },
+    ]);
+    const map = await sf('get', '/sitemap').expect(200);
+    expect(map.body.posts.map((p: { handle: string }) => p.handle)).toEqual(['older']);
+  });
 });

@@ -17,6 +17,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${origin}/products/${p.handle}`,
       lastModified: p.updatedAt,
     })),
+    { url: `${origin}/blog` },
+    ...data.posts.map((p) => ({ url: `${origin}/blog/${p.handle}`, lastModified: p.updatedAt })),
     ...data.pages.map((p) => ({ url: `${origin}/pages/${p.handle}`, lastModified: p.updatedAt })),
     ...data.policies.map((kind) => ({ url: `${origin}/policies/${kind}` })),
   ];
