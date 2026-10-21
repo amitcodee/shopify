@@ -1,6 +1,7 @@
 import { type AdminCustomer, formatMoney, type Paginated } from '@repo/contracts';
 import Link from 'next/link';
 import {
+  ButtonLink,
   Badge,
   EmptyState,
   formatDateTime,
@@ -29,7 +30,14 @@ export default async function CustomersPage({
 
   return (
     <>
-      <PageHeader title="Customers" />
+      <PageHeader
+        title="Customers"
+        actions={
+          <ButtonLink href={`/s/${storeId}/customers/segments`} variant="secondary">
+            Segments
+          </ButtonLink>
+        }
+      />
       <form action={base} className="mb-4">
         <label htmlFor="customer-search" className="sr-only">
           Search customers

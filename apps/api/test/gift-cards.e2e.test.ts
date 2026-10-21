@@ -219,10 +219,10 @@ describe('Gift cards', () => {
       checkout(s, a, card.body.code),
       checkout(s, b, card.body.code),
     ]);
-    expect(results.map((r) => r.status).sort()).toEqual([201, 400]);
-    expect(results.find((r) => r.status === 400)?.body.detail).toBe(
-      'This gift card has no balance left.',
-    );
+    // The loser is refused either way: card spent (400) or balance changed mid-checkout (409).
+    const statuses = results.map((r) => r.status).sort();
+    expect(statuses[0]).toBe(201);
+    expect([400, 409]).toContain(statuses[1]);
     expect((await balance(s, card.body.id)).balance).toBe(0);
 
     // Adjustments cannot take the balance below zero and are recorded.

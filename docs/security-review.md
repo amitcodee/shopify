@@ -144,3 +144,7 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   an HMAC over the store id and the password's change time, so changing the password or
   re-enabling protection signs every visitor out; it is kept in an HttpOnly cookie. Tests:
   `online-store.e2e`, `online-store.spec`.
+- **2026-10-21 — customer segments.** Conditions are a closed, typed set compiled to
+  parameterised SQL (no merchant text reaches the query), evaluated under the tenant's RLS
+  context. Viewing needs `customers:read`; the CSV export of personal data is recorded in the
+  audit log. Tests: `segments.e2e`, `segments.spec`.

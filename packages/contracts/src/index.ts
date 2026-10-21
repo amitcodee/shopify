@@ -25,3 +25,4 @@ export * from './gift-cards.js';
 export * from './csv.js';
 export * from './product-csv.js';
 export * from './developer.js';
+export * from './segments.js';

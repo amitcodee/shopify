@@ -14,6 +14,7 @@ import {
   CustomerPrivacyController,
   CustomerPrivacyService,
 } from '../customers/customer-privacy.js';
+import { SegmentsController, SegmentsService } from '../customers/segments.js';
 import { MaintenanceService } from '../jobs/maintenance.service.js';
 import { JobsService } from '../jobs/jobs.service.js';
 import { OrdersCoreModule } from '../orders/orders-core.module.js';
@@ -36,6 +37,7 @@ import { DeveloperModule } from '../webhooks/developer.js';
     DraftOrdersController,
     InvoicesController,
     AdminCustomersController,
+    SegmentsController,
     CustomerPrivacyController,
     AnalyticsController,
   ],
@@ -46,6 +48,7 @@ import { DeveloperModule } from '../webhooks/developer.js';
     OrdersService,
     DraftOrdersService,
     AdminCustomersService,
+    SegmentsService,
     AnalyticsService,
     JobsService,
     CustomerPrivacyService,

@@ -85,3 +85,4 @@ Each phase ends with: lint, type check, tests, build all green; docs/threat mode
 - ✅ Storefront password page (2026-10-21): pre-launch stores require a password; the API itself refuses catalog, cart and checkout without the access token.
 - ✅ Blog (2026-10-21): posts with drafts, scheduled publishing, authors, excerpts and tags at `/blog`; menu link type and sitemap entries.
 - ✅ Gift card products (2026-10-21): products flagged as gift cards (variants = denominations) issue and email one card per unit when paid; never discounted, shipped, taxed or stock-tracked, and not payable with gift cards.
+- ✅ Customer segments (2026-10-21): saved filters (paid orders, spend, last order, signup age, marketing consent, account) with live counts, member lists and audited CSV export.

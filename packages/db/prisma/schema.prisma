@@ -133,6 +133,7 @@ model Store {
   giftCards      GiftCard[]
   apiTokens      ApiToken[]
   blogPosts      BlogPost[]
+  segments       CustomerSegment[]
   webhooks       WebhookSubscription[]
   subscription   Subscription?
   paymentAccount PaymentAccount?
@@ -1223,4 +1224,19 @@ model WebhookDelivery {
 
   @@index([status, nextAttemptAt])
   @@index([subscriptionId, createdAt])
+}
+
+/// Saved customer filter (see @repo/contracts segmentConditionSchema), evaluated on demand.
+model CustomerSegment {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  storeId    String   @db.Uuid
+  name       String
+  conditions Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, id])
+  @@index([storeId, name])
 }
