@@ -233,4 +233,37 @@ describe('Online store: pages, policies, navigation', () => {
     ]);
     expect((await sf('get', '/shop').expect(200)).body.menus.main).toHaveLength(2);
   });
+
+  it('lists only published content in the sitemap', async () => {
+    const { merchant, admin, sf } = await setup();
+    await ctx
+      .http()
+      .post(`${admin}/products`)
+      .set(merchant.auth)
+      .send({ title: 'Live mug', status: 'ACTIVE', variants: [{ price: 100 }] })
+      .expect(201);
+    await ctx
+      .http()
+      .post(`${admin}/products`)
+      .set(merchant.auth)
+      .send({ title: 'Draft mug', variants: [{ price: 100 }] })
+      .expect(201);
+    await ctx
+      .http()
+      .post(`${admin}/pages`)
+      .set(merchant.auth)
+      .send({ title: 'Hidden', published: false })
+      .expect(201);
+    await ctx
+      .http()
+      .put(`${admin}/policies/terms`)
+      .set(merchant.auth)
+      .send({ body: 'Be nice.' })
+      .expect(200);
+
+    const map = await sf('get', '/sitemap').expect(200);
+    expect(map.body.products.map((p: { handle: string }) => p.handle)).toEqual(['live-mug']);
+    expect(map.body.pages).toEqual([]);
+    expect(map.body.policies).toEqual(['terms']);
+  });
 });

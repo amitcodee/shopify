@@ -22,6 +22,7 @@ import {
   STOREFRONT_HEADERS,
   type StorefrontCollection,
   type StorefrontPage,
+  type StorefrontSitemap,
   type StorefrontProduct,
   type StorefrontProductQuery,
   storefrontProductQuerySchema,
@@ -54,6 +55,11 @@ export class StorefrontController {
   @Get('shop')
   shop(@CurrentShop() shop: ShopContext): Promise<Shop> {
     return this.catalog.shop(shop);
+  }
+
+  @Get('sitemap')
+  sitemap(@CurrentShop() shop: ShopContext): Promise<StorefrontSitemap> {
+    return this.catalog.sitemap(shop);
   }
 
   @Get('products')

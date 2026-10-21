@@ -1,8 +1,8 @@
 import 'server-only';
 import type { Cart, Shop } from '@repo/contracts';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { cache } from 'react';
-import { isNotFound, sf } from './api';
+import { isNotFound, requestHost, sf } from './api';
 
 export const CART_COOKIE = 'cart_token';
 
@@ -66,4 +66,14 @@ export async function setCustomerToken(token: string, expiresAt: string): Promis
 
 export async function clearCustomerToken(): Promise<void> {
   (await cookies()).delete(CUSTOMER_COOKIE);
+}
+
+/**
+ * Absolute origin of the store being visited (sitemaps and robots.txt need absolute URLs). The
+ * TLS-terminating proxy (Caddy) reports the shopper's scheme in X-Forwarded-Proto.
+ */
+export async function storeOrigin(): Promise<string> {
+  const forwarded = (await headers()).get('x-forwarded-proto')?.split(',')[0]?.trim();
+  const protocol = forwarded === 'https' ? 'https' : 'http';
+  return `${protocol}://${await requestHost()}`;
 }

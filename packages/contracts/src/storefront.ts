@@ -137,3 +137,13 @@ export type Cart = z.infer<typeof cartSchema>;
 
 export const createdCartSchema = z.object({ token: z.string(), cart: cartSchema });
 export type CreatedCart = z.infer<typeof createdCartSchema>;
+
+const sitemapEntrySchema = z.object({ handle: z.string(), updatedAt: z.iso.datetime() });
+/** Published, linkable content for sitemap.xml. */
+export const storefrontSitemapSchema = z.object({
+  products: z.array(sitemapEntrySchema),
+  collections: z.array(sitemapEntrySchema),
+  pages: z.array(sitemapEntrySchema),
+  policies: z.array(z.string()),
+});
+export type StorefrontSitemap = z.infer<typeof storefrontSitemapSchema>;

@@ -78,3 +78,4 @@ Each phase ends with: lint, type check, tests, build all green; docs/threat mode
 - ✅ Online store content (2026-10-21): pages, store policies (footer + checkout links), main/footer navigation menus with typed links.
 - ✅ Abandoned checkout recovery (2026-10-21): one email after a store-chosen delay with a signed link that rebuilds the cart; admin list with recovered orders.
 - ✅ Draft orders (2026-10-21): merchant-built orders with catalog or custom items, custom prices, discount and shipping; emailed invoices paid on the storefront, or marked as paid (manual payment, refunds recorded only).
+- ✅ SEO basics (2026-10-21): per-store `sitemap.xml` (active products, published collections/pages, policies) and `robots.txt`.

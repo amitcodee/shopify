@@ -70,6 +70,14 @@ test('shopper browses a store by subdomain, searches, and manages the cart', asy
   await expect(shopper).toHaveURL(/\/cart\?recovery=expired$/);
   await expect(shopper.getByText('That link has expired')).toBeVisible();
 
+  // Crawlers get absolute URLs for the store's own host.
+  const sitemap = await shopper.goto(storefrontUrl(subdomain, '/sitemap.xml'));
+  expect(sitemap?.ok()).toBe(true);
+  expect(await sitemap?.text()).toContain(storefrontUrl(subdomain, '/collections/all'));
+  const robots = await (await shopper.goto(storefrontUrl(subdomain, '/robots.txt')))?.text();
+  expect(robots).toContain('Disallow: /checkout');
+  expect(robots).toContain(`Sitemap: ${storefrontUrl(subdomain, '/sitemap.xml')}`);
+
   // Unknown subdomains show a not-found page; the bare domain shows the platform landing.
   await shopper.goto(storefrontUrl('no-such-store'));
   await expect(shopper.getByRole('heading', { name: 'Store not found' })).toBeVisible();

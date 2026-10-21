@@ -6,6 +6,7 @@ import type {
   StorefrontCollection,
   StorefrontProduct,
   StorefrontProductQuery,
+  StorefrontSitemap,
 } from '@repo/contracts';
 import { Prisma, type TenantTx } from '@repo/db';
 import { TenantDb } from '../database/database.module.js';
@@ -72,6 +73,38 @@ export class StorefrontCatalogService {
         collections,
         theme: shop.theme,
         ...navigation,
+      };
+    });
+  }
+
+  /** Everything a crawler may index (capped; large catalogs list their newest items first). */
+  sitemap(shop: ShopContext): Promise<StorefrontSitemap> {
+    return this.tenantDb.run(shop.id, async (tx) => {
+      const select = { handle: true, updatedAt: true } as const;
+      const [products, collections, pages, policies] = await Promise.all([
+        tx.product.findMany({
+          where: { storeId: shop.id, status: 'ACTIVE' },
+          orderBy: { updatedAt: 'desc' },
+          select,
+          take: 5000,
+        }),
+        tx.collection.findMany({
+          where: { storeId: shop.id, published: true },
+          select,
+          take: 1000,
+        }),
+        tx.page.findMany({ where: { storeId: shop.id, published: true }, select, take: 1000 }),
+        tx.storePolicy.findMany({ where: { storeId: shop.id }, select: { kind: true } }),
+      ]);
+      const entry = (r: { handle: string; updatedAt: Date }) => ({
+        handle: r.handle,
+        updatedAt: r.updatedAt.toISOString(),
+      });
+      return {
+        products: products.map(entry),
+        collections: collections.map(entry),
+        pages: pages.map(entry),
+        policies: policies.map((p) => p.kind.toLowerCase()),
       };
     });
   }
