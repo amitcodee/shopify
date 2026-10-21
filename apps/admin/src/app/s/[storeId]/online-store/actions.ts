@@ -11,7 +11,13 @@ import {
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
-import { type FormState, optionalString, requiredString, toFormState } from '@/lib/form';
+import {
+  type FormState,
+  formValues,
+  optionalString,
+  requiredString,
+  toFormState,
+} from '@/lib/form';
 
 function pageBody(formData: FormData) {
   return {
@@ -112,7 +118,7 @@ export async function saveMenuAction(
       requiredString(formData, `target-${i}`),
       requiredString(formData, `url-${i}`),
     );
-    if (!link) return { error: `Choose where “${title}” links to.` };
+    if (!link) return { error: `Choose where “${title}” links to.`, values: formValues(formData) };
     const position = Number(requiredString(formData, `position-${i}`)) || i + 1;
     entries.push({ position, index: i, item: { title, link } });
   }
@@ -124,11 +130,11 @@ export async function saveMenuAction(
     });
   } catch (error) {
     // Validation paths look like "items.3.link.url"; name the row instead of a hidden field.
-    const state = toFormState(error);
+    const state = toFormState(error, formData);
     const [path, message] = Object.entries(state?.fieldErrors ?? {})[0] ?? [];
     const row = /^items\.(\d+)/.exec(path ?? '');
     const title = row ? entries[Number(row[1])]?.item.title : undefined;
-    return title ? { error: `“${title}”: ${message}` } : state;
+    return title ? { error: `“${title}”: ${message}`, values: state?.values } : state;
   }
   revalidatePath(`/s/${storeId}/online-store/navigation`);
   return { success: 'Menu saved.' };

@@ -1,6 +1,14 @@
 import { formatMoney, type OrderListItem, type Paginated } from '@repo/contracts';
 import Link from 'next/link';
-import { EmptyState, formatDateTime, PageHeader, Pagination, Table, Td } from '@/components/ui';
+import {
+  ButtonLink,
+  EmptyState,
+  formatDateTime,
+  PageHeader,
+  Pagination,
+  Table,
+  Td,
+} from '@/components/ui';
 import { api } from '@/lib/api';
 import { FinancialBadge, FulfillmentBadge, OrderStatusBadge } from './badges';
 
@@ -42,12 +50,17 @@ export default async function OrdersPage({
       <PageHeader
         title="Orders"
         actions={
-          <Link
-            href={`${base}/abandoned`}
-            className="text-sm text-indigo-600 hover:text-indigo-500"
-          >
-            Abandoned checkouts
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href={`${base}/abandoned`}
+              className="text-sm text-indigo-600 hover:text-indigo-500"
+            >
+              Abandoned checkouts
+            </Link>
+            <ButtonLink href={`${base}/drafts`} variant="secondary">
+              Draft orders
+            </ButtonLink>
+          </div>
         }
       />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

@@ -123,6 +123,7 @@ model Store {
   pages          Page[]
   policies       StorePolicy[]
   menus          Menu[]
+  draftOrders    DraftOrder[]
   subscription   Subscription?
   paymentAccount PaymentAccount?
 
@@ -440,10 +441,11 @@ model Customer {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  store    Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  sessions CustomerSession[]
-  tokens   CustomerToken[]
-  orders   Order[]
+  store       Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  sessions    CustomerSession[]
+  tokens      CustomerToken[]
+  orders      Order[]
+  draftOrders DraftOrder[]
 
   @@unique([storeId, id])
   @@unique([storeId, email])
@@ -506,8 +508,55 @@ enum FulfillmentStatus {
 
 /// Per-store sequential order numbers (1001, 1002, ...).
 model OrderCounter {
-  storeId String @id @db.Uuid
-  next    Int    @default(1001)
+  storeId   String @id @db.Uuid
+  next      Int    @default(1001)
+  /// Next draft order number (draft #D1, #D2, ...).
+  nextDraft Int    @default(1)
+}
+
+enum DraftOrderStatus {
+  OPEN
+  INVOICE_SENT
+  COMPLETED
+}
+
+/// Order the merchant builds in the admin, then invoices (shopper pays online) or marks paid.
+model DraftOrder {
+  id              String           @id @default(uuid(7)) @db.Uuid
+  storeId         String           @db.Uuid
+  number          Int
+  status          DraftOrderStatus @default(OPEN)
+  customerId      String?          @db.Uuid
+  email           String?
+  /// Line snapshots (see @repo/contracts draftOrderLineSchema); prices are fixed on the draft.
+  lines           Json
+  shippingAddress Json?
+  shippingTitle   String?
+  shippingPrice   Int              @default(0)
+  discountType    String?
+  discountValue   Int?
+  note            String?
+  currency        String           @db.Char(3)
+  subtotal        Int              @default(0)
+  discountTotal   Int              @default(0)
+  shippingTotal   Int              @default(0)
+  taxTotal        Int              @default(0)
+  total           Int              @default(0)
+  /// Latest order created from this draft (awaiting payment, or the completed order).
+  orderId         String?          @db.Uuid
+  invoiceSentAt   DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  store    Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [storeId, customerId], references: [storeId, id])
+  order    Order?    @relation(fields: [storeId, orderId], references: [storeId, id])
+
+  @@unique([storeId, id])
+  @@unique([storeId, number])
+  @@index([storeId, status, createdAt])
+  @@index([orderId])
 }
 
 model Order {
@@ -555,6 +604,7 @@ model Order {
   disputes     Dispute[]
   fulfillments Fulfillment[]
   events       OrderEvent[]
+  draftOrders  DraftOrder[]
 
   @@unique([storeId, id])
   @@unique([storeId, number])

@@ -48,7 +48,7 @@ function customerToken(req: Request): string | null {
   return token && token.length <= 200 ? token : null;
 }
 
-function signedHost(req: Request): string {
+export function signedHost(req: Request): string {
   const value = req.headers[STOREFRONT_HEADERS.host];
   return (Array.isArray(value) ? value[0] : value) ?? '';
 }

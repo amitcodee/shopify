@@ -28,7 +28,7 @@ import {
   shippingConfirmationEmail,
 } from '../outbox/templates.js';
 import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-provider.js';
-import { OrderLifecycle } from './order-lifecycle.service.js';
+import { MANUAL_PAYMENT, OrderLifecycle } from './order-lifecycle.service.js';
 
 const detailInclude = {
   lines: true,
@@ -159,15 +159,20 @@ export class OrdersService {
     const provider = this.providers.get(pending.payment.provider);
     let result: Awaited<ReturnType<PaymentProvider['refund']>> | null = null;
     try {
-      if (!provider) throw new Error(`Provider ${pending.payment.provider} unavailable`);
-      result = await provider.refund({
-        providerRef: pending.payment.providerRef,
-        providerPaymentId: pending.payment.providerPaymentId,
-        amount: input.amount,
-        currency: pending.currency,
-        idempotencyKey: `refund-${pending.refund.id}`,
-        reverseTransfer: pending.payment.destinationAccountId !== null,
-      });
+      if (pending.payment.provider === MANUAL_PAYMENT) {
+        // Collected outside the platform, so it is returned outside it too: record it only.
+        result = { status: 'SUCCEEDED', providerRef: `manual-refund-${pending.refund.id}` };
+      } else {
+        if (!provider) throw new Error(`Provider ${pending.payment.provider} unavailable`);
+        result = await provider.refund({
+          providerRef: pending.payment.providerRef,
+          providerPaymentId: pending.payment.providerPaymentId,
+          amount: input.amount,
+          currency: pending.currency,
+          idempotencyKey: `refund-${pending.refund.id}`,
+          reverseTransfer: pending.payment.destinationAccountId !== null,
+        });
+      }
     } catch {
       result = null;
     }

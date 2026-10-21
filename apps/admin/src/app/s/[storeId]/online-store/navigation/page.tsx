@@ -8,7 +8,7 @@ import {
   POLICY_TITLES,
   type ProductListItem,
 } from '@repo/contracts';
-import { ActionForm, SubmitButton } from '@/components/form';
+import { ActionForm, InlineInput, InlineSelect, SubmitButton } from '@/components/form';
 import { Card } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
@@ -31,9 +31,6 @@ const MENU_INFO: Record<Menu['handle'], { title: string; description: string }> 
 /** Empty rows offered below the saved items (a menu holds at most 20 links). */
 const SPARE_ROWS = 3;
 const MAX_ITEMS = 20;
-
-const inputClass =
-  'block w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-slate-50';
 
 function targetValue(link: MenuLink): string {
   switch (link.type) {
@@ -110,46 +107,33 @@ export default async function NavigationPage({ params }: { params: Promise<{ sto
                   const link = item?.link;
                   return (
                     <div key={i} className="grid gap-2 sm:grid-cols-[4rem_1fr_1fr_1fr]">
-                      <input
+                      <InlineInput
                         name={`position-${i}`}
+                        label={`Order of link ${i + 1}`}
                         type="number"
                         min={1}
                         max={99}
                         defaultValue={i + 1}
-                        aria-label={`Order of link ${i + 1}`}
-                        className={inputClass}
                       />
-                      <input
+                      <InlineInput
                         name={`title-${i}`}
+                        label={`Label of link ${i + 1}`}
                         defaultValue={item?.title ?? ''}
                         maxLength={60}
                         placeholder="Label (empty to remove)"
-                        aria-label={`Label of link ${i + 1}`}
-                        className={inputClass}
                       />
-                      <select
+                      <InlineSelect
                         name={`target-${i}`}
+                        label={`Destination of link ${i + 1}`}
                         defaultValue={link ? targetValue(link) : 'home'}
-                        aria-label={`Destination of link ${i + 1}`}
-                        className={inputClass}
-                      >
-                        {targets.map((g) => (
-                          <optgroup key={g.group} label={g.group}>
-                            {g.options.map((o) => (
-                              <option key={o.value} value={o.value}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </select>
-                      <input
+                        groups={targets.map((g) => ({ label: g.group, options: g.options }))}
+                      />
+                      <InlineInput
                         name={`url-${i}`}
+                        label={`Custom URL of link ${i + 1}`}
                         defaultValue={link?.type === 'url' ? link.url : ''}
                         maxLength={500}
                         placeholder="/path or https://…"
-                        aria-label={`Custom URL of link ${i + 1}`}
-                        className={inputClass}
                       />
                     </div>
                   );

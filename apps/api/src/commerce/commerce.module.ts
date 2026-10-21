@@ -17,6 +17,8 @@ import {
 import { MaintenanceService } from '../jobs/maintenance.service.js';
 import { JobsService } from '../jobs/jobs.service.js';
 import { OrdersCoreModule } from '../orders/orders-core.module.js';
+import { DraftOrdersController, InvoicesController } from '../orders/draft-orders.controller.js';
+import { DraftOrdersService } from '../orders/draft-orders.service.js';
 import { OrdersController } from '../orders/orders.controller.js';
 import { OrdersService } from '../orders/orders.service.js';
 import { PaymentsModule } from '../payments/payments.module.js';
@@ -30,6 +32,8 @@ import { StorefrontModule } from '../storefront/storefront.module.js';
     CartRecoveryController,
     AbandonedCheckoutsController,
     OrdersController,
+    DraftOrdersController,
+    InvoicesController,
     AdminCustomersController,
     CustomerPrivacyController,
     AnalyticsController,
@@ -39,6 +43,7 @@ import { StorefrontModule } from '../storefront/storefront.module.js';
     CheckoutRecoveryService,
     CustomerAuthService,
     OrdersService,
+    DraftOrdersService,
     AdminCustomersService,
     AnalyticsService,
     JobsService,

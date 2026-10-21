@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import type { OrderLine, Prisma, PrismaClient, TenantTx } from '@repo/db';
 import { DiscountRules } from '../commerce/commerce-rules.js';
 import { PLATFORM_DB, TenantDb } from '../database/database.module.js';
@@ -25,6 +25,9 @@ export interface PaidOutcome {
  * Order state transitions shared by checkout, payment webhooks, the admin, and background
  * jobs. Every transition runs inside a tenant transaction and writes an order event.
  */
+/** Provider name of payments collected outside the platform (see markPaidManually). */
+export const MANUAL_PAYMENT = 'manual';
+
 @Injectable()
 export class OrderLifecycle {
   private readonly logger = new Logger(OrderLifecycle.name);
@@ -55,6 +58,47 @@ export class OrderLifecycle {
         data: extra.data,
       },
     });
+  }
+
+  /** Next sequential order number for the store (first order is #1001). */
+  async allocateOrderNumber(tx: TenantTx, storeId: string): Promise<number> {
+    const [counter] = await tx.$queryRaw<{ number: number }[]>`
+      INSERT INTO "OrderCounter" ("storeId", "next") VALUES (${storeId}::uuid, 1002)
+      ON CONFLICT ("storeId") DO UPDATE SET "next" = "OrderCounter"."next" + 1
+      RETURNING "next" - 1 AS number`;
+    if (!counter) throw new Error('Could not allocate an order number');
+    return counter.number;
+  }
+
+  /** Atomic conditional decrements: concurrent checkouts can never oversell. */
+  async reserveStock(
+    tx: TenantTx,
+    storeId: string,
+    orderId: string,
+    lines: { variantId: string | null; title: string; quantity: number; trackInventory: boolean }[],
+  ): Promise<void> {
+    for (const line of lines) {
+      if (!line.trackInventory || !line.variantId) continue;
+      const rows = await tx.$queryRaw<{ inventoryQuantity: number }[]>`
+        UPDATE "ProductVariant"
+        SET "inventoryQuantity" = "inventoryQuantity" - ${line.quantity}, "updatedAt" = now()
+        WHERE id = ${line.variantId}::uuid AND "storeId" = ${storeId}::uuid
+          AND ("inventoryQuantity" >= ${line.quantity} OR "allowBackorder")
+        RETURNING "inventoryQuantity"`;
+      const row = rows[0];
+      if (!row)
+        throw new ConflictException(`${line.title} just sold out. Please review your cart.`);
+      await tx.inventoryAdjustment.create({
+        data: {
+          storeId,
+          variantId: line.variantId,
+          delta: -line.quantity,
+          quantityAfter: row.inventoryQuantity,
+          reason: 'ORDER',
+          referenceId: orderId,
+        },
+      });
+    }
   }
 
   /** Returns reserved/sold units to stock for the given lines (quantities default to the rest). */
@@ -263,6 +307,7 @@ export class OrderLifecycle {
         data: { status: 'OPEN', financialStatus: 'PAID', paidAt: new Date(), expiresAt: null },
       });
       if (order.cartId) await tx.cart.deleteMany({ where: { id: order.cartId, storeId } });
+      await this.completeDraft(tx, storeId, order.id);
       await this.event(tx, storeId, order.id, 'paid', 'Payment received.');
       await this.sendOrderEmails(tx, storeId, order);
     });
@@ -276,8 +321,56 @@ export class OrderLifecycle {
     });
     if (order.discountCode) await this.discounts.redeem(tx, storeId, order.discountCode);
     if (order.cartId) await tx.cart.deleteMany({ where: { id: order.cartId, storeId } });
+    await this.completeDraft(tx, storeId, order.id);
     await this.event(tx, storeId, order.id, 'paid', 'No payment required (order total is zero).');
     await this.sendOrderEmails(tx, storeId, order);
+  }
+
+  /**
+   * Records a payment the merchant collected outside the platform (cash, bank transfer). It is
+   * a "manual" payment: refunds against it are recorded but not sent to any provider.
+   */
+  async markPaidManually(
+    tx: TenantTx,
+    storeId: string,
+    order: OrderWithLines,
+    actorUserId: string,
+  ): Promise<void> {
+    await tx.payment.create({
+      data: {
+        storeId,
+        orderId: order.id,
+        provider: MANUAL_PAYMENT,
+        providerRef: `manual-${order.id}`,
+        amount: order.total,
+        currency: order.currency,
+        status: 'SUCCEEDED',
+      },
+    });
+    await tx.order.update({
+      where: { id: order.id },
+      data: { status: 'OPEN', financialStatus: 'PAID', paidAt: new Date(), expiresAt: null },
+    });
+    await this.completeDraft(tx, storeId, order.id);
+    await this.event(
+      tx,
+      storeId,
+      order.id,
+      'paid',
+      'Marked as paid (payment collected manually).',
+      {
+        actorUserId,
+      },
+    );
+    await this.sendOrderEmails(tx, storeId, order);
+  }
+
+  /** A draft order whose order was paid is complete. */
+  private async completeDraft(tx: TenantTx, storeId: string, orderId: string): Promise<void> {
+    await tx.draftOrder.updateMany({
+      where: { storeId, orderId, status: { not: 'COMPLETED' } },
+      data: { status: 'COMPLETED', completedAt: new Date() },
+    });
   }
 
   async markFailed(storeId: string, paymentId: string): Promise<void> {

@@ -217,16 +217,10 @@ export class CheckoutService {
         );
       }
 
-      const [counter] = await tx.$queryRaw<{ number: number }[]>`
-        INSERT INTO "OrderCounter" ("storeId", "next") VALUES (${shop.id}::uuid, 1002)
-        ON CONFLICT ("storeId") DO UPDATE SET "next" = "OrderCounter"."next" + 1
-        RETURNING "next" - 1 AS number`;
-      if (!counter) throw new Error('Could not allocate an order number');
-
       const created = await tx.order.create({
         data: {
           storeId: shop.id,
-          number: counter.number,
+          number: await this.lifecycle.allocateOrderNumber(tx, shop.id),
           customerId: customer.id,
           email,
           currency: shop.currency,
@@ -269,7 +263,7 @@ export class CheckoutService {
         data: { accessTokenHash: this.urls.orderAccessTokenHash(created.id) },
       });
 
-      await this.reserveStock(tx, shop.id, created.id, quote);
+      await this.lifecycle.reserveStock(tx, shop.id, created.id, quote.lines);
       await this.lifecycle.event(
         tx,
         shop.id,
@@ -386,37 +380,6 @@ export class CheckoutService {
     return { cart, pricing, requiresShipping, shippingOptions, selectedShipping, discount, lines };
   }
 
-  /** Atomic conditional decrements: concurrent checkouts can never oversell. */
-  private async reserveStock(
-    tx: TenantTx,
-    storeId: string,
-    orderId: string,
-    quote: Quote,
-  ): Promise<void> {
-    for (const line of quote.lines) {
-      if (!line.trackInventory) continue;
-      const rows = await tx.$queryRaw<{ inventoryQuantity: number }[]>`
-        UPDATE "ProductVariant"
-        SET "inventoryQuantity" = "inventoryQuantity" - ${line.quantity}, "updatedAt" = now()
-        WHERE id = ${line.variantId}::uuid AND "storeId" = ${storeId}::uuid
-          AND ("inventoryQuantity" >= ${line.quantity} OR "allowBackorder")
-        RETURNING "inventoryQuantity"`;
-      const row = rows[0];
-      if (!row)
-        throw new ConflictException(`${line.title} just sold out. Please review your cart.`);
-      await tx.inventoryAdjustment.create({
-        data: {
-          storeId,
-          variantId: line.variantId,
-          delta: -line.quantity,
-          quantityAfter: row.inventoryQuantity,
-          reason: 'ORDER',
-          referenceId: orderId,
-        },
-      });
-    }
-  }
-
   private async resume(
     shop: ShopContext,
     host: string,
@@ -432,10 +395,12 @@ export class CheckoutService {
     return this.openPayment(shop, host, order);
   }
 
-  private async openPayment(
+  /** Opens a provider payment session for an unpaid order; `cancelPath` is where "back" leads. */
+  async openPayment(
     shop: ShopContext,
     host: string,
     order: { id: string; number: number; total: number; currency: string; email: string },
+    cancelPath = '/checkout?cancelled=1',
   ): Promise<CheckoutResult> {
     const origin = this.urls.originForHost(host);
     const destination = await this.tenantDb.run(shop.id, (tx) =>
@@ -454,7 +419,7 @@ export class CheckoutService {
         currency: order.currency,
         email: order.email,
         successUrl: `${this.statusUrl(host, order.id)}?from=checkout`,
-        cancelUrl: `${origin}/checkout?cancelled=1`,
+        cancelUrl: `${origin}${cancelPath}`,
         idempotencyKey: `checkout-${order.id}`,
         destination: { accountId: destination.accountId, applicationFee: fee },
       });

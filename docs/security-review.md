@@ -105,3 +105,11 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   stops working after 30 days, and drops unavailable items and caps quantities at stock.
   Checkouts that expired before the release are marked as handled by the migration.
   Tests: `checkout-recovery.e2e`, `storefront.spec`.
+- **2026-10-21 — draft orders.** Drafts are under forced RLS and need `orders:write`; catalog
+  lines are checked against the store's own variants. Invoice links are `<draftId>.<HMAC>` with
+  their own purpose string, scoped to the store and only payable while the invoice is sent;
+  paying locks the draft row, reuses an open payment session and creates the order with the same
+  quota, stock-reservation and payment-timeout rules as checkout. A draft cannot be edited,
+  deleted or completed while its invoice payment is in progress (409), so the amount paid always
+  matches the order. "Mark as paid" records a `manual` payment; refunds against it are recorded
+  and never sent to a provider. Tests: `draft-orders.e2e`, `draft-orders.spec`.

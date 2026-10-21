@@ -190,3 +190,37 @@ Prices and availability are confirmed when you check out.`,
     ),
   };
 }
+
+export function draftInvoiceEmail(
+  to: string,
+  data: {
+    storeName: string;
+    number: number;
+    currency: string;
+    total: number;
+    lines: OrderEmailData['lines'];
+    message: string | null;
+    payUrl: string;
+  },
+): EmailMessage {
+  const order = { ...data, orderNumber: data.number };
+  const total = formatMoney(data.total, data.currency);
+  return {
+    to,
+    subject: `Invoice #D${data.number} from ${data.storeName}`,
+    text: `${
+      data.message
+        ? `${data.message}
+
+`
+        : ''
+    }${lineText(order)}
+Total: ${total}
+
+Pay securely online: ${data.payUrl}`,
+    html: layout(
+      data.storeName,
+      `${data.message ? `<p>${escapeHtml(data.message)}</p>` : ''}<p><strong>Invoice #D${data.number}</strong></p>${lineHtml(order)}<p>Total: <strong>${escapeHtml(total)}</strong></p><p><a href="${escapeHtml(data.payUrl)}">Pay now</a></p>`,
+    ),
+  };
+}
