@@ -113,3 +113,13 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   deleted or completed while its invoice payment is in progress (409), so the amount paid always
   matches the order. "Mark as paid" records a `manual` payment; refunds against it are recorded
   and never sent to a provider. Tests: `draft-orders.e2e`, `draft-orders.spec`.
+- **2026-10-21 — gift cards.** Codes are 16 random characters from a 31-symbol alphabet
+  (≈2^79) unless the merchant chooses one; only an HMAC (keyed with `APP_ENCRYPTION_KEY`, scoped
+  to the store) is stored, and the full code is returned once at issue. Unknown codes, other
+  stores' cards and other currencies all answer "not valid". Redemption locks the card row, so
+  concurrent checkouts cannot overspend it, and fails if the balance changed since the preview,
+  so the provider is never asked for a different amount than the shopper saw. The provider only
+  charges the remainder. Unpaid orders give their reservation back when cancelled or expired;
+  refunds return money to the card/manual payment first and credit the gift card only after
+  that succeeds. Balance changes are an append-only ledger (`UPDATE`/`DELETE` revoked from the
+  app role) under forced RLS. Tests: `gift-cards.e2e`, `gift-cards.spec`.

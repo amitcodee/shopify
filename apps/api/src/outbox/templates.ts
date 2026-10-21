@@ -224,3 +224,32 @@ Pay securely online: ${data.payUrl}`,
     ),
   };
 }
+
+export function giftCardIssuedEmail(
+  to: string,
+  data: {
+    storeName: string;
+    code: string;
+    value: number;
+    currency: string;
+    expiresOn: string | null;
+    shopUrl: string;
+  },
+): EmailMessage {
+  const value = formatMoney(data.value, data.currency);
+  const expiry = data.expiresOn ? `It is valid until ${data.expiresOn}.` : 'It does not expire.';
+  return {
+    to,
+    subject: `Your ${value} gift card for ${data.storeName}`,
+    text: `You have a ${value} gift card for ${data.storeName}.
+
+Gift card code: ${data.code}
+${expiry}
+
+Enter the code at checkout: ${data.shopUrl}`,
+    html: layout(
+      data.storeName,
+      `<p>You have a <strong>${escapeHtml(value)}</strong> gift card.</p><p style="font-size:20px;letter-spacing:2px"><strong>${escapeHtml(data.code)}</strong></p><p>${escapeHtml(expiry)}</p><p><a href="${escapeHtml(data.shopUrl)}">Start shopping</a> and enter the code at checkout.</p>`,
+    ),
+  };
+}

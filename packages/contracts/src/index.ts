@@ -21,3 +21,4 @@ export * from './security-headers.js';
 export * from './redirects.js';
 export * from './online-store.js';
 export * from './draft-orders.js';
+export * from './gift-cards.js';

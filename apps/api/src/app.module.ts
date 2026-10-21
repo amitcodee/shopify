@@ -12,6 +12,7 @@ import type { Env } from './config/env.js';
 import type { PrismaClient } from '@repo/db';
 import { DatabaseModule, PLATFORM_DB } from './database/database.module.js';
 import { EmailModule } from './email/email.module.js';
+import { GiftCardsModule } from './gift-cards/gift-cards.module.js';
 import { HealthModule } from './health/health.module.js';
 import { OnlineStoreModule } from './online-store/online-store.module.js';
 import { PlatformAdminModule } from './platform/platform-admin.module.js';
@@ -55,6 +56,7 @@ export class AppModule {
         CommerceModule,
         SettingsModule,
         OnlineStoreModule,
+        GiftCardsModule,
         PlatformAdminModule,
       ],
       providers: [

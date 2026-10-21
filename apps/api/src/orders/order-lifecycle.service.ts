@@ -2,6 +2,7 @@ import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import type { OrderLine, Prisma, PrismaClient, TenantTx } from '@repo/db';
 import { DiscountRules } from '../commerce/commerce-rules.js';
 import { PLATFORM_DB, TenantDb } from '../database/database.module.js';
+import { GiftCardLedger } from '../gift-cards/gift-card-ledger.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import { formatMoney } from '@repo/contracts';
 import {
@@ -27,6 +28,8 @@ export interface PaidOutcome {
  */
 /** Provider name of payments collected outside the platform (see markPaidManually). */
 export const MANUAL_PAYMENT = 'manual';
+/** Provider name of the part of an order paid with a gift card (settled at checkout). */
+export const GIFT_CARD_PAYMENT = 'gift_card';
 
 @Injectable()
 export class OrderLifecycle {
@@ -37,6 +40,7 @@ export class OrderLifecycle {
     private readonly outbox: OutboxService,
     private readonly urls: StoreUrls,
     private readonly discounts: DiscountRules,
+    private readonly giftCards: GiftCardLedger,
     @Inject(PLATFORM_DB) private readonly platformDb: PrismaClient,
   ) {}
 
@@ -168,6 +172,17 @@ export class OrderLifecycle {
       where: { orderId, storeId, status: 'PENDING' },
       data: { status: 'CANCELLED' },
     });
+    // An unpaid order hands its gift card reservation back.
+    if (order.financialStatus === 'PENDING' && order.giftCardId && order.giftCardAmount > 0) {
+      await this.giftCards.credit(tx, storeId, order.giftCardId, order.giftCardAmount, 'RESTORED', {
+        orderId,
+        actorUserId: options.actorUserId,
+      });
+      await tx.payment.updateMany({
+        where: { orderId, storeId, provider: GIFT_CARD_PAYMENT, status: 'SUCCEEDED' },
+        data: { status: 'CANCELLED' },
+      });
+    }
     const updated = await tx.order.update({
       where: { id: orderId },
       data: {
@@ -322,7 +337,15 @@ export class OrderLifecycle {
     if (order.discountCode) await this.discounts.redeem(tx, storeId, order.discountCode);
     if (order.cartId) await tx.cart.deleteMany({ where: { id: order.cartId, storeId } });
     await this.completeDraft(tx, storeId, order.id);
-    await this.event(tx, storeId, order.id, 'paid', 'No payment required (order total is zero).');
+    await this.event(
+      tx,
+      storeId,
+      order.id,
+      'paid',
+      order.giftCardAmount > 0
+        ? 'Paid in full with a gift card.'
+        : 'No payment required (order total is zero).',
+    );
     await this.sendOrderEmails(tx, storeId, order);
   }
 

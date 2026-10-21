@@ -41,6 +41,9 @@ export function CheckoutForm({
   const [region, setRegion] = useState('');
   const [shippingRateId, setShippingRateId] = useState(initial.selectedShippingRateId ?? '');
   const [discountCode, setDiscountCode] = useState('');
+  const [giftCardCode, setGiftCardCode] = useState('');
+  /** The gift card code the current totals were computed with (sent with the order). */
+  const [appliedGiftCard, setAppliedGiftCard] = useState('');
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const money = (n: number) => formatMoney(n, preview.currency);
@@ -51,12 +54,21 @@ export function CheckoutForm({
     region?: string;
     shippingRateId?: string;
     discountCode?: string;
+    giftCardCode?: string;
   }) {
-    const input = { country, region, shippingRateId, discountCode, ...next };
+    const input = {
+      country,
+      region,
+      shippingRateId,
+      discountCode,
+      giftCardCode: appliedGiftCard,
+      ...next,
+    };
     startTransition(async () => {
       const result = await previewAction(input);
       if (result.preview) {
         setPreview(result.preview);
+        setAppliedGiftCard(result.preview.giftCard ? input.giftCardCode : '');
         setShippingRateId(result.preview.selectedShippingRateId ?? '');
         setPreviewError(null);
       } else {
@@ -75,6 +87,7 @@ export function CheckoutForm({
         name="discountCode"
         value={preview.discount?.applied ? preview.discount.code : ''}
       />
+      <input type="hidden" name="giftCardCode" value={appliedGiftCard} />
 
       <div className="space-y-8">
         <Notice result={state} />
@@ -239,6 +252,7 @@ export function CheckoutForm({
               type="button"
               onClick={() => refresh({ discountCode })}
               className="rounded-md border border-zinc-900 px-3 py-2 text-sm font-medium"
+              aria-label="Apply discount code"
             >
               Apply
             </button>
@@ -251,6 +265,41 @@ export function CheckoutForm({
               {preview.discount.applied
                 ? `Code ${preview.discount.code} applied.`
                 : preview.discount.message}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="gift-card" className="block text-sm font-medium text-zinc-800">
+            Gift card
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="gift-card"
+              value={giftCardCode}
+              onChange={(e) => setGiftCardCode(e.target.value)}
+              autoComplete="off"
+              className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm uppercase"
+            />
+            <button
+              type="button"
+              onClick={() => refresh({ giftCardCode })}
+              className="rounded-md border border-zinc-900 px-3 py-2 text-sm font-medium"
+              aria-label="Apply gift card"
+            >
+              Apply
+            </button>
+          </div>
+          {preview.giftCard ? (
+            <p className="text-xs text-emerald-700" role="status">
+              Gift card •••• {preview.giftCard.lastCharacters} applied
+              {preview.giftCard.remaining > 0
+                ? ` (${money(preview.giftCard.remaining)} left on the card after this order).`
+                : '.'}
+            </p>
+          ) : preview.giftCardError ? (
+            <p className="text-xs text-red-700" role="status">
+              {preview.giftCardError}
             </p>
           ) : null}
         </div>
@@ -276,12 +325,20 @@ export function CheckoutForm({
           />
           <Row label="Tax" value={money(preview.taxTotal)} />
           <Row label="Total" value={money(preview.total)} strong />
+          {preview.giftCard ? (
+            <>
+              <Row label="Gift card" value={`−${money(preview.giftCard.applied)}`} />
+              <Row label="Due now" value={money(preview.amountDue)} strong />
+            </>
+          ) : null}
         </dl>
         {previewError ? <p className="text-xs text-red-700">{previewError}</p> : null}
         {preview.warnings.length > 0 ? (
           <p className="text-xs text-amber-800">{preview.warnings.join(' ')}</p>
         ) : null}
-        {preview.acceptingPayments || preview.total === 0 ? (
+        {preview.amountDue === 0 ? (
+          <Submit pendingLabel="Placing order…">Place order</Submit>
+        ) : preview.acceptingPayments ? (
           <>
             <Submit pendingLabel="Placing order…">Continue to payment</Submit>
             <p className="text-center text-xs text-zinc-500">

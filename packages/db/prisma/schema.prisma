@@ -124,6 +124,7 @@ model Store {
   policies       StorePolicy[]
   menus          Menu[]
   draftOrders    DraftOrder[]
+  giftCards      GiftCard[]
   subscription   Subscription?
   paymentAccount PaymentAccount?
 
@@ -446,6 +447,7 @@ model Customer {
   tokens      CustomerToken[]
   orders      Order[]
   draftOrders DraftOrder[]
+  giftCards   GiftCard[]
 
   @@unique([storeId, id])
   @@unique([storeId, email])
@@ -590,6 +592,9 @@ model Order {
   paidAt              DateTime?
   cancelledAt         DateTime?
   cancelReason        String?
+  /// Gift card applied at checkout and the amount it covers (the rest is paid by the provider).
+  giftCardId          String?           @db.Uuid
+  giftCardAmount      Int               @default(0)
   /// Abandoned-checkout recovery for orders that expired unpaid (null = not handled yet).
   recoveryStatus      RecoveryStatus?
   recoveryEmailSentAt DateTime?
@@ -605,6 +610,7 @@ model Order {
   fulfillments Fulfillment[]
   events       OrderEvent[]
   draftOrders  DraftOrder[]
+  giftCard     GiftCard?     @relation(fields: [storeId, giftCardId], references: [storeId, id])
 
   @@unique([storeId, id])
   @@unique([storeId, number])
@@ -647,6 +653,65 @@ model OrderLine {
   order Order @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
 
   @@index([orderId])
+}
+
+enum GiftCardTransactionKind {
+  ISSUED
+  /// Spent at checkout (reserved when the order is placed).
+  REDEEMED
+  /// Returned because the order was never paid.
+  RESTORED
+  /// Credited back by a refund.
+  REFUNDED
+  /// Balance changed by the merchant.
+  ADJUSTED
+}
+
+/// Store credit the shopper spends at checkout with a code. Only a keyed hash of the code is
+/// stored; the merchant sees the full code once, when issuing it.
+model GiftCard {
+  id             String    @id @default(uuid(7)) @db.Uuid
+  storeId        String    @db.Uuid
+  codeHash       String
+  /// Last 4 characters, to recognise a card ("•••• K7QM").
+  lastCharacters String    @db.Char(4)
+  initialValue   Int
+  balance        Int
+  currency       String    @db.Char(3)
+  customerId     String?   @db.Uuid
+  note           String?
+  expiresAt      DateTime?
+  disabledAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  store        Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer     Customer?             @relation(fields: [storeId, customerId], references: [storeId, id])
+  transactions GiftCardTransaction[]
+  orders       Order[]
+
+  @@unique([storeId, id])
+  @@unique([storeId, codeHash])
+  @@index([storeId, createdAt])
+}
+
+/// Append-only balance history of a gift card.
+model GiftCardTransaction {
+  id           String                  @id @default(uuid(7)) @db.Uuid
+  storeId      String                  @db.Uuid
+  giftCardId   String                  @db.Uuid
+  kind         GiftCardTransactionKind
+  /// Signed change in minor units (negative when spent).
+  amount       Int
+  balanceAfter Int
+  orderId      String?                 @db.Uuid
+  actorUserId  String?                 @db.Uuid
+  note         String?
+  createdAt    DateTime                @default(now())
+
+  giftCard GiftCard @relation(fields: [storeId, giftCardId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([giftCardId, createdAt])
 }
 
 enum PaymentStatus {

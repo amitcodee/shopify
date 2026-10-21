@@ -65,8 +65,8 @@ test('merchant configures theme, shipping, tax and a discount; checkout totals r
   await shopper.goto(storefrontUrl(subdomain, '/checkout'));
   await expect(shopper.getByText('Ground')).toBeVisible();
 
-  await shopper.getByLabel('Discount code').fill('welcome10');
-  await shopper.getByRole('button', { name: 'Apply' }).click();
+  await shopper.getByLabel('Discount code', { exact: true }).fill('welcome10');
+  await shopper.getByRole('button', { name: 'Apply discount code' }).click();
   await expect(shopper.getByText('Code WELCOME10 applied.')).toBeVisible();
   // $40 - $4 discount + $5 shipping + 10% tax on $36 ($3.60) = $44.60
   await expect(shopper.getByText('−$4.00')).toBeVisible();

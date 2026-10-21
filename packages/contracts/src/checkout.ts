@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { emailSchema } from './common.js';
+import { giftCardCodeInputSchema } from './gift-cards.js';
 import { cartLineSchema } from './storefront.js';
 
 export const addressSchema = z.strictObject({
@@ -28,6 +29,7 @@ export const checkoutPreviewInputSchema = z.strictObject({
   region: z.string().trim().max(100).optional(),
   shippingRateId: z.string().max(64).optional(),
   discountCode: z.string().trim().max(50).optional(),
+  giftCardCode: giftCardCodeInputSchema.optional(),
 });
 export type CheckoutPreviewInput = z.infer<typeof checkoutPreviewInputSchema>;
 
@@ -59,6 +61,18 @@ export const checkoutPreviewSchema = checkoutTotalsSchema.extend({
   warnings: z.array(z.string()),
   /** False until the store has connected a payout account that can take payments. */
   acceptingPayments: z.boolean(),
+  giftCard: z
+    .object({
+      lastCharacters: z.string(),
+      applied: z.number().int(),
+      /** Balance left on the card after this order. */
+      remaining: z.number().int(),
+    })
+    .nullable(),
+  /** Message when the entered gift card cannot be used. */
+  giftCardError: z.string().nullable(),
+  /** What the payment provider charges: total minus the gift card. */
+  amountDue: z.number().int(),
 });
 export type CheckoutPreview = z.infer<typeof checkoutPreviewSchema>;
 
@@ -67,6 +81,7 @@ export const checkoutInputSchema = z.strictObject({
   shippingAddress: addressSchema,
   shippingRateId: z.string().max(64).optional(),
   discountCode: z.string().trim().max(50).optional(),
+  giftCardCode: giftCardCodeInputSchema.optional(),
   note: z.string().trim().max(500).optional(),
   /** Generated once per checkout page; retries with the same key never create a second order. */
   idempotencyKey: z.uuid(),

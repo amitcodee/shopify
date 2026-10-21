@@ -9,15 +9,16 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type {
-  Cart,
-  CheckoutPreview,
-  CheckoutPreviewInput,
-  CheckoutResult,
-  checkoutInputSchema,
-  MockPayment,
-  PublicOrder,
-  ShippingOption,
+import {
+  type Cart,
+  type CheckoutPreview,
+  type CheckoutPreviewInput,
+  type CheckoutResult,
+  type checkoutInputSchema,
+  formatMoney,
+  type MockPayment,
+  type PublicOrder,
+  type ShippingOption,
 } from '@repo/contracts';
 import type { Prisma, TenantTx } from '@repo/db';
 import type { z } from 'zod';
@@ -29,7 +30,8 @@ import {
 } from '../commerce/commerce-rules.js';
 import { ENV, type Env } from '../config/env.js';
 import { TenantDb } from '../database/database.module.js';
-import { OrderLifecycle } from '../orders/order-lifecycle.service.js';
+import { GiftCardLedger } from '../gift-cards/gift-card-ledger.js';
+import { GIFT_CARD_PAYMENT, OrderLifecycle } from '../orders/order-lifecycle.service.js';
 import { PlanLimits } from '../platform/plans.service.js';
 import { StoreUrls } from '../orders/store-urls.js';
 import { applicationFee } from '../payments/connect-provider.js';
@@ -49,6 +51,10 @@ interface Quote {
   shippingOptions: ShippingOption[];
   selectedShipping: ShippingOption | null;
   discount: DiscountEvaluation | null;
+  /** Gift card the shopper entered, if usable, and how much of the total it covers. */
+  giftCard: { lastCharacters: string; applied: number; remaining: number } | null;
+  giftCardError: string | null;
+  amountDue: number;
   lines: {
     variantId: string;
     productId: string;
@@ -80,6 +86,7 @@ export class CheckoutService {
     private readonly urls: StoreUrls,
     private readonly limits: PlanLimits,
     private readonly paymentAccounts: PaymentAccountsService,
+    private readonly giftCards: GiftCardLedger,
     @Inject(PAYMENT_PROVIDERS) private readonly providers: Map<string, PaymentProvider>,
     @Inject(ENV) private readonly env: Env,
   ) {}
@@ -112,6 +119,9 @@ export class CheckoutService {
           : null,
         warnings: cart.warnings,
         acceptingPayments: await this.paymentAccounts.acceptingPayments(tx, shop.id),
+        giftCard: quote.giftCard,
+        giftCardError: quote.giftCardError,
+        amountDue: quote.amountDue,
       };
     });
   }
@@ -178,6 +188,7 @@ export class CheckoutService {
         region: input.shippingAddress.region,
         shippingRateId: input.shippingRateId,
         discountCode: input.discountCode,
+        giftCardCode: input.giftCardCode,
       });
       if (quote.requiresShipping && !quote.selectedShipping) {
         throw new BadRequestException('We do not ship to this address.');
@@ -187,10 +198,11 @@ export class CheckoutService {
           quote.discount?.message ?? 'This discount code is not valid.',
         );
       }
+      if (quote.giftCardError) throw new BadRequestException(quote.giftCardError);
       // Paid orders need somewhere to settle: no stock is reserved for a store that cannot
       // take payments yet.
       const destination =
-        quote.pricing.total > 0 ? await this.paymentAccounts.requireDestination(tx, shop.id) : null;
+        quote.amountDue > 0 ? await this.paymentAccounts.requireDestination(tx, shop.id) : null;
 
       const customer = customerId
         ? await tx.customer.findFirstOrThrow({ where: { id: customerId, storeId: shop.id } })
@@ -264,6 +276,9 @@ export class CheckoutService {
       });
 
       await this.lifecycle.reserveStock(tx, shop.id, created.id, quote.lines);
+      const placed = input.giftCardCode
+        ? await this.redeemGiftCard(tx, shop, created, input.giftCardCode, quote.amountDue)
+        : created;
       await this.lifecycle.event(
         tx,
         shop.id,
@@ -272,11 +287,13 @@ export class CheckoutService {
         `Order placed by ${created.email}.`,
       );
 
-      if (created.total === 0) await this.lifecycle.markFreeOrderPaid(tx, shop.id, created);
-      return created;
+      if (placed.total - placed.giftCardAmount === 0) {
+        await this.lifecycle.markFreeOrderPaid(tx, shop.id, placed);
+      }
+      return placed;
     });
 
-    if (order.total === 0) {
+    if (order.total - order.giftCardAmount === 0) {
       return { orderNumber: order.number, paymentUrl: this.statusUrl(host, order.id) };
     }
     return this.openPayment(shop, host, order);
@@ -377,7 +394,87 @@ export class CheckoutService {
       taxRateBps: tax.rateBps,
       taxShipping: tax.taxShipping,
     });
-    return { cart, pricing, requiresShipping, shippingOptions, selectedShipping, discount, lines };
+    let giftCard: Quote['giftCard'] = null;
+    let giftCardError: string | null = null;
+    if (input.giftCardCode) {
+      const usable = await this.giftCards.findUsable(
+        tx,
+        shop.id,
+        input.giftCardCode,
+        shop.currency,
+      );
+      if (usable.card) {
+        const applied = Math.min(usable.card.balance, pricing.total);
+        giftCard = {
+          lastCharacters: usable.card.lastCharacters,
+          applied,
+          remaining: usable.card.balance - applied,
+        };
+      } else {
+        giftCardError = usable.error;
+      }
+    }
+    return {
+      cart,
+      pricing,
+      requiresShipping,
+      shippingOptions,
+      selectedShipping,
+      discount,
+      lines,
+      giftCard,
+      giftCardError,
+      amountDue: pricing.total - (giftCard?.applied ?? 0),
+    };
+  }
+
+  /**
+   * Spends the gift card on a just-created order (locked, so two checkouts cannot spend the same
+   * balance) and records it as an already-settled payment. Fails if the balance changed since
+   * the shopper saw the total, because the amount to charge would differ.
+   */
+  private async redeemGiftCard<T extends { id: string; total: number; currency: string }>(
+    tx: TenantTx,
+    shop: ShopContext,
+    order: T,
+    code: string,
+    expectedDue: number,
+  ): Promise<T & { giftCardAmount: number }> {
+    const redeemed = await this.giftCards.redeem(
+      tx,
+      shop.id,
+      code,
+      shop.currency,
+      order.total,
+      order.id,
+    );
+    if (!redeemed.card) throw new BadRequestException(redeemed.error);
+    if (order.total - redeemed.amount !== expectedDue) {
+      throw new ConflictException('Your gift card balance changed. Please review your order.');
+    }
+    await tx.order.update({
+      where: { id: order.id },
+      data: { giftCardId: redeemed.card.id, giftCardAmount: redeemed.amount },
+    });
+    await tx.payment.create({
+      data: {
+        storeId: shop.id,
+        orderId: order.id,
+        provider: GIFT_CARD_PAYMENT,
+        providerRef: `gift-card-${order.id}`,
+        amount: redeemed.amount,
+        currency: order.currency,
+        status: 'SUCCEEDED',
+      },
+    });
+    await this.lifecycle.event(
+      tx,
+      shop.id,
+      order.id,
+      'gift_card_applied',
+      `Gift card •••• ${redeemed.card.lastCharacters} covers ${formatMoney(redeemed.amount, order.currency)}.`,
+    );
+    return { ...order, giftCardAmount: redeemed.amount };
   }
 
   private async resume(
@@ -399,14 +496,23 @@ export class CheckoutService {
   async openPayment(
     shop: ShopContext,
     host: string,
-    order: { id: string; number: number; total: number; currency: string; email: string },
+    order: {
+      id: string;
+      number: number;
+      total: number;
+      giftCardAmount: number;
+      currency: string;
+      email: string;
+    },
     cancelPath = '/checkout?cancelled=1',
   ): Promise<CheckoutResult> {
+    // A gift card already paid part of the order; the provider charges the rest.
+    const amount = order.total - order.giftCardAmount;
     const origin = this.urls.originForHost(host);
     const destination = await this.tenantDb.run(shop.id, (tx) =>
       this.paymentAccounts.requireDestination(tx, shop.id),
     );
-    const fee = applicationFee(order.total, destination.feeBps);
+    const fee = applicationFee(amount, destination.feeBps);
     const provider = this.providers.get(destination.provider);
     if (!provider) throw new BadGatewayException('The payment provider is unavailable.');
     let created;
@@ -415,7 +521,7 @@ export class CheckoutService {
         storeId: shop.id,
         orderId: order.id,
         orderNumber: order.number,
-        amount: order.total,
+        amount,
         currency: order.currency,
         email: order.email,
         successUrl: `${this.statusUrl(host, order.id)}?from=checkout`,
@@ -444,7 +550,7 @@ export class CheckoutService {
           orderId: order.id,
           provider: provider.name,
           providerRef: created.providerRef,
-          amount: order.total,
+          amount,
           currency: order.currency,
           checkoutUrl: created.checkoutUrl,
           returnUrl: created.returnUrl ?? null,
@@ -477,6 +583,7 @@ export function toPublicOrder(
     shippingTotal: order.shippingTotal,
     taxTotal: order.taxTotal,
     total: order.total,
+    giftCardAmount: order.giftCardAmount,
     shippingMethod: order.shippingMethod,
     shippingAddress: order.shippingAddress as PublicOrder['shippingAddress'],
     lines: order.lines.map((l) => ({

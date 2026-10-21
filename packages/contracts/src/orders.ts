@@ -89,6 +89,8 @@ export const orderDetailSchema = orderListItemSchema.extend({
   discountTotal: z.number().int(),
   shippingTotal: z.number().int(),
   taxTotal: z.number().int(),
+  /** Part of the total paid with a gift card. */
+  giftCardAmount: z.number().int(),
   discountCode: z.string().nullable(),
   shippingMethod: z.string().nullable(),
   shippingAddress: addressShape,
@@ -180,6 +182,7 @@ export const publicOrderSchema = z.object({
   shippingTotal: z.number().int(),
   taxTotal: z.number().int(),
   total: z.number().int(),
+  giftCardAmount: z.number().int(),
   shippingMethod: z.string().nullable(),
   shippingAddress: addressShape,
   lines: z.array(

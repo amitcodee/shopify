@@ -28,7 +28,8 @@ import {
   shippingConfirmationEmail,
 } from '../outbox/templates.js';
 import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-provider.js';
-import { MANUAL_PAYMENT, OrderLifecycle } from './order-lifecycle.service.js';
+import { GiftCardLedger } from '../gift-cards/gift-card-ledger.js';
+import { GIFT_CARD_PAYMENT, MANUAL_PAYMENT, OrderLifecycle } from './order-lifecycle.service.js';
 
 const detailInclude = {
   lines: true,
@@ -75,6 +76,7 @@ export class OrdersService {
     private readonly lifecycle: OrderLifecycle,
     private readonly outbox: OutboxService,
     private readonly audit: AuditService,
+    private readonly giftCards: GiftCardLedger,
     @Inject(PAYMENT_PROVIDERS) private readonly providers: Map<string, PaymentProvider>,
   ) {}
 
@@ -141,25 +143,48 @@ export class OrdersService {
           );
         }
       }
-      const payment = order.payments.find((p) => p.status === 'SUCCEEDED');
-      if (!payment) throw new ConflictException('No successful payment to refund.');
-      const refund = await tx.refund.create({
-        data: {
-          storeId: store.id,
-          orderId,
-          paymentId: payment.id,
-          amount: input.amount,
-          reason: input.reason ?? null,
-          actorUserId: actor.id,
-        },
-      });
-      return { refund, payment, currency: order.currency };
+      // Money goes back the way it came: the card/manual payment first, then the gift card.
+      const remaining = (p: { id: string; amount: number }) =>
+        p.amount -
+        order.refunds
+          .filter((r) => r.paymentId === p.id && r.status !== 'FAILED')
+          .reduce((sum, r) => sum + r.amount, 0);
+      const succeeded = order.payments.filter((p) => p.status === 'SUCCEEDED');
+      const payment = succeeded.find((p) => p.provider !== GIFT_CARD_PAYMENT) ?? null;
+      const giftPayment = succeeded.find((p) => p.provider === GIFT_CARD_PAYMENT) ?? null;
+      if (!payment && !giftPayment) throw new ConflictException('No successful payment to refund.');
+      const toPayment = payment ? Math.min(input.amount, remaining(payment)) : 0;
+      const toGiftCard = input.amount - toPayment;
+      const row = (paymentId: string, amount: number) =>
+        tx.refund.create({
+          data: {
+            storeId: store.id,
+            orderId,
+            paymentId,
+            amount,
+            reason: input.reason ?? null,
+            actorUserId: actor.id,
+          },
+        });
+      const refund = payment && toPayment > 0 ? await row(payment.id, toPayment) : null;
+      const giftRefund =
+        giftPayment && toGiftCard > 0 ? await row(giftPayment.id, toGiftCard) : null;
+      return {
+        refund,
+        payment,
+        giftRefund,
+        giftCardId: order.giftCardId,
+        currency: order.currency,
+      };
     });
 
-    const provider = this.providers.get(pending.payment.provider);
+    const provider = pending.payment ? this.providers.get(pending.payment.provider) : undefined;
     let result: Awaited<ReturnType<PaymentProvider['refund']>> | null = null;
     try {
-      if (pending.payment.provider === MANUAL_PAYMENT) {
+      if (!pending.refund || !pending.payment) {
+        // Nothing to send to a provider: the whole amount goes back to the gift card.
+        result = { status: 'SUCCEEDED', providerRef: 'gift-card-only' };
+      } else if (pending.payment.provider === MANUAL_PAYMENT) {
         // Collected outside the platform, so it is returned outside it too: record it only.
         result = { status: 'SUCCEEDED', providerRef: `manual-refund-${pending.refund.id}` };
       } else {
@@ -182,8 +207,12 @@ export class OrdersService {
       // (restock clamps to what is still un-restocked on the freshly read lines).
       await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId}::uuid AND "storeId" = ${store.id}::uuid FOR UPDATE`;
       if (!result || result.status === 'FAILED') {
-        await tx.refund.update({
-          where: { id: pending.refund.id },
+        await tx.refund.updateMany({
+          where: {
+            id: {
+              in: [pending.refund?.id, pending.giftRefund?.id].filter((id) => id !== undefined),
+            },
+          },
           data: { status: 'FAILED', providerRef: result?.providerRef ?? null },
         });
         await this.lifecycle.event(
@@ -196,10 +225,26 @@ export class OrdersService {
         );
         return;
       }
-      await tx.refund.update({
-        where: { id: pending.refund.id },
-        data: { status: result.status, providerRef: result.providerRef },
-      });
+      if (pending.refund) {
+        await tx.refund.update({
+          where: { id: pending.refund.id },
+          data: { status: result.status, providerRef: result.providerRef },
+        });
+      }
+      if (pending.giftRefund && pending.giftCardId) {
+        await this.giftCards.credit(
+          tx,
+          store.id,
+          pending.giftCardId,
+          pending.giftRefund.amount,
+          'REFUNDED',
+          { orderId, actorUserId: actor.id },
+        );
+        await tx.refund.update({
+          where: { id: pending.giftRefund.id },
+          data: { status: 'SUCCEEDED', providerRef: `gift-card-refund-${pending.giftRefund.id}` },
+        });
+      }
       const order = await this.find(tx, store.id, orderId);
       const refunded = committedRefunds(order);
       await tx.order.update({
@@ -224,10 +269,15 @@ export class OrdersService {
         store.id,
         orderId,
         'refunded',
-        `Refunded ${input.amount} ${order.currency}.`,
+        pending.giftRefund
+          ? `Refunded ${input.amount} ${order.currency} (${pending.giftRefund.amount} to the gift card).`
+          : `Refunded ${input.amount} ${order.currency}.`,
         {
           actorUserId: actor.id,
-          data: { refundId: pending.refund.id, reason: input.reason ?? null },
+          data: {
+            refundId: pending.refund?.id ?? pending.giftRefund?.id ?? null,
+            reason: input.reason ?? null,
+          },
         },
       );
       await this.audit.record(tx, {
@@ -377,6 +427,7 @@ export class OrdersService {
       discountTotal: order.discountTotal,
       shippingTotal: order.shippingTotal,
       taxTotal: order.taxTotal,
+      giftCardAmount: order.giftCardAmount,
       discountCode: order.discountCode,
       shippingMethod: order.shippingMethod,
       shippingAddress: order.shippingAddress as OrderDetail['shippingAddress'],

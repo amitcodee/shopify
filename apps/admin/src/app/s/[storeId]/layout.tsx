@@ -29,6 +29,7 @@ export default async function StoreLayout({
     { label: 'Collections', href: `${base}/collections`, permission: 'products:read' },
     { label: 'Customers', href: `${base}/customers`, permission: 'customers:read' },
     { label: 'Discounts', href: `${base}/discounts`, permission: 'discounts:write' },
+    { label: 'Gift cards', href: `${base}/gift-cards`, permission: 'orders:read' },
     { label: 'Online store', href: `${base}/online-store`, permission: 'settings:read' },
     { label: 'Settings', href: `${base}/settings`, permission: 'settings:read' },
   ];

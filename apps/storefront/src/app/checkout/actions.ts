@@ -10,6 +10,7 @@ export async function previewAction(input: {
   region?: string;
   shippingRateId?: string;
   discountCode?: string;
+  giftCardCode?: string;
 }): Promise<{ preview?: CheckoutPreview; error?: string }> {
   try {
     const preview = await sf<CheckoutPreview>('/checkout/preview', {
@@ -20,6 +21,7 @@ export async function previewAction(input: {
         region: input.region || undefined,
         shippingRateId: input.shippingRateId || undefined,
         discountCode: input.discountCode || undefined,
+        giftCardCode: input.giftCardCode || undefined,
       },
     });
     return { preview };
@@ -46,6 +48,7 @@ export async function placeOrderAction(_: FormResult, formData: FormData): Promi
         idempotencyKey: field(formData, 'idempotencyKey') ?? '',
         shippingRateId: field(formData, 'shippingRateId'),
         discountCode: field(formData, 'discountCode'),
+        giftCardCode: field(formData, 'giftCardCode'),
         note: field(formData, 'note'),
         shippingAddress: {
           name: field(formData, 'name') ?? '',

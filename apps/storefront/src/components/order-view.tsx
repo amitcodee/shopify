@@ -101,6 +101,12 @@ export function OrderView({ order }: { order: PublicOrder }) {
             <dt>Total</dt>
             <dd>{money(order.total)}</dd>
           </div>
+          {order.giftCardAmount > 0 ? (
+            <div className="flex justify-between">
+              <dt>Paid with gift card</dt>
+              <dd>−{money(order.giftCardAmount)}</dd>
+            </div>
+          ) : null}
         </dl>
       </aside>
     </div>

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { DiscountRules, ShippingRules, TaxRules } from '../commerce/commerce-rules.js';
+import { GiftCardLedger } from '../gift-cards/gift-card-ledger.js';
 import { OutboxProcessor, OutboxService } from '../outbox/outbox.service.js';
 import { OrderLifecycle } from './order-lifecycle.service.js';
 import { StoreUrls } from './store-urls.js';
@@ -14,6 +15,7 @@ import { StoreUrls } from './store-urls.js';
     ShippingRules,
     TaxRules,
     DiscountRules,
+    GiftCardLedger,
   ],
   exports: [
     OrderLifecycle,
@@ -23,6 +25,7 @@ import { StoreUrls } from './store-urls.js';
     ShippingRules,
     TaxRules,
     DiscountRules,
+    GiftCardLedger,
   ],
 })
 export class OrdersCoreModule {}

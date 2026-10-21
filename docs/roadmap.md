@@ -79,3 +79,4 @@ Each phase ends with: lint, type check, tests, build all green; docs/threat mode
 - ✅ Abandoned checkout recovery (2026-10-21): one email after a store-chosen delay with a signed link that rebuilds the cart; admin list with recovered orders.
 - ✅ Draft orders (2026-10-21): merchant-built orders with catalog or custom items, custom prices, discount and shipping; emailed invoices paid on the storefront, or marked as paid (manual payment, refunds recorded only).
 - ✅ SEO basics (2026-10-21): per-store `sitemap.xml` (active products, published collections/pages, policies) and `robots.txt`.
+- ✅ Gift cards (2026-10-21): merchant-issued codes (shown once, keyed hash stored), redeemed at checkout for part or all of an order, restored when unpaid orders expire, credited back by refunds; balance history and adjustments. Selling gift cards as products is a follow-up.

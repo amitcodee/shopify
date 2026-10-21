@@ -107,6 +107,12 @@ export default async function OrderPage({
                 <dt>Total</dt>
                 <dd>{money(order.total)}</dd>
               </div>
+              {order.giftCardAmount > 0 ? (
+                <div className="flex justify-between text-slate-500">
+                  <dt>Paid with gift card</dt>
+                  <dd>{money(order.giftCardAmount)}</dd>
+                </div>
+              ) : null}
               {order.refunds.length > 0 ? (
                 <div className="flex justify-between text-slate-500">
                   <dt>Refunded</dt>
