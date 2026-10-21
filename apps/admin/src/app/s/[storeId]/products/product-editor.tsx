@@ -93,6 +93,7 @@ export function ProductEditor({
   const [tags, setTags] = useState(product?.tags.join(', ') ?? '');
   const [seoTitle, setSeoTitle] = useState(product?.seoTitle ?? '');
   const [seoDescription, setSeoDescription] = useState(product?.seoDescription ?? '');
+  const [isGiftCard, setIsGiftCard] = useState(product?.isGiftCard ?? false);
   const [options, setOptions] = useState<OptionRow[]>(
     product?.options.map((o) => ({ name: o.name, values: o.values.join(', ') })) ?? [],
   );
@@ -140,6 +141,7 @@ export function ProductEditor({
       tags: splitList(tags),
       seoTitle,
       seoDescription,
+      isGiftCard,
       options: parsedOptions,
       variants: combos.map((combo) => {
         const row = variants[combo.join(SEP)] ?? emptyVariant();
@@ -169,6 +171,7 @@ export function ProductEditor({
     tags,
     seoTitle,
     seoDescription,
+    isGiftCard,
     parsedOptions,
     combos,
     variants,
@@ -291,6 +294,21 @@ export function ProductEditor({
                 />
               </div>
             </div>
+            <label className="flex items-start gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={isGiftCard}
+                onChange={(e) => setIsGiftCard(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+              />
+              <span>
+                Sell as a gift card
+                <span className="block text-xs text-slate-500">
+                  Each variant is a denomination. Paid orders email the buyer a gift card code; no
+                  shipping, tax or stock tracking.
+                </span>
+              </span>
+            </label>
             <div className="space-y-1">
               <label htmlFor="p-tags" className={label}>
                 Tags

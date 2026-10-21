@@ -79,8 +79,9 @@ Each phase ends with: lint, type check, tests, build all green; docs/threat mode
 - ✅ Abandoned checkout recovery (2026-10-21): one email after a store-chosen delay with a signed link that rebuilds the cart; admin list with recovered orders.
 - ✅ Draft orders (2026-10-21): merchant-built orders with catalog or custom items, custom prices, discount and shipping; emailed invoices paid on the storefront, or marked as paid (manual payment, refunds recorded only).
 - ✅ SEO basics (2026-10-21): per-store `sitemap.xml` (active products, published collections/pages, policies) and `robots.txt`.
-- ✅ Gift cards (2026-10-21): merchant-issued codes (shown once, keyed hash stored), redeemed at checkout for part or all of an order, restored when unpaid orders expire, credited back by refunds; balance history and adjustments. Selling gift cards as products is a follow-up.
+- ✅ Gift cards (2026-10-21): merchant-issued codes (shown once, keyed hash stored), redeemed at checkout for part or all of an order, restored when unpaid orders expire, credited back by refunds; balance history and adjustments.
 - ✅ Product CSV import/export (2026-10-21): Shopify-style columns, one row per variant; import creates new products through the normal validation and plan limits, skips existing handles and reports problems by row.
 - ✅ Developer platform (2026-10-21): store-scoped Admin API access tokens and signed outbound webhooks with retries and SSRF protection ([ADR 0008](adr/0008-developer-platform.md)).
 - ✅ Storefront password page (2026-10-21): pre-launch stores require a password; the API itself refuses catalog, cart and checkout without the access token.
 - ✅ Blog (2026-10-21): posts with drafts, scheduled publishing, authors, excerpts and tags at `/blog`; menu link type and sitemap entries.
+- ✅ Gift card products (2026-10-21): products flagged as gift cards (variants = denominations) issue and email one card per unit when paid; never discounted, shipped, taxed or stock-tracked, and not payable with gift cards.

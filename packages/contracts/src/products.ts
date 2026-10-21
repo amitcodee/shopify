@@ -77,6 +77,7 @@ export const productInputSchema = z
       .transform((tags) => [...new Set(tags)]),
     seoTitle: optionalText(70),
     seoDescription: optionalText(320),
+    isGiftCard: z.boolean().default(false),
     options: z
       .array(productOptionInputSchema)
       .max(3)
@@ -127,7 +128,24 @@ export const productInputSchema = z
     if (new Set(skus).size !== skus.length) {
       ctx.addIssue({ code: 'custom', path: ['variants'], message: 'SKUs must be unique' });
     }
-  });
+  })
+  // Gift cards are delivered by email: never shipped, taxed (tax applies when they are spent)
+  // or limited by stock.
+  .transform((product) =>
+    product.isGiftCard
+      ? {
+          ...product,
+          variants: product.variants.map((v) => ({
+            ...v,
+            requiresShipping: false,
+            taxable: false,
+            trackInventory: false,
+            allowBackorder: false,
+            weightGrams: 0,
+          })),
+        }
+      : product,
+  );
 export type ProductInput = z.input<typeof productInputSchema>;
 export type ProductInputParsed = z.output<typeof productInputSchema>;
 
@@ -170,6 +188,7 @@ export const productSchema = z.object({
   tags: z.array(z.string()),
   seoTitle: z.string().nullable(),
   seoDescription: z.string().nullable(),
+  isGiftCard: z.boolean(),
   options: z.array(z.object({ name: z.string(), values: z.array(z.string()) })),
   variants: z.array(variantSchema),
   images: z.array(productImageSchema),

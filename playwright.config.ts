@@ -37,7 +37,7 @@ export default defineConfig({
       cwd: 'apps/api',
       url: `${apiUrl}/api/v1/health/ready`,
       reuseExistingServer: false,
-      timeout: 60_000,
+      timeout: 180_000,
       env: {
         ...db,
         NODE_ENV: 'test',
@@ -56,7 +56,7 @@ export default defineConfig({
       cwd: 'apps/admin',
       url: `http://localhost:${PORTS.admin}/login`,
       reuseExistingServer: false,
-      timeout: 60_000,
+      timeout: 180_000,
       env: {
         API_URL: apiUrl,
         STOREFRONT_PUBLIC_URL: `http://{subdomain}.localhost:${PORTS.storefront}`,
@@ -67,7 +67,7 @@ export default defineConfig({
       cwd: 'apps/storefront',
       url: `http://localhost:${PORTS.storefront}`,
       reuseExistingServer: false,
-      timeout: 60_000,
+      timeout: 180_000,
       env: {
         API_URL: apiUrl,
         STOREFRONT_SHARED_SECRET: storefrontSecret,

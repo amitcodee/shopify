@@ -212,6 +212,8 @@ model Product {
   vendor         String?
   productType    String?
   tags           String[]      @default([])
+  /// Sold as a gift card: variants are denominations; each unit paid issues a card.
+  isGiftCard     Boolean       @default(false)
   seoTitle       String?
   seoDescription String?
   publishedAt    DateTime?
@@ -679,6 +681,8 @@ model OrderLine {
   weightGrams       Int     @default(0)
   /// Whether stock was reserved (tracked variant) so cancellations release it correctly.
   stockReserved     Boolean @default(false)
+  /// Gift card denomination: paying the order issues one card per unit.
+  isGiftCard        Boolean @default(false)
   restockedQuantity Int     @default(0)
 
   order Order @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
@@ -706,6 +710,8 @@ model GiftCard {
   codeHash       String
   /// Last 4 characters, to recognise a card ("•••• K7QM").
   lastCharacters String    @db.Char(4)
+  /// Order whose purchase issued this card (null when issued by staff).
+  sourceOrderId  String?   @db.Uuid
   initialValue   Int
   balance        Int
   currency       String    @db.Char(3)

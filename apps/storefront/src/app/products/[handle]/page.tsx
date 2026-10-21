@@ -87,6 +87,11 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
           <p className="text-sm uppercase tracking-wide text-zinc-500">{product.vendor}</p>
         ) : null}
         <h1 className="mt-1 text-3xl font-bold tracking-tight">{product.title}</h1>
+        {product.isGiftCard ? (
+          <p className="mt-2 text-sm text-zinc-600">
+            Delivered by email: you receive a gift card code as soon as your order is paid.
+          </p>
+        ) : null}
         <div className="mt-6">
           <VariantPicker product={product} currency={shop.currency} />
         </div>

@@ -334,13 +334,18 @@ export class DraftOrdersService {
     const variantIds = input.lines.flatMap((l) => ('variantId' in l ? [l.variantId] : []));
     const variants = await tx.productVariant.findMany({
       where: { storeId, id: { in: variantIds } },
-      include: { product: { select: { title: true } } },
+      include: { product: { select: { title: true, isGiftCard: true } } },
     });
     const byId = new Map(variants.map((v) => [v.id, v]));
     const lines: DraftOrderLine[] = input.lines.map((l) => {
       if ('variantId' in l) {
         const v = byId.get(l.variantId);
         if (!v) throw new BadRequestException('Unknown product variant.');
+        if (v.product.isGiftCard) {
+          throw new BadRequestException(
+            'Gift cards are sold through the storefront; issue one from Gift cards instead.',
+          );
+        }
         return {
           variantId: v.id,
           productId: v.productId,

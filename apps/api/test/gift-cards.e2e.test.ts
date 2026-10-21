@@ -253,4 +253,94 @@ describe('Gift cards', () => {
       .set(s.merchant.auth)
       .expect(404);
   });
+
+  it('sells gift card products: discounts skip them and paying issues emailed cards', async () => {
+    const s = await setup();
+    const giftProduct = await ctx
+      .http()
+      .post(`${s.admin}/products`)
+      .set(s.merchant.auth)
+      .send({
+        title: 'Store gift card',
+        status: 'ACTIVE',
+        isGiftCard: true,
+        options: [{ name: 'Amount', values: ['25', '50'] }],
+        variants: [
+          { options: ['25'], price: 2500, requiresShipping: true, inventoryQuantity: 0 },
+          { options: ['50'], price: 5000 },
+        ],
+      })
+      .expect(201);
+    expect(giftProduct.body.isGiftCard).toBe(true);
+    expect(giftProduct.body.variants[0]).toMatchObject({
+      requiresShipping: false,
+      taxable: false,
+      trackInventory: false,
+    });
+    await ctx
+      .http()
+      .post(`${s.admin}/discounts`)
+      .set(s.merchant.auth)
+      .send({ code: 'HALF', type: 'PERCENTAGE', value: 50 })
+      .expect(201);
+
+    const cart = (await s.sf('post', '/cart').expect(201)).body.token as string;
+    await s
+      .sf('post', '/cart/lines', { cart })
+      .send({ variantId: giftProduct.body.variants[0].id, quantity: 2 })
+      .expect(201);
+    await s.sf('post', '/cart/lines', { cart }).send({ variantId: s.variantId }).expect(201);
+    const preview = await s
+      .sf('post', '/checkout/preview', { cart })
+      .send({ country: 'GB', discountCode: 'HALF' })
+      .expect(200);
+    // 50% off the 30.00 kettle only: the 2 × 25.00 cards keep their value.
+    expect(preview.body).toMatchObject({ subtotal: 8000, discountTotal: 1500, total: 6500 });
+
+    // Gift cards cannot pay for gift cards.
+    const card = await s.issue({ initialValue: 1000 }).expect(201);
+    const blocked = await s
+      .sf('post', '/checkout/preview', { cart })
+      .send({ giftCardCode: card.body.code })
+      .expect(200);
+    expect(blocked.body.giftCardError).toBe('Gift cards can’t be used to buy gift cards.');
+
+    const placed = await s
+      .sf('post', '/checkout', { cart })
+      .send({
+        email: 'buyer@example.com',
+        shippingAddress: address,
+        idempotencyKey: randomUUID(),
+        discountCode: 'HALF',
+      })
+      .expect(201);
+    mailbox.sent.length = 0;
+    await payMock(s.sf, placed.body.paymentUrl);
+    await outbox.processBatch();
+    const codes = mailbox.sent
+      .filter((m) => m.to === 'buyer@example.com' && m.subject.includes('gift card'))
+      .map((m) => /([A-Z2-9]{4}(?:-[A-Z2-9]{4}){3})/.exec(m.text)?.[1]);
+    expect(codes).toHaveLength(2);
+
+    const issued = await ctx.platform.giftCard.findMany({
+      where: { storeId: s.merchant.store.id, sourceOrderId: { not: null } },
+    });
+    expect(issued.map((c) => c.balance)).toEqual([2500, 2500]);
+
+    // A purchased card works at checkout like any other.
+    const next = await cartWith(s);
+    const spend = await s
+      .sf('post', '/checkout/preview', { cart: next })
+      .send({ giftCardCode: codes[0] })
+      .expect(200);
+    expect(spend.body.giftCard).toMatchObject({ applied: 2500 });
+
+    // Draft orders cannot sell gift cards.
+    await ctx
+      .http()
+      .post(`${s.admin}/draft-orders`)
+      .set(s.merchant.auth)
+      .send({ lines: [{ variantId: giftProduct.body.variants[1].id, quantity: 1 }] })
+      .expect(400);
+  });
 });

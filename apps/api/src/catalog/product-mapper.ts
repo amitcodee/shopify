@@ -45,6 +45,7 @@ export function toProductDto(p: ProductWithDetail, media: MediaUrls): ProductDto
     productType: p.productType,
     tags: p.tags,
     seoTitle: p.seoTitle,
+    isGiftCard: p.isGiftCard,
     seoDescription: p.seoDescription,
     options: p.options.map((o) => ({ name: o.name, values: o.values })),
     variants: p.variants.map(toVariantDto),

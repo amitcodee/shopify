@@ -238,6 +238,7 @@ export class StorefrontCatalogService {
       vendor: product.vendor,
       productType: product.productType,
       tags: product.tags,
+      isGiftCard: product.isGiftCard,
       seoTitle: product.seoTitle,
       seoDescription: product.seoDescription,
       options: product.options.map((o) => ({ name: o.name, values: o.values })),

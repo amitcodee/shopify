@@ -8,6 +8,8 @@ export interface PricingLine {
   quantity: number;
   taxable: boolean;
   requiresShipping: boolean;
+  /** False for gift cards: order discounts never reduce their price. Default true. */
+  discountable?: boolean;
 }
 
 export interface PricingDiscount {
@@ -65,14 +67,19 @@ export function priceCart(input: PricingInput): PricingResult {
   const lineTotals = input.lines.map((l) => l.unitPrice * l.quantity);
   const subtotal = lineTotals.reduce((s, t) => s + t, 0);
 
+  const discountWeights = input.lines.map((l, i) =>
+    l.discountable === false ? 0 : (lineTotals[i] ?? 0),
+  );
+  const discountBase = discountWeights.reduce((s, t) => s + t, 0);
+
   let discountTotal = 0;
   if (input.discount?.type === 'PERCENTAGE') {
     const pct = Math.min(100, Math.max(0, input.discount.value));
-    discountTotal = divRoundHalfUp(subtotal * pct, 100);
+    discountTotal = divRoundHalfUp(discountBase * pct, 100);
   } else if (input.discount?.type === 'FIXED_AMOUNT') {
-    discountTotal = Math.min(subtotal, Math.max(0, input.discount.value));
+    discountTotal = Math.min(discountBase, Math.max(0, input.discount.value));
   }
-  const lineDiscounts = allocate(discountTotal, lineTotals);
+  const lineDiscounts = allocate(discountTotal, discountWeights);
 
   const needsShipping = input.lines.some((l) => l.requiresShipping);
   const shippingTotal =

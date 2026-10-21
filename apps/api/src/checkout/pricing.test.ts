@@ -94,4 +94,40 @@ describe('priceCart', () => {
     expect(result.taxTotal).toBe(200);
     expect(result.total).toBe(3200);
   });
+
+  it('never discounts gift card lines', () => {
+    const result = priceCart({
+      lines: [
+        {
+          unitPrice: 5000,
+          quantity: 1,
+          taxable: false,
+          requiresShipping: false,
+          discountable: false,
+        },
+        { unitPrice: 2000, quantity: 1, taxable: true, requiresShipping: true },
+      ],
+      discount: { type: 'PERCENTAGE', value: 50 },
+      shippingPrice: 0,
+      taxRateBps: 0,
+      taxShipping: false,
+    });
+    expect(result).toMatchObject({ discountTotal: 1000, lineDiscounts: [0, 1000], total: 6000 });
+    const fixed = priceCart({
+      lines: [
+        {
+          unitPrice: 5000,
+          quantity: 1,
+          taxable: false,
+          requiresShipping: false,
+          discountable: false,
+        },
+      ],
+      discount: { type: 'FIXED_AMOUNT', value: 1000 },
+      shippingPrice: 0,
+      taxRateBps: 0,
+      taxShipping: false,
+    });
+    expect(fixed.discountTotal).toBe(0);
+  });
 });

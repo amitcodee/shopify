@@ -1,4 +1,3 @@
-import { randomInt } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -6,8 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  formatGiftCardCode,
-  GIFT_CARD_ALPHABET,
   type GiftCard as GiftCardDto,
   type giftCardAdjustInputSchema,
   type GiftCardDetail,
@@ -29,14 +26,6 @@ import { GiftCardLedger, giftCardStatus } from './gift-card-ledger.js';
 
 type IssueInput = z.output<typeof giftCardIssueInputSchema>;
 type CardWithCustomer = GiftCard & { customer: { email: string } | null };
-
-/** Random 16-character code: 31^16 ≈ 2^79 possibilities. */
-function generateCode(): string {
-  return Array.from(
-    { length: 16 },
-    () => GIFT_CARD_ALPHABET[randomInt(GIFT_CARD_ALPHABET.length)],
-  ).join('');
-}
 
 /** Cards expire at the end of the chosen day (UTC). */
 const endOfDay = (date: string) => new Date(`${date}T23:59:59.999Z`);
@@ -99,10 +88,11 @@ export class GiftCardsService {
     }
     return this.tenantDb.run(storeId, async (tx) => {
       const store = await tx.store.findUniqueOrThrow({ where: { id: storeId } });
-      const code = input.code ?? generateCode();
-      const codeHash = this.ledger.codeHash(storeId, code);
-      if (await tx.giftCard.findUnique({ where: { storeId_codeHash: { storeId, codeHash } } })) {
-        throw new ConflictException('A gift card with this code already exists.');
+      if (input.code) {
+        const codeHash = this.ledger.codeHash(storeId, input.code);
+        if (await tx.giftCard.findUnique({ where: { storeId_codeHash: { storeId, codeHash } } })) {
+          throw new ConflictException('A gift card with this code already exists.');
+        }
       }
       const customer = input.customerEmail
         ? await tx.customer.upsert({
@@ -111,22 +101,17 @@ export class GiftCardsService {
             create: { storeId, email: input.customerEmail },
           })
         : null;
-      const card = await tx.giftCard.create({
-        data: {
-          storeId,
-          codeHash,
-          lastCharacters: code.slice(-4),
-          initialValue: input.initialValue,
-          balance: 0,
-          currency: store.currency,
-          customerId: customer?.id ?? null,
-          note: input.note ?? null,
-          expiresAt: input.expiresOn ? endOfDay(input.expiresOn) : null,
-        },
-      });
-      const issued = await this.ledger.apply(tx, card, input.initialValue, 'ISSUED', {
+      const { card: issued, code } = await this.ledger.issue(tx, {
+        storeId,
+        value: input.initialValue,
+        currency: store.currency,
+        code: input.code,
+        customerId: customer?.id ?? null,
+        note: input.note ?? null,
+        expiresAt: input.expiresOn ? endOfDay(input.expiresOn) : null,
         actorUserId: actor.id,
       });
+      const card = issued;
       if (input.notifyCustomer && customer) {
         const primary = await tx.domain.findFirst({
           where: { storeId, isPrimary: true, verifiedAt: { not: null } },
@@ -136,7 +121,7 @@ export class GiftCardsService {
           storeId,
           giftCardIssuedEmail(customer.email, {
             storeName: store.name,
-            code: formatGiftCardCode(code),
+            code,
             value: input.initialValue,
             currency: store.currency,
             expiresOn: input.expiresOn ?? null,
@@ -155,7 +140,7 @@ export class GiftCardsService {
       });
       return {
         ...this.toDto({ ...issued, customer: customer ? { email: customer.email } : null }),
-        code: formatGiftCardCode(code),
+        code,
       };
     });
   }

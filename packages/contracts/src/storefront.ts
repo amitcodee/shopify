@@ -89,6 +89,7 @@ export const storefrontProductSchema = z.object({
   tags: z.array(z.string()),
   seoTitle: z.string().nullable(),
   seoDescription: z.string().nullable(),
+  isGiftCard: z.boolean(),
   options: z.array(z.object({ name: z.string(), values: z.array(z.string()) })),
   variants: z.array(storefrontVariantSchema),
   images: z.array(

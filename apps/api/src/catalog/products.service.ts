@@ -144,6 +144,7 @@ export class ProductsService {
             tags: input.tags,
             seoTitle: input.seoTitle ?? null,
             seoDescription: input.seoDescription ?? null,
+            isGiftCard: input.isGiftCard,
             publishedAt: input.status === 'ACTIVE' ? new Date() : null,
             options: {
               create: input.options.map((o, position) => ({
@@ -212,6 +213,7 @@ export class ProductsService {
             tags: input.tags,
             seoTitle: input.seoTitle ?? null,
             seoDescription: input.seoDescription ?? null,
+            isGiftCard: input.isGiftCard,
             publishedAt:
               input.status === 'ACTIVE'
                 ? (existing.publishedAt ?? new Date())

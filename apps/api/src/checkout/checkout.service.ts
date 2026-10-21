@@ -67,6 +67,8 @@ interface Quote {
     requiresShipping: boolean;
     weightGrams: number;
     trackInventory: boolean;
+    isGiftCard: boolean;
+    discountable: boolean;
   }[];
 }
 
@@ -264,6 +266,7 @@ export class CheckoutService {
               requiresShipping: l.requiresShipping,
               weightGrams: l.weightGrams,
               stockReserved: l.trackInventory,
+              isGiftCard: l.isGiftCard,
             })),
           },
         },
@@ -344,6 +347,7 @@ export class CheckoutService {
     const available = cart.lines.filter((l) => l.available);
     const variants = await tx.productVariant.findMany({
       where: { storeId: shop.id, id: { in: available.map((l) => l.variantId) } },
+      include: { product: { select: { isGiftCard: true } } },
     });
     const byId = new Map(variants.map((v) => [v.id, v]));
     const lines = available.flatMap((l) => {
@@ -362,6 +366,8 @@ export class CheckoutService {
               requiresShipping: v.requiresShipping,
               weightGrams: v.weightGrams,
               trackInventory: v.trackInventory,
+              isGiftCard: v.product.isGiftCard,
+              discountable: !v.product.isGiftCard,
             },
           ]
         : [];
@@ -396,7 +402,9 @@ export class CheckoutService {
     });
     let giftCard: Quote['giftCard'] = null;
     let giftCardError: string | null = null;
-    if (input.giftCardCode) {
+    if (input.giftCardCode && lines.some((l) => l.isGiftCard)) {
+      giftCardError = 'Gift cards can’t be used to buy gift cards.';
+    } else if (input.giftCardCode) {
       const usable = await this.giftCards.findUsable(
         tx,
         shop.id,

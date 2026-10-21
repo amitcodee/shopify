@@ -1,6 +1,11 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, randomInt } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import { type GiftCardStatus, normalizeGiftCardCode } from '@repo/contracts';
+import {
+  formatGiftCardCode,
+  GIFT_CARD_ALPHABET,
+  type GiftCardStatus,
+  normalizeGiftCardCode,
+} from '@repo/contracts';
 import type { GiftCard, GiftCardTransactionKind, TenantTx } from '@repo/db';
 import { ENV, type Env } from '../config/env.js';
 
@@ -32,6 +37,51 @@ export class GiftCardLedger {
     return createHmac('sha256', this.env.APP_ENCRYPTION_KEY)
       .update(`gift-card:${storeId}:${normalizeGiftCardCode(code)}`)
       .digest('hex');
+  }
+
+  /**
+   * Creates a card with an ISSUED transaction. Returns the formatted code, which is never
+   * stored and must be shown or emailed now. A random code is 16 characters (≈2^79).
+   */
+  async issue(
+    tx: TenantTx,
+    input: {
+      storeId: string;
+      value: number;
+      currency: string;
+      code?: string;
+      customerId?: string | null;
+      note?: string | null;
+      expiresAt?: Date | null;
+      sourceOrderId?: string | null;
+      actorUserId?: string | null;
+    },
+  ): Promise<{ card: GiftCard; code: string }> {
+    const code =
+      input.code ??
+      Array.from(
+        { length: 16 },
+        () => GIFT_CARD_ALPHABET[randomInt(GIFT_CARD_ALPHABET.length)],
+      ).join('');
+    const card = await tx.giftCard.create({
+      data: {
+        storeId: input.storeId,
+        codeHash: this.codeHash(input.storeId, code),
+        lastCharacters: code.slice(-4),
+        initialValue: input.value,
+        balance: 0,
+        currency: input.currency,
+        customerId: input.customerId ?? null,
+        note: input.note ?? null,
+        expiresAt: input.expiresAt ?? null,
+        sourceOrderId: input.sourceOrderId ?? null,
+      },
+    });
+    const issued = await this.apply(tx, card, input.value, 'ISSUED', {
+      actorUserId: input.actorUserId ?? null,
+      orderId: input.sourceOrderId ?? undefined,
+    });
+    return { card: issued, code: formatGiftCardCode(code) };
   }
 
   /** Finds a card the shopper can spend in `currency` (no lock; for previews). */

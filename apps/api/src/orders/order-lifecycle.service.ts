@@ -8,6 +8,7 @@ import { OutboxService } from '../outbox/outbox.service.js';
 import { formatMoney } from '@repo/contracts';
 import {
   disputeEmail,
+  giftCardIssuedEmail,
   merchantNewOrderEmail,
   orderConfirmationEmail,
   type OrderEmailData,
@@ -327,6 +328,7 @@ export class OrderLifecycle {
       if (order.cartId) await tx.cart.deleteMany({ where: { id: order.cartId, storeId } });
       await this.completeDraft(tx, storeId, order.id);
       await this.event(tx, storeId, order.id, 'paid', 'Payment received.');
+      await this.issuePurchasedGiftCards(tx, storeId, order);
       await this.webhooks.emitOrder(tx, storeId, 'orders/paid', order.id);
       await this.sendOrderEmails(tx, storeId, order);
     });
@@ -350,6 +352,7 @@ export class OrderLifecycle {
         ? 'Paid in full with a gift card.'
         : 'No payment required (order total is zero).',
     );
+    await this.issuePurchasedGiftCards(tx, storeId, order);
     await this.webhooks.emitOrder(tx, storeId, 'orders/paid', order.id);
     await this.sendOrderEmails(tx, storeId, order);
   }
@@ -390,8 +393,60 @@ export class OrderLifecycle {
         actorUserId,
       },
     );
+    await this.issuePurchasedGiftCards(tx, storeId, order);
     await this.webhooks.emitOrder(tx, storeId, 'orders/paid', order.id);
     await this.sendOrderEmails(tx, storeId, order);
+  }
+
+  /**
+   * Paying for gift card products issues one card per unit, worth its denomination, and emails
+   * the codes to the buyer (they are not stored and cannot be shown again).
+   */
+  private async issuePurchasedGiftCards(
+    tx: TenantTx,
+    storeId: string,
+    order: OrderWithLines,
+  ): Promise<void> {
+    const lines = order.lines.filter((l) => l.isGiftCard);
+    if (lines.length === 0) return;
+    const store = await tx.store.findUniqueOrThrow({ where: { id: storeId } });
+    const primary = await tx.domain.findFirst({
+      where: { storeId, isPrimary: true, verifiedAt: { not: null } },
+    });
+    const shopUrl = this.urls.storefrontOrigin(store.subdomain, primary?.hostname);
+    let issued = 0;
+    for (const line of lines) {
+      for (let unit = 0; unit < line.quantity; unit++) {
+        const { code } = await this.giftCards.issue(tx, {
+          storeId,
+          value: line.unitPrice,
+          currency: order.currency,
+          customerId: order.customerId,
+          note: `Purchased in order #${order.number}`,
+          sourceOrderId: order.id,
+        });
+        await this.outbox.enqueueEmail(
+          tx,
+          storeId,
+          giftCardIssuedEmail(order.email, {
+            storeName: store.name,
+            code,
+            value: line.unitPrice,
+            currency: order.currency,
+            expiresOn: null,
+            shopUrl,
+          }),
+        );
+        issued++;
+      }
+    }
+    await this.event(
+      tx,
+      storeId,
+      order.id,
+      'gift_cards_issued',
+      `${issued} gift card${issued === 1 ? '' : 's'} issued and emailed to ${order.email}.`,
+    );
   }
 
   /** A draft order whose order was paid is complete. */
