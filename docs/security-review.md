@@ -123,3 +123,8 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   refunds return money to the card/manual payment first and credit the gift card only after
   that succeeds. Balance changes are an append-only ledger (`UPDATE`/`DELETE` revoked from the
   app role) under forced RLS. Tests: `gift-cards.e2e`, `gift-cards.spec`.
+- **2026-10-21 — product CSV import/export.** Exports neutralise spreadsheet formulas (cells
+  starting with `=`, `+`, `-`, `@`, tab or CR get a leading apostrophe). Imports are capped at
+  4 MB and 5000 rows, parsed in memory without evaluation, and every product goes through the
+  same schema, plan quota and audit path as the product editor; existing products are never
+  overwritten. Tests: `csv.test`, `product-csv.e2e`, `product-csv.spec`.

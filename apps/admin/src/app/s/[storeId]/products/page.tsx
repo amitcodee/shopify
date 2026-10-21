@@ -1,6 +1,15 @@
 import { formatMoney, type Paginated, type ProductListItem } from '@repo/contracts';
 import Link from 'next/link';
-import { Badge, ButtonLink, EmptyState, PageHeader, Pagination, Table, Td } from '@/components/ui';
+import {
+  Badge,
+  ButtonLink,
+  buttonClass,
+  EmptyState,
+  PageHeader,
+  Pagination,
+  Table,
+  Td,
+} from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
 import { statusTone } from './status';
@@ -40,7 +49,22 @@ export default async function ProductsPage({
     <>
       <PageHeader
         title="Products"
-        actions={canWrite ? <ButtonLink href={`${base}/new`}>Add product</ButtonLink> : null}
+        actions={
+          <div className="flex items-center gap-2">
+            {/* A route handler download, not a page: plain <a>, no client-side navigation. */}
+            <a href={`${base}/export`} className={buttonClass('ghost')} download>
+              Export
+            </a>
+            {canWrite ? (
+              <>
+                <ButtonLink href={`${base}/import`} variant="secondary">
+                  Import
+                </ButtonLink>
+                <ButtonLink href={`${base}/new`}>Add product</ButtonLink>
+              </>
+            ) : null}
+          </div>
+        }
       />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <nav aria-label="Filter by status" className="flex gap-1">
