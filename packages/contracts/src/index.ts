@@ -19,3 +19,4 @@ export * from './platform.js';
 export * from './payments.js';
 export * from './security-headers.js';
 export * from './redirects.js';
+export * from './online-store.js';

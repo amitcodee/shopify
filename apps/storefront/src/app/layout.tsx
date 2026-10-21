@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { MenuLink } from '@/components/content';
 import { requestHost } from '@/lib/api';
 import { getCart, getShop, isRootHost } from '@/lib/shop';
 import { themeStyle } from '@/lib/theme';
@@ -86,18 +87,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <Link href="/" className="text-xl font-bold tracking-tight text-brand">
               {shop.name}
             </Link>
-            <nav aria-label="Collections" className="flex flex-1 flex-wrap gap-4 text-sm">
-              <Link href="/collections/all" className="text-zinc-700 hover:text-zinc-950">
-                Shop all
-              </Link>
-              {shop.collections.slice(0, 5).map((c) => (
-                <Link
-                  key={c.handle}
-                  href={`/collections/${c.handle}`}
+            <nav aria-label="Main" className="flex flex-1 flex-wrap gap-4 text-sm">
+              {shop.menus.main.map((link) => (
+                <MenuLink
+                  key={`${link.title}-${link.href}`}
+                  link={link}
                   className="text-zinc-700 hover:text-zinc-950"
-                >
-                  {c.title}
-                </Link>
+                />
               ))}
             </nav>
             <form action="/search" role="search" className="flex">
@@ -123,11 +119,35 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
           {children}
         </main>
-        <footer className="border-t border-zinc-200 py-8 text-center text-sm text-zinc-500">
-          © {new Date().getFullYear()} {shop.name} ·{' '}
-          <a href={`mailto:${shop.contactEmail}`} className="hover:underline">
-            {shop.contactEmail}
-          </a>
+        <footer className="border-t border-zinc-200 py-8 text-sm text-zinc-500">
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4">
+            {shop.menus.footer.length > 0 || shop.policies.length > 0 ? (
+              <nav aria-label="Footer" className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+                {shop.menus.footer.map((link) => (
+                  <MenuLink
+                    key={`${link.title}-${link.href}`}
+                    link={link}
+                    className="hover:text-zinc-900 hover:underline"
+                  />
+                ))}
+                {shop.policies.map((p) => (
+                  <Link
+                    key={p.kind}
+                    href={`/policies/${p.kind}`}
+                    className="hover:text-zinc-900 hover:underline"
+                  >
+                    {p.title}
+                  </Link>
+                ))}
+              </nav>
+            ) : null}
+            <p>
+              © {new Date().getFullYear()} {shop.name} ·{' '}
+              <a href={`mailto:${shop.contactEmail}`} className="hover:underline">
+                {shop.contactEmail}
+              </a>
+            </p>
+          </div>
         </footer>
       </body>
     </html>

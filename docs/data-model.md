@@ -35,6 +35,9 @@ Conventions: UUID primary keys; `store_id uuid not null` on every tenant table (
 | `ProductImage` / `MediaAsset` | store_id, product_id?, storage_key, alt, width, height, position                                                                                                |
 | `Collection`                  | store_id, id, title, handle, type (`MANUAL`/`SMART`), rules json                                                                                                |
 | `CollectionProduct`           | store_id, collection_id, product_id, position                                                                                                                   |
+| `Page`                        | store_id, id, title, handle (unique per store), body (plain text), published                                                                                    |
+| `StorePolicy`                 | store_id + kind (`REFUND`/`PRIVACY`/`TERMS`/`SHIPPING`/`CONTACT`), body                                                                                         |
+| `Menu`                        | store_id + handle (`main`/`footer`), items json (typed links validated on write and read)                                                                       |
 | `InventoryLocation`           | store_id, id, name, address                                                                                                                                     |
 | `InventoryLevel`              | store_id, variant_id, location_id, available, reserved — unique(variant_id, location_id)                                                                        |
 | `InventoryAdjustment`         | store_id, variant_id, location_id, delta, reason, ref, actor                                                                                                    |

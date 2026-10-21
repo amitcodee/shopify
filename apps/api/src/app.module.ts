@@ -13,6 +13,7 @@ import type { PrismaClient } from '@repo/db';
 import { DatabaseModule, PLATFORM_DB } from './database/database.module.js';
 import { EmailModule } from './email/email.module.js';
 import { HealthModule } from './health/health.module.js';
+import { OnlineStoreModule } from './online-store/online-store.module.js';
 import { PlatformAdminModule } from './platform/platform-admin.module.js';
 import { PlatformCoreModule } from './platform/platform-core.module.js';
 import { SettingsModule } from './settings/settings.module.js';
@@ -53,6 +54,7 @@ export class AppModule {
         StorefrontModule,
         CommerceModule,
         SettingsModule,
+        OnlineStoreModule,
         PlatformAdminModule,
       ],
       providers: [

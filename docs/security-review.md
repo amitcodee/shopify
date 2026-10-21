@@ -89,3 +89,10 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   fixed: the worker inherited the API's port health check and would always report unhealthy
   (it now has a heartbeat file check), and `/app/storage` did not exist in the API image, so
   a fresh media volume was root-owned and uploads would fail for the `node` user.
+- **2026-10-21 — online store content.** Pages and policies are plain text rendered as React text
+  nodes (no merchant HTML). Menu links are typed (`home`, `collection`, `page`, `policy`, ...);
+  custom URLs must be a same-site path (`/…`, not `//` or `/\`) or an absolute http(s) URL, so
+  `javascript:`/`data:` links are rejected on write and dropped again on read. External links get
+  `rel="noopener noreferrer"`. Links to hidden collections, draft products and unpublished pages
+  are not rendered. Pages, policies and menus are under forced RLS. Tests: `online-store.test`,
+  `online-store.e2e`, `online-store.spec`.

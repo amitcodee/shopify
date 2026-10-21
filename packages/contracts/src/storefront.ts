@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { themeInputSchema } from './settings.js';
+import { policyKindSchema, resolvedLinkSchema } from './online-store.js';
 
 /** Headers the storefront server uses to tell the API which host (store) a request is for. */
 export const STOREFRONT_HEADERS = {
@@ -22,6 +23,10 @@ export const shopSchema = z.object({
   contactEmail: z.string(),
   collections: z.array(z.object({ title: z.string(), handle: z.string() })),
   theme: themeInputSchema,
+  /** Header and footer navigation, already resolved to hrefs. */
+  menus: z.object({ main: z.array(resolvedLinkSchema), footer: z.array(resolvedLinkSchema) }),
+  /** Policies the store has published (linked from the footer and checkout). */
+  policies: z.array(z.object({ kind: policyKindSchema, title: z.string() })),
 });
 export type Shop = z.infer<typeof shopSchema>;
 

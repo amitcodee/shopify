@@ -118,6 +118,9 @@ model Store {
   shippingZones  ShippingZone[]
   taxRates       TaxRate[]
   discounts      DiscountCode[]
+  pages          Page[]
+  policies       StorePolicy[]
+  menus          Menu[]
   subscription   Subscription?
   paymentAccount PaymentAccount?
 
@@ -334,6 +337,56 @@ model CollectionProduct {
 
   @@id([collectionId, productId])
   @@index([storeId, productId])
+}
+
+/// Online store content page (About, FAQ, ...). Plain text only: no merchant HTML is rendered.
+model Page {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  storeId   String   @db.Uuid
+  title     String
+  handle    String
+  body      String   @default("")
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, id])
+  @@unique([storeId, handle])
+}
+
+enum PolicyKind {
+  REFUND
+  PRIVACY
+  TERMS
+  SHIPPING
+  CONTACT
+}
+
+/// Store policies shown at /policies/<kind> and linked from the footer and checkout.
+model StorePolicy {
+  storeId   String     @db.Uuid
+  kind      PolicyKind
+  body      String
+  updatedAt DateTime   @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@id([storeId, kind])
+}
+
+/// Navigation menu ("main" header, "footer"). `items` is validated by the contracts schema on
+/// write and on read; links reference handles, never raw HTML or script URLs.
+model Menu {
+  storeId   String   @db.Uuid
+  handle    String
+  items     Json
+  updatedAt DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@id([storeId, handle])
 }
 
 // ─────────────────────────────── Cart (tenant, RLS) ──────────────────────────────

@@ -14,10 +14,14 @@ import {
   addToCartInputSchema,
   type Cart,
   type CreatedCart,
+  type Policy,
+  type PolicyKind,
+  policyKindSchema,
   type ProductCardPage,
   type Shop,
   STOREFRONT_HEADERS,
   type StorefrontCollection,
+  type StorefrontPage,
   type StorefrontProduct,
   type StorefrontProductQuery,
   storefrontProductQuerySchema,
@@ -27,6 +31,7 @@ import type { z } from 'zod';
 import { Public } from '../auth/auth.guard.js';
 import { UuidParam } from '../common/uuid-param.pipe.js';
 import { ApiZodBody, ZodPipe } from '../common/zod.js';
+import { OnlineStoreService } from '../online-store/online-store.service.js';
 import { CartService } from './cart.service.js';
 import { StorefrontCatalogService } from './storefront-catalog.service.js';
 import { CartToken, CurrentShop, StorefrontGuard } from './storefront.guard.js';
@@ -43,6 +48,7 @@ export class StorefrontController {
   constructor(
     private readonly catalog: StorefrontCatalogService,
     private readonly carts: CartService,
+    private readonly onlineStore: OnlineStoreService,
   ) {}
 
   @Get('shop')
@@ -64,6 +70,19 @@ export class StorefrontController {
     @Param('handle') handle: string,
   ): Promise<StorefrontProduct> {
     return this.catalog.getProduct(shop, handle.slice(0, 120));
+  }
+
+  @Get('pages/:handle')
+  page(@CurrentShop() shop: ShopContext, @Param('handle') handle: string): Promise<StorefrontPage> {
+    return this.onlineStore.storefrontPage(shop.id, handle.slice(0, 120));
+  }
+
+  @Get('policies/:kind')
+  policy(
+    @CurrentShop() shop: ShopContext,
+    @Param('kind', new ZodPipe(policyKindSchema)) kind: PolicyKind,
+  ): Promise<Policy> {
+    return this.onlineStore.storefrontPolicy(shop.id, kind);
   }
 
   @Get('collections')

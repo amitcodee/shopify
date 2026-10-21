@@ -9,6 +9,7 @@ import type {
 } from '@repo/contracts';
 import { Prisma, type TenantTx } from '@repo/db';
 import { TenantDb } from '../database/database.module.js';
+import { OnlineStoreService } from '../online-store/online-store.service.js';
 import { MediaUrls } from '../storage/storage.module.js';
 import type { ShopContext } from './store-resolver.js';
 
@@ -51,25 +52,28 @@ export class StorefrontCatalogService {
   constructor(
     private readonly tenantDb: TenantDb,
     private readonly media: MediaUrls,
+    private readonly onlineStore: OnlineStoreService,
   ) {}
 
   async shop(shop: ShopContext): Promise<Shop> {
-    const collections = await this.tenantDb.run(shop.id, (tx) =>
-      tx.collection.findMany({
+    return this.tenantDb.run(shop.id, async (tx) => {
+      const collections = await tx.collection.findMany({
         where: { storeId: shop.id, published: true },
         orderBy: { title: 'asc' },
         select: { title: true, handle: true },
         take: 20,
-      }),
-    );
-    return {
-      name: shop.name,
-      subdomain: shop.subdomain,
-      currency: shop.currency,
-      contactEmail: shop.contactEmail,
-      collections,
-      theme: shop.theme,
-    };
+      });
+      const navigation = await this.onlineStore.storefrontNavigation(tx, shop.id, collections);
+      return {
+        name: shop.name,
+        subdomain: shop.subdomain,
+        currency: shop.currency,
+        contactEmail: shop.contactEmail,
+        collections,
+        theme: shop.theme,
+        ...navigation,
+      };
+    });
   }
 
   async listProducts(shop: ShopContext, query: StorefrontProductQuery): Promise<ProductCardPage> {
