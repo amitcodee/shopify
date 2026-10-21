@@ -9,6 +9,8 @@ export const STOREFRONT_HEADERS = {
   signature: 'x-storefront-signature',
   cart: 'x-cart-token',
   customer: 'x-customer-token',
+  /** Proof the visitor entered a password-protected store's password. */
+  access: 'x-storefront-access',
 } as const;
 
 /** Canonical string signed with HMAC-SHA256: `${host}\n${timestamp}`. */
@@ -27,6 +29,9 @@ export const shopSchema = z.object({
   menus: z.object({ main: z.array(resolvedLinkSchema), footer: z.array(resolvedLinkSchema) }),
   /** Policies the store has published (linked from the footer and checkout). */
   policies: z.array(z.object({ kind: policyKindSchema, title: z.string() })),
+  /** True when the store is password protected and this visitor has not entered it. */
+  locked: z.boolean(),
+  passwordMessage: z.string(),
 });
 export type Shop = z.infer<typeof shopSchema>;
 
@@ -147,3 +152,7 @@ export const storefrontSitemapSchema = z.object({
   policies: z.array(z.string()),
 });
 export type StorefrontSitemap = z.infer<typeof storefrontSitemapSchema>;
+
+export const storefrontPasswordInputSchema = z.strictObject({
+  password: z.string().min(1).max(100),
+});

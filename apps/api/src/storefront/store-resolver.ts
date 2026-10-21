@@ -11,6 +11,9 @@ export interface ShopContext {
   currency: string;
   contactEmail: string;
   theme: Theme;
+  /** Set while the store is password protected; changes whenever the password changes. */
+  accessVersion: string | null;
+  passwordMessage: string;
 }
 
 const CACHE_TTL_MS = 30_000;
@@ -84,6 +87,9 @@ export class StoreResolver {
     contactEmail: string;
     themePreset: string;
     themeSettings: unknown;
+    passwordProtected: boolean;
+    storefrontPasswordChangedAt: Date | null;
+    passwordMessage: string;
   }): ShopContext {
     return {
       id: store.id,
@@ -92,6 +98,11 @@ export class StoreResolver {
       currency: store.currency,
       contactEmail: store.contactEmail,
       theme: parseTheme(store.themePreset, store.themeSettings),
+      accessVersion:
+        store.passwordProtected && store.storefrontPasswordChangedAt
+          ? store.storefrontPasswordChangedAt.toISOString()
+          : null,
+      passwordMessage: store.passwordMessage,
     };
   }
 }

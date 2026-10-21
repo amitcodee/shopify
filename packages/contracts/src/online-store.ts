@@ -114,3 +114,18 @@ export function paragraphs(body: string): string[] {
     .map((p) => p.trim())
     .filter(Boolean);
 }
+
+/** Pre-launch password page settings. */
+export const storefrontAccessSchema = z.object({
+  enabled: z.boolean(),
+  password: z.string().nullable(),
+  message: z.string(),
+});
+export type StorefrontAccess = z.infer<typeof storefrontAccessSchema>;
+
+/** Omit `password` to keep the current one. */
+export const storefrontAccessInputSchema = z.strictObject({
+  enabled: z.boolean(),
+  password: z.string().trim().min(4, 'Use at least 4 characters').max(100).optional(),
+  message: z.string().trim().max(500).default(''),
+});

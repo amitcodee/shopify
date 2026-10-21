@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { createHash, timingSafeEqual } from 'node:crypto';
+import { Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import type {
   ProductCard,
   ProductCardPage,
@@ -9,9 +10,12 @@ import type {
   StorefrontSitemap,
 } from '@repo/contracts';
 import { Prisma, type TenantTx } from '@repo/db';
+import { decryptSecret } from '../common/crypto.js';
+import { ENV, type Env } from '../config/env.js';
 import { TenantDb } from '../database/database.module.js';
 import { OnlineStoreService } from '../online-store/online-store.service.js';
 import { MediaUrls } from '../storage/storage.module.js';
+import { storefrontAccessToken } from './storefront.guard.js';
 import type { ShopContext } from './store-resolver.js';
 
 interface CardRow {
@@ -54,10 +58,26 @@ export class StorefrontCatalogService {
     private readonly tenantDb: TenantDb,
     private readonly media: MediaUrls,
     private readonly onlineStore: OnlineStoreService,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
-  async shop(shop: ShopContext): Promise<Shop> {
+  async shop(shop: ShopContext, locked = false): Promise<Shop> {
     return this.tenantDb.run(shop.id, async (tx) => {
+      if (locked) {
+        // The password page shows only the store's name, message and branding.
+        return {
+          name: shop.name,
+          subdomain: shop.subdomain,
+          currency: shop.currency,
+          contactEmail: shop.contactEmail,
+          collections: [],
+          theme: shop.theme,
+          menus: { main: [], footer: [] },
+          policies: [],
+          locked: true,
+          passwordMessage: shop.passwordMessage,
+        };
+      }
       const collections = await tx.collection.findMany({
         where: { storeId: shop.id, published: true },
         orderBy: { title: 'asc' },
@@ -73,8 +93,34 @@ export class StorefrontCatalogService {
         collections,
         theme: shop.theme,
         ...navigation,
+        locked: false,
+        passwordMessage: '',
       };
     });
+  }
+
+  /** Checks the storefront password; the token proves it on later requests. */
+  async unlock(shop: ShopContext, password: string): Promise<{ accessToken: string }> {
+    const store = await this.tenantDb.run(shop.id, (tx) =>
+      tx.store.findUniqueOrThrow({ where: { id: shop.id } }),
+    );
+    const current = store.storefrontPasswordEncrypted
+      ? decryptSecret(this.env.APP_ENCRYPTION_KEY, store.storefrontPasswordEncrypted)
+      : null;
+    const a = createHash('sha256').update(password).digest();
+    const b = createHash('sha256')
+      .update(current ?? '')
+      .digest();
+    if (!shop.accessVersion || !current || !timingSafeEqual(a, b)) {
+      throw new UnauthorizedException('That password is not right.');
+    }
+    return {
+      accessToken: storefrontAccessToken(
+        this.env.STOREFRONT_SHARED_SECRET,
+        shop.id,
+        shop.accessVersion,
+      ),
+    };
   }
 
   /** Everything a crawler may index (capped; large catalogs list their newest items first). */

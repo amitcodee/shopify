@@ -32,7 +32,7 @@ import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { UuidParam } from '../common/uuid-param.pipe.js';
 import { ApiZodBody, ZodPipe } from '../common/zod.js';
-import { CurrentShop, StorefrontGuard } from '../storefront/storefront.guard.js';
+import { AllowLockedStore, CurrentShop, StorefrontGuard } from '../storefront/storefront.guard.js';
 import type { ShopContext } from '../storefront/store-resolver.js';
 import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
 import { DraftOrdersService } from './draft-orders.service.js';
@@ -131,6 +131,7 @@ export class DraftOrdersController {
 
 @ApiTags('storefront')
 @Public()
+@AllowLockedStore()
 @UseGuards(StorefrontGuard)
 @Controller('storefront/invoices')
 export class InvoicesController {

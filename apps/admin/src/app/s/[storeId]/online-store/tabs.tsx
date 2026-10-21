@@ -7,6 +7,7 @@ const TABS = [
   { label: 'Pages', path: '/pages' },
   { label: 'Navigation', path: '/navigation' },
   { label: 'Policies', path: '/policies' },
+  { label: 'Password', path: '/password' },
 ];
 
 const tabClass = (active: boolean) =>

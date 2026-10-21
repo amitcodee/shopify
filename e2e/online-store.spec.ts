@@ -51,3 +51,31 @@ test('merchant publishes a page and a policy and links them from the storefront 
   await expect(shopper).toHaveURL(/\/policies\/refund$/);
   await expect(shopper.getByText('Returns within 30 days.')).toBeVisible();
 });
+
+test('a password-protected store shows a password page until the visitor enters it', async ({
+  page,
+  browser,
+}) => {
+  await signUp(page);
+  const { subdomain } = await createStore(page, 'Soon Co', { payments: false });
+  await page.getByRole('link', { name: 'Online store' }).first().click();
+  await page.getByRole('link', { name: 'Password' }).click();
+  await page.getByLabel('Require a password to visit the storefront').check();
+  await page.getByLabel('Password', { exact: true }).fill('let-me-in');
+  await page.getByLabel('Message for visitors').fill('Launching next week.');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Saved.')).toBeVisible();
+
+  const visitor = await browser.newPage();
+  await visitor.goto(storefrontUrl(subdomain, '/collections/all'));
+  await expect(visitor.getByText('Launching next week.')).toBeVisible();
+  await expect(visitor.getByRole('navigation', { name: 'Main' })).toHaveCount(0);
+  await visitor.getByLabel('Password').fill('nope');
+  await visitor.getByRole('button', { name: 'Enter store' }).click();
+  await expect(visitor.getByText('That password is not right.')).toBeVisible();
+  await visitor.getByLabel('Password').fill('let-me-in');
+  await visitor.getByRole('button', { name: 'Enter store' }).click();
+  await expect(visitor.getByRole('navigation', { name: 'Main' })).toBeVisible();
+  await visitor.goto(storefrontUrl(subdomain, '/collections/all'));
+  await expect(visitor.getByRole('heading', { name: 'All products' })).toBeVisible();
+});

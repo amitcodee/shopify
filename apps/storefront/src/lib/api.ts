@@ -5,9 +5,14 @@ import {
   STOREFRONT_HEADERS,
   storefrontSignaturePayload,
 } from '@repo/contracts';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
+
+/** Cookie holding the password-page access token for a protected store. */
+export const ACCESS_COOKIE = 'storefront_access';
+const LOCKED_DETAIL = 'This store is password protected.';
 
 export class StorefrontApiError extends Error {
   constructor(
@@ -55,6 +60,9 @@ export async function sf<T>(path: string, options: SfOptions = {}): Promise<T> {
   if (options.body !== undefined) requestHeaders.set('content-type', 'application/json');
   if (options.cartToken) requestHeaders.set(STOREFRONT_HEADERS.cart, options.cartToken);
   if (options.customerToken) requestHeaders.set(STOREFRONT_HEADERS.customer, options.customerToken);
+  // Password-protected stores: the access token from the password page (HttpOnly cookie).
+  const access = (await cookies()).get(ACCESS_COOKIE)?.value;
+  if (access && access.length <= 100) requestHeaders.set(STOREFRONT_HEADERS.access, access);
   const forwardedFor = incoming.get('x-forwarded-for');
   if (forwardedFor) requestHeaders.set('x-forwarded-for', forwardedFor);
 
@@ -71,6 +79,8 @@ export async function sf<T>(path: string, options: SfOptions = {}): Promise<T> {
   });
   if (!res.ok) {
     const problem = (await res.json().catch(() => null)) as ProblemDetails | null;
+    // Locked store: send the visitor to the password page (rendered by the root layout).
+    if (res.status === 403 && problem?.detail === LOCKED_DETAIL) redirect('/password');
     throw new StorefrontApiError(
       res.status,
       problem ?? { type: 'about:blank', title: res.statusText, status: res.status },

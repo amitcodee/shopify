@@ -3,10 +3,13 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  Inject,
   Param,
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiHeader, ApiTags } from '@nestjs/swagger';
@@ -26,8 +29,12 @@ import {
   type StorefrontProduct,
   type StorefrontProductQuery,
   storefrontProductQuerySchema,
+  storefrontPasswordInputSchema,
   updateCartLineInputSchema,
 } from '@repo/contracts';
+import type { Request } from 'express';
+import { Throttle } from '@nestjs/throttler';
+import { ENV, type Env } from '../config/env.js';
 import type { z } from 'zod';
 import { Public } from '../auth/auth.guard.js';
 import { UuidParam } from '../common/uuid-param.pipe.js';
@@ -35,7 +42,13 @@ import { ApiZodBody, ZodPipe } from '../common/zod.js';
 import { OnlineStoreService } from '../online-store/online-store.service.js';
 import { CartService } from './cart.service.js';
 import { StorefrontCatalogService } from './storefront-catalog.service.js';
-import { CartToken, CurrentShop, StorefrontGuard } from './storefront.guard.js';
+import {
+  AllowLockedStore,
+  CartToken,
+  CurrentShop,
+  hasStorefrontAccess,
+  StorefrontGuard,
+} from './storefront.guard.js';
 import type { ShopContext } from './store-resolver.js';
 
 @ApiTags('storefront')
@@ -50,11 +63,30 @@ export class StorefrontController {
     private readonly catalog: StorefrontCatalogService,
     private readonly carts: CartService,
     private readonly onlineStore: OnlineStoreService,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   @Get('shop')
-  shop(@CurrentShop() shop: ShopContext): Promise<Shop> {
-    return this.catalog.shop(shop);
+  @AllowLockedStore()
+  shop(@CurrentShop() shop: ShopContext, @Req() req: Request): Promise<Shop> {
+    return this.catalog.shop(
+      shop,
+      !hasStorefrontAccess(req, shop, this.env.STOREFRONT_SHARED_SECRET),
+    );
+  }
+
+  /** Password page: exchanges the store password for an access token (kept in a cookie). */
+  @Post('password')
+  @AllowLockedStore()
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiZodBody(storefrontPasswordInputSchema)
+  password(
+    @CurrentShop() shop: ShopContext,
+    @Body(new ZodPipe(storefrontPasswordInputSchema))
+    body: z.output<typeof storefrontPasswordInputSchema>,
+  ): Promise<{ accessToken: string }> {
+    return this.catalog.unlock(shop, body.password);
   }
 
   @Get('sitemap')

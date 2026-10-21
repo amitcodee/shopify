@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { headers } from 'next/headers';
 import { MenuLink } from '@/components/content';
 import { requestHost } from '@/lib/api';
 import { getCart, getShop, isRootHost } from '@/lib/shop';
 import { themeStyle } from '@/lib/theme';
+import { PasswordForm } from './password/password-form';
 import './globals.css';
 
 // Per-request rendering is required for the CSP nonce (see src/proxy.ts) to reach Next's scripts.
@@ -19,6 +21,9 @@ export async function generateMetadata(): Promise<Metadata> {
       }
     : { title: 'Commerce Platform' };
 }
+
+/** Paths that belong to one shopper and keep working while the store is locked. */
+const LOCK_EXEMPT = ['/orders/', '/invoices/', '/checkout/pay/'];
 
 const adminUrl = process.env.ADMIN_PUBLIC_URL ?? 'http://localhost:3100';
 
@@ -67,7 +72,28 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     );
   }
 
-  const cart = await getCart();
+  // Password-protected store: only per-shopper links (order status, invoices, payment) open.
+  const path = (await headers()).get('x-pathname') ?? '/';
+  if (shop.locked && !LOCK_EXEMPT.some((prefix) => path.startsWith(prefix))) {
+    return (
+      <html lang="en">
+        <body
+          className="flex min-h-screen items-center justify-center bg-white text-zinc-900 antialiased"
+          style={themeStyle(shop.theme)}
+        >
+          <main className="w-full max-w-sm px-6 py-24 text-center">
+            <h1 className="text-3xl font-bold tracking-tight text-brand">{shop.name}</h1>
+            <p className="mt-3 text-zinc-600">{shop.passwordMessage || 'Opening soon.'}</p>
+            <div className="mt-8">
+              <PasswordForm />
+            </div>
+          </main>
+        </body>
+      </html>
+    );
+  }
+
+  const cart = shop.locked ? null : await getCart();
   return (
     <html lang="en">
       <body

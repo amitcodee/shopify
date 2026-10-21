@@ -137,3 +137,10 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   holding database locks, and protected against SSRF (private ranges blocked, DNS pinned, no
   redirects, 5 s timeout, https in production). Tests: `developer.e2e`, `safe-http.test`,
   `developer.spec`.
+- **2026-10-21 — storefront password page.** Enforced in the API (`StorefrontGuard`), not just
+  the storefront UI: a locked store answers 403 to every storefront route except the shop
+  summary (name, message, theme only), the password check (10/min per IP, constant-time
+  compare) and per-shopper links (order status, invoices, sandbox payment). The access token is
+  an HMAC over the store id and the password's change time, so changing the password or
+  re-enabling protection signs every visitor out; it is kept in an HttpOnly cookie. Tests:
+  `online-store.e2e`, `online-store.spec`.

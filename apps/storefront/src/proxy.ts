@@ -11,6 +11,8 @@ export function proxy(request: NextRequest) {
 
   const headers = new Headers(request.headers);
   headers.set('x-nonce', nonce);
+  // Lets the root layout know the path (password pages exempt per-shopper links).
+  headers.set('x-pathname', request.nextUrl.pathname);
   headers.set('Content-Security-Policy', csp);
   const response = NextResponse.next({ request: { headers } });
 

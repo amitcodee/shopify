@@ -144,3 +144,24 @@ export async function resetMenuAction(storeId: string, handle: MenuHandle) {
   await api(`/admin/stores/${storeId}/menus/${handle}`, { method: 'DELETE' });
   revalidatePath(`/s/${storeId}/online-store/navigation`);
 }
+
+export async function saveStorefrontAccessAction(
+  storeId: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  try {
+    await api(`/admin/stores/${storeId}/storefront-access`, {
+      method: 'PUT',
+      body: {
+        enabled: formData.get('enabled') === 'on',
+        password: optionalString(formData, 'password'),
+        message: requiredString(formData, 'message'),
+      },
+    });
+  } catch (error) {
+    return toFormState(error, formData);
+  }
+  revalidatePath(`/s/${storeId}/online-store/password`);
+  return { success: 'Saved.' };
+}

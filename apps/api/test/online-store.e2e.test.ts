@@ -266,4 +266,57 @@ describe('Online store: pages, policies, navigation', () => {
     expect(map.body.pages).toEqual([]);
     expect(map.body.policies).toEqual(['terms']);
   });
+
+  it('locks a password-protected storefront until the visitor enters the password', async () => {
+    const { merchant, admin, sf } = await setup();
+    await ctx
+      .http()
+      .post(`${admin}/products`)
+      .set(merchant.auth)
+      .send({ title: 'Secret lamp', status: 'ACTIVE', variants: [{ price: 100 }] })
+      .expect(201);
+    const access = (body: object) =>
+      ctx.http().put(`${admin}/storefront-access`).set(merchant.auth).send(body);
+    await access({ enabled: true }).expect(400); // no password yet
+    const saved = await access({
+      enabled: true,
+      password: 'opening-soon',
+      message: 'Back in May',
+    }).expect(200);
+    expect(saved.body).toEqual({ enabled: true, password: 'opening-soon', message: 'Back in May' });
+
+    // The shop summary says it is locked and hides navigation; everything else is refused.
+    const shop = await sf('get', '/shop').expect(200);
+    expect(shop.body).toMatchObject({
+      locked: true,
+      passwordMessage: 'Back in May',
+      collections: [],
+    });
+    await sf('get', '/products').expect(403);
+    await sf('get', '/products/secret-lamp').expect(403);
+    await sf('post', '/cart').expect(403);
+
+    await sf('post', '/password').send({ password: 'wrong' }).expect(401);
+    const unlocked = await sf('post', '/password').send({ password: 'opening-soon' }).expect(200);
+    const token = unlocked.body.accessToken as string;
+    expect((await sf('get', '/shop', { access: token }).expect(200)).body.locked).toBe(false);
+    await sf('get', '/products/secret-lamp', { access: token }).expect(200);
+
+    // A token for one store does not open another.
+    const other = await setup();
+    await ctx
+      .http()
+      .put(`${other.admin}/storefront-access`)
+      .set(other.merchant.auth)
+      .send({ enabled: true, password: 'opening-soon' })
+      .expect(200);
+    await other.sf('get', '/products', { access: token }).expect(403);
+
+    // Changing the password signs everyone out; turning protection off opens the store.
+    await access({ enabled: true, password: 'new-password' }).expect(200);
+    await sf('get', '/products', { access: token }).expect(403);
+    await access({ enabled: false }).expect(200);
+    await sf('get', '/products').expect(200);
+    expect((await sf('get', '/shop').expect(200)).body.locked).toBe(false);
+  });
 });

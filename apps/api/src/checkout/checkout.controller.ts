@@ -38,7 +38,12 @@ import { CustomerAuthService } from '../customers/customer-auth.service.js';
 import { MockPaymentProvider, MOCK_SIGNATURE_HEADER } from '../payments/mock-payment.provider.js';
 import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-provider.js';
 import { PaymentWebhooksService } from '../payments/payment-webhooks.service.js';
-import { CartToken, CurrentShop, StorefrontGuard } from '../storefront/storefront.guard.js';
+import {
+  AllowLockedStore,
+  CartToken,
+  CurrentShop,
+  StorefrontGuard,
+} from '../storefront/storefront.guard.js';
 import type { ShopContext } from '../storefront/store-resolver.js';
 import { CheckoutService } from './checkout.service.js';
 
@@ -90,6 +95,7 @@ export class CheckoutController {
     return this.checkout.place(shop, signedHost(req), cart, customer?.id ?? null, body);
   }
 
+  @AllowLockedStore()
   @Get('checkout/mock-payments/:reference')
   mockPayment(
     @CurrentShop() shop: ShopContext,
@@ -99,6 +105,7 @@ export class CheckoutController {
   }
 
   /** Sandbox only: simulates the provider completing (or declining) the payment. */
+  @AllowLockedStore()
   @Post('checkout/mock-payments/:reference')
   @HttpCode(200)
   @ApiZodBody(mockPaymentOutcomeSchema)
@@ -117,6 +124,7 @@ export class CheckoutController {
     return this.checkout.getMockPayment(shop, reference);
   }
 
+  @AllowLockedStore()
   @Get('orders/:token')
   order(@CurrentShop() shop: ShopContext, @Param('token') token: string): Promise<PublicOrder> {
     return this.checkout.publicOrder(shop, token.slice(0, 200));

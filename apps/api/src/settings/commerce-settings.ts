@@ -1,9 +1,11 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
+  Inject,
   Injectable,
   NotFoundException,
   Param,
@@ -18,6 +20,8 @@ import {
   discountInputSchema,
   parseTheme,
   type ShippingZone,
+  type StorefrontAccess,
+  storefrontAccessInputSchema,
   shippingRateInputSchema,
   shippingZoneInputSchema,
   type TaxRate,
@@ -29,6 +33,8 @@ import { Prisma, type DiscountCode, type TenantTx } from '@repo/db';
 import { ConflictException } from '@nestjs/common';
 import { z } from 'zod';
 import { AuditService } from '../audit/audit.service.js';
+import { decryptSecret, encryptSecret } from '../common/crypto.js';
+import { ENV, type Env } from '../config/env.js';
 import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { UuidParam } from '../common/uuid-param.pipe.js';
@@ -67,6 +73,7 @@ export class CommerceSettingsService {
     private readonly tenantDb: TenantDb,
     private readonly audit: AuditService,
     private readonly resolver: StoreResolver,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   private record(
@@ -114,6 +121,59 @@ export class CommerceSettingsService {
     });
     this.resolver.invalidate();
     return input;
+  }
+
+  // Storefront password page
+  async getStorefrontAccess(storeId: string): Promise<StorefrontAccess> {
+    const store = await this.tenantDb.run(storeId, (tx) =>
+      tx.store.findUniqueOrThrow({ where: { id: storeId } }),
+    );
+    return {
+      enabled: store.passwordProtected,
+      password: store.storefrontPasswordEncrypted
+        ? decryptSecret(this.env.APP_ENCRYPTION_KEY, store.storefrontPasswordEncrypted)
+        : null,
+      message: store.passwordMessage,
+    };
+  }
+
+  async saveStorefrontAccess(
+    storeId: string,
+    input: z.output<typeof storefrontAccessInputSchema>,
+    actor: AuthUser,
+    meta: RequestMeta,
+  ): Promise<StorefrontAccess> {
+    await this.tenantDb.run(storeId, async (tx) => {
+      const store = await tx.store.findUniqueOrThrow({ where: { id: storeId } });
+      if (input.enabled && !input.password && !store.storefrontPasswordEncrypted) {
+        throw new BadRequestException('Set a password to protect the store.');
+      }
+      await tx.store.update({
+        where: { id: storeId },
+        data: {
+          passwordProtected: input.enabled,
+          passwordMessage: input.message,
+          // A new password (or switching protection on) signs every visitor out.
+          ...(input.password
+            ? {
+                storefrontPasswordEncrypted: encryptSecret(
+                  this.env.APP_ENCRYPTION_KEY,
+                  input.password,
+                ),
+                storefrontPasswordChangedAt: new Date(),
+              }
+            : input.enabled && !store.passwordProtected
+              ? { storefrontPasswordChangedAt: new Date() }
+              : {}),
+        },
+      });
+      await this.record(tx, storeId, actor, 'storefront_password.updated', storeId, meta, {
+        enabled: input.enabled,
+        passwordChanged: Boolean(input.password),
+      });
+    });
+    this.resolver.invalidate();
+    return this.getStorefrontAccess(storeId);
   }
 
   // Shipping
@@ -371,6 +431,25 @@ export class CommerceSettingsController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<Theme> {
     return this.settings.saveTheme(store.id, body, user, meta);
+  }
+
+  @Get('storefront-access')
+  @RequirePermission('settings:read')
+  storefrontAccess(@CurrentStore() store: StoreContext): Promise<StorefrontAccess> {
+    return this.settings.getStorefrontAccess(store.id);
+  }
+
+  @Put('storefront-access')
+  @RequirePermission('themes:write')
+  @ApiZodBody(storefrontAccessInputSchema)
+  saveStorefrontAccess(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodPipe(storefrontAccessInputSchema))
+    body: z.output<typeof storefrontAccessInputSchema>,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<StorefrontAccess> {
+    return this.settings.saveStorefrontAccess(store.id, body, user, meta);
   }
 
   @Get('shipping-zones')

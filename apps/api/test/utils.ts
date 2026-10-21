@@ -145,7 +145,11 @@ type Method = 'get' | 'post' | 'patch' | 'delete';
 /** Storefront API client that signs requests for `host` like the storefront server does. */
 export function storefrontClient(ctx: TestContext, host: string) {
   const secret = process.env.STOREFRONT_SHARED_SECRET ?? '';
-  return (method: Method, path: string, tokens: { cart?: string; customer?: string } = {}) => {
+  return (
+    method: Method,
+    path: string,
+    tokens: { cart?: string; customer?: string; access?: string } = {},
+  ) => {
     const ts = String(Date.now());
     const agent = ctx.http();
     const req = agent[method](`/api/v1/storefront${path}`)
@@ -154,6 +158,7 @@ export function storefrontClient(ctx: TestContext, host: string) {
       .set(STOREFRONT_HEADERS.signature, signStorefrontRequest(secret, host, ts));
     if (tokens.cart) req.set(STOREFRONT_HEADERS.cart, tokens.cart);
     if (tokens.customer) req.set(STOREFRONT_HEADERS.customer, tokens.customer);
+    if (tokens.access) req.set(STOREFRONT_HEADERS.access, tokens.access);
     return req;
   };
 }
