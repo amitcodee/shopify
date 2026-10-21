@@ -63,6 +63,53 @@ export class CartService {
     return { token, cart: this.toDto(cart, shop) };
   }
 
+  /**
+   * New cart holding `lines` as far as they can still be bought: inactive or deleted variants
+   * are dropped and quantities are capped at the stock on hand.
+   */
+  async createWithLines(
+    shop: ShopContext,
+    lines: { variantId: string; quantity: number }[],
+  ): Promise<CreatedCart> {
+    const token = randomBytes(24).toString('base64url');
+    const cart = await this.tenantDb.run(shop.id, async (tx) => {
+      const created = await tx.cart.create({
+        data: {
+          storeId: shop.id,
+          tokenHash: hashToken(token),
+          expiresAt: new Date(Date.now() + CART_TTL_MS),
+        },
+      });
+      const variants = await tx.productVariant.findMany({
+        where: {
+          storeId: shop.id,
+          id: { in: lines.map((l) => l.variantId) },
+          product: { status: 'ACTIVE' },
+        },
+      });
+      const byId = new Map(variants.map((v) => [v.id, v]));
+      const quantities = new Map<string, number>();
+      for (const line of lines) {
+        const variant = byId.get(line.variantId);
+        if (!variant) continue;
+        const wanted = (quantities.get(variant.id) ?? 0) + line.quantity;
+        const cap = maxOrderable(variant);
+        quantities.set(variant.id, Math.min(wanted, cap ?? wanted, 99));
+      }
+      const data = [...quantities]
+        .filter(([, quantity]) => quantity > 0)
+        .map(([variantId, quantity]) => ({
+          storeId: shop.id,
+          cartId: created.id,
+          variantId,
+          quantity,
+        }));
+      if (data.length > 0) await tx.cartLine.createMany({ data });
+      return tx.cart.findUniqueOrThrow({ where: { id: created.id }, include: cartInclude });
+    });
+    return { token, cart: this.toDto(cart, shop) };
+  }
+
   get(shop: ShopContext, token: string | null): Promise<CartDto> {
     return this.tenantDb.run(shop.id, async (tx) =>
       this.toDto(await this.load(tx, shop, token), shop),

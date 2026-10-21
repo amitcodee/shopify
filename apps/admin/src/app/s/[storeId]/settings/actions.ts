@@ -17,6 +17,9 @@ export async function updateStoreAction(
         contactEmail: optionalString(formData, 'contactEmail'),
         currency: optionalString(formData, 'currency'),
         timezone: optionalString(formData, 'timezone'),
+        abandonedCheckoutDelayHours: formData.has('abandonedCheckoutDelayHours')
+          ? Number(formData.get('abandonedCheckoutDelayHours')) || null
+          : undefined,
       },
     });
   } catch (error) {

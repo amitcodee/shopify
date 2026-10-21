@@ -76,3 +76,4 @@ Each phase ends with: lint, type check, tests, build all green; docs/threat mode
 - ✅ Multiple gateways + Razorpay (2026-10-20): per-store gateway choice; Razorpay Payment Links + Route payouts ([ADR 0007](adr/0007-payment-gateways-razorpay.md)).
 - ✅ Release hardening (2026-10-21): CI builds and boots the production images; dependency audit clean at `high`.
 - ✅ Online store content (2026-10-21): pages, store policies (footer + checkout links), main/footer navigation menus with typed links.
+- ✅ Abandoned checkout recovery (2026-10-21): one email after a store-chosen delay with a signed link that rebuilds the cart; admin list with recovered orders.

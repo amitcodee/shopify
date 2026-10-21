@@ -92,6 +92,11 @@ export class CustomerPrivacyService {
           },
         });
       }
+      // Never send an abandoned-checkout email for a redacted customer.
+      await tx.order.updateMany({
+        where: { storeId: store.id, customerId, recoveryStatus: null },
+        data: { recoveryStatus: 'SKIPPED' },
+      });
       await tx.customerSession.deleteMany({ where: { customerId, storeId: store.id } });
       await tx.customerToken.deleteMany({ where: { customerId, storeId: store.id } });
       await tx.customer.update({

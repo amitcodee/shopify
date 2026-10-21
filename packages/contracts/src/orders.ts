@@ -202,3 +202,21 @@ export const publicOrderSchema = z.object({
   createdAt: z.iso.datetime(),
 });
 export type PublicOrder = z.infer<typeof publicOrderSchema>;
+
+/** An unpaid checkout that expired (the shopper never paid). */
+export const abandonedCheckoutSchema = z.object({
+  id: z.uuid(),
+  email: z.string(),
+  currency: z.string(),
+  total: z.number().int(),
+  itemCount: z.number().int(),
+  createdAt: z.iso.datetime(),
+  recoveryStatus: z.enum(['PENDING', 'SENT', 'SKIPPED']),
+  recoveryEmailSentAt: z.iso.datetime().nullable(),
+  /** A later paid order from the same email, if any. */
+  recoveredOrder: z.object({ id: z.uuid(), number: z.number().int() }).nullable(),
+});
+export type AbandonedCheckout = z.infer<typeof abandonedCheckoutSchema>;
+export const abandonedCheckoutListSchema = paginated(abandonedCheckoutSchema);
+
+export const recoverCartInputSchema = z.strictObject({ token: z.string().min(10).max(200) });

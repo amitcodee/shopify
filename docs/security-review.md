@@ -96,3 +96,12 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   `rel="noopener noreferrer"`. Links to hidden collections, draft products and unpublished pages
   are not rendered. Pages, policies and menus are under forced RLS. Tests: `online-store.test`,
   `online-store.e2e`, `online-store.spec`.
+- **2026-10-21 — abandoned checkout recovery.** Unpaid checkouts that expired get at most one
+  email (claimed atomically per order, so concurrent workers cannot double-send), only within 7
+  days, and never when the shopper has since paid or checked out again, when the store turned
+  emails off, or after the customer was redacted. The link is `<orderId>.<HMAC>` with its own
+  purpose string (an order-status token does not work), verified in constant time and scoped
+  to the host's store; it only rebuilds a cart (no order, address or email data is exposed),
+  stops working after 30 days, and drops unavailable items and caps quantities at stock.
+  Checkouts that expired before the release are marked as handled by the migration.
+  Tests: `checkout-recovery.e2e`, `storefront.spec`.

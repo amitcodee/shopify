@@ -39,7 +39,17 @@ export default async function OrdersPage({
 
   return (
     <>
-      <PageHeader title="Orders" />
+      <PageHeader
+        title="Orders"
+        actions={
+          <Link
+            href={`${base}/abandoned`}
+            className="text-sm text-indigo-600 hover:text-indigo-500"
+          >
+            Abandoned checkouts
+          </Link>
+        }
+      />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <nav aria-label="Order views" className="flex gap-1">
           {VIEWS.map((v) => (

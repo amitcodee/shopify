@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { hashToken } from '../auth/session.service.js';
 import { ENV, type Env } from '../config/env.js';
@@ -35,5 +35,22 @@ export class StoreUrls {
 
   orderAccessTokenHash(orderId: string): string {
     return hashToken(this.orderAccessToken(orderId));
+  }
+
+  /** Abandoned-checkout link token: `<orderId>.<HMAC>` (a different purpose than order links). */
+  checkoutRecoveryToken(orderId: string): string {
+    const mac = createHmac('sha256', this.env.STOREFRONT_SHARED_SECRET)
+      .update(`checkout-recovery:${orderId}`)
+      .digest('base64url');
+    return `${orderId}.${mac}`;
+  }
+
+  /** The order id a recovery token was issued for, or null when it is not authentic. */
+  verifyCheckoutRecoveryToken(token: string): string | null {
+    const orderId = token.split('.', 1)[0] ?? '';
+    if (!/^[0-9a-f-]{36}$/.test(orderId)) return null;
+    const expected = Buffer.from(this.checkoutRecoveryToken(orderId));
+    const given = Buffer.from(token);
+    return given.length === expected.length && timingSafeEqual(given, expected) ? orderId : null;
   }
 }

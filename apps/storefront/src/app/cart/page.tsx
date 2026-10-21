@@ -5,14 +5,23 @@ import { removeLineAction, updateLineAction } from './actions';
 
 export const metadata = { title: 'Cart' };
 
-export default async function CartPage() {
-  const [shop, cart] = await Promise.all([getShop(), getCart()]);
+export default async function CartPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ recovery?: string }>;
+}) {
+  const [shop, cart, { recovery }] = await Promise.all([getShop(), getCart(), searchParams]);
   if (!shop) return null;
 
   if (!cart || cart.lines.length === 0) {
     return (
       <div className="py-16 text-center">
         <h1 className="text-3xl font-bold tracking-tight">Your cart is empty</h1>
+        {recovery === 'expired' ? (
+          <p role="status" className="mt-2 text-zinc-600">
+            That link has expired, but the store is still open.
+          </p>
+        ) : null}
         <Link href="/collections/all" className="mt-6 inline-block text-sm font-medium underline">
           Continue shopping
         </Link>

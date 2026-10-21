@@ -90,21 +90,23 @@ enum StoreRole {
 }
 
 model Store {
-  id              String      @id @default(uuid(7)) @db.Uuid
-  merchantId      String      @db.Uuid
-  name            String
+  id                          String      @id @default(uuid(7)) @db.Uuid
+  merchantId                  String      @db.Uuid
+  name                        String
   /// Unique store handle used for `<subdomain>.<storefront root domain>`.
-  subdomain       String      @unique
-  contactEmail    String
-  currency        String      @default("USD") @db.Char(3)
-  timezone        String      @default("UTC")
-  status          StoreStatus @default(ACTIVE)
-  suspendedReason String?
+  subdomain                   String      @unique
+  contactEmail                String
+  currency                    String      @default("USD") @db.Char(3)
+  timezone                    String      @default("UTC")
+  status                      StoreStatus @default(ACTIVE)
+  suspendedReason             String?
   /// Storefront theme preset and validated settings (see @repo/contracts themeSettingsSchema).
-  themePreset     String      @default("minimal")
-  themeSettings   Json        @default("{}")
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  themePreset                 String      @default("minimal")
+  themeSettings               Json        @default("{}")
+  /// Hours after an unpaid checkout before the shopper gets a recovery email; null turns it off.
+  abandonedCheckoutDelayHours Int?        @default(10)
+  createdAt                   DateTime    @default(now())
+  updatedAt                   DateTime    @updatedAt
 
   merchant       Merchant          @relation(fields: [merchantId], references: [id])
   members        StoreMember[]
@@ -509,38 +511,41 @@ model OrderCounter {
 }
 
 model Order {
-  id                String            @id @default(uuid(7)) @db.Uuid
-  storeId           String            @db.Uuid
-  number            Int
-  customerId        String?           @db.Uuid
-  email             String
-  status            OrderStatus       @default(PENDING_PAYMENT)
-  financialStatus   FinancialStatus   @default(PENDING)
-  fulfillmentStatus FulfillmentStatus @default(UNFULFILLED)
-  currency          String            @db.Char(3)
-  subtotal          Int
-  discountTotal     Int               @default(0)
-  shippingTotal     Int               @default(0)
-  taxTotal          Int               @default(0)
-  total             Int
-  discountCode      String?
-  shippingMethod    String?
-  shippingAddress   Json
+  id                  String            @id @default(uuid(7)) @db.Uuid
+  storeId             String            @db.Uuid
+  number              Int
+  customerId          String?           @db.Uuid
+  email               String
+  status              OrderStatus       @default(PENDING_PAYMENT)
+  financialStatus     FinancialStatus   @default(PENDING)
+  fulfillmentStatus   FulfillmentStatus @default(UNFULFILLED)
+  currency            String            @db.Char(3)
+  subtotal            Int
+  discountTotal       Int               @default(0)
+  shippingTotal       Int               @default(0)
+  taxTotal            Int               @default(0)
+  total               Int
+  discountCode        String?
+  shippingMethod      String?
+  shippingAddress     Json
   /// SHA-256 of the order-status link token sent to the customer.
-  accessTokenHash   String            @unique
+  accessTokenHash     String            @unique
   /// Client idempotency key for the checkout request.
-  checkoutKey       String
+  checkoutKey         String
   /// Cart that produced the order; emptied once payment succeeds.
-  cartId            String?           @db.Uuid
-  paymentProvider   String
-  note              String?
+  cartId              String?           @db.Uuid
+  paymentProvider     String
+  note                String?
   /// Unpaid orders release their reserved stock after this time.
-  expiresAt         DateTime?
-  paidAt            DateTime?
-  cancelledAt       DateTime?
-  cancelReason      String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  expiresAt           DateTime?
+  paidAt              DateTime?
+  cancelledAt         DateTime?
+  cancelReason        String?
+  /// Abandoned-checkout recovery for orders that expired unpaid (null = not handled yet).
+  recoveryStatus      RecoveryStatus?
+  recoveryEmailSentAt DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
   store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
   customer     Customer?     @relation(fields: [storeId, customerId], references: [storeId, id])
@@ -558,6 +563,14 @@ model Order {
   @@index([status, expiresAt])
   @@index([storeId, customerId])
   @@index([storeId, paidAt])
+  @@index([status, recoveryStatus, createdAt])
+}
+
+enum RecoveryStatus {
+  /// The recovery email was queued.
+  SENT
+  /// Not emailed: the shopper paid or checked out again, or the store turned emails off.
+  SKIPPED
 }
 
 /// Snapshot of what was bought; survives product/variant changes and deletion.

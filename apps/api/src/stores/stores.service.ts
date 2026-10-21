@@ -104,6 +104,7 @@ export class StoresService {
       contactEmail: store.contactEmail,
       currency: store.currency,
       timezone: store.timezone,
+      abandonedCheckoutDelayHours: store.abandonedCheckoutDelayHours,
       permissions: ctx.permissions,
       createdAt: store.createdAt.toISOString(),
     };
@@ -135,7 +136,10 @@ export class StoresService {
             changes: Object.fromEntries(
               Object.keys(changes).map((key) => [
                 key,
-                { from: before[key as keyof typeof before] as string, to: changes[key] as string },
+                {
+                  from: before[key as keyof typeof before] as string | number | null,
+                  to: changes[key] as string | number | null,
+                },
               ]),
             ),
           },
@@ -143,6 +147,6 @@ export class StoresService {
         });
       });
     }
-    return this.get({ ...ctx, currency: changes.currency ?? ctx.currency });
+    return this.get({ ...ctx, currency: input.currency ?? ctx.currency });
   }
 }

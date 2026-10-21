@@ -42,11 +42,22 @@ export const createStoreInputSchema = z.strictObject({
 });
 export type CreateStoreInput = z.infer<typeof createStoreInputSchema>;
 
+/** Hours before an abandoned-checkout email; null turns recovery emails off. */
+export const ABANDONED_CHECKOUT_DELAYS = [1, 6, 10, 24] as const;
+export const abandonedCheckoutDelaySchema = z
+  .number()
+  .int()
+  .refine((h) => (ABANDONED_CHECKOUT_DELAYS as readonly number[]).includes(h), {
+    message: `Choose ${ABANDONED_CHECKOUT_DELAYS.join(', ')} hours`,
+  })
+  .nullable();
+
 export const updateStoreInputSchema = z.strictObject({
   name: z.string().trim().min(1).max(100).optional(),
   contactEmail: emailSchema.optional(),
   currency: currencyCodeSchema.optional(),
   timezone: z.string().trim().min(1).max(64).optional(),
+  abandonedCheckoutDelayHours: abandonedCheckoutDelaySchema.optional(),
 });
 export type UpdateStoreInput = z.infer<typeof updateStoreInputSchema>;
 
@@ -63,6 +74,7 @@ export const storeDetailSchema = storeSummarySchema.extend({
   contactEmail: z.string(),
   currency: z.string(),
   timezone: z.string(),
+  abandonedCheckoutDelayHours: z.number().int().nullable(),
   permissions: z.array(permissionSchema),
   createdAt: z.iso.datetime(),
 });

@@ -63,6 +63,13 @@ test('shopper browses a store by subdomain, searches, and manages the cart', asy
   await shopper.getByRole('button', { name: 'Remove' }).click();
   await expect(shopper.getByRole('heading', { name: 'Your cart is empty' })).toBeVisible();
 
+  // An expired or forged abandoned-checkout link lands on the cart with an explanation.
+  await shopper.goto(
+    storefrontUrl(subdomain, '/cart/recover/00000000-0000-7000-8000-000000000000.forged-token'),
+  );
+  await expect(shopper).toHaveURL(/\/cart\?recovery=expired$/);
+  await expect(shopper.getByText('That link has expired')).toBeVisible();
+
   // Unknown subdomains show a not-found page; the bare domain shows the platform landing.
   await shopper.goto(storefrontUrl('no-such-store'));
   await expect(shopper.getByRole('heading', { name: 'Store not found' })).toBeVisible();

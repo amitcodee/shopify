@@ -1,4 +1,4 @@
-import { SUPPORTED_CURRENCIES } from '@repo/contracts';
+import { ABANDONED_CHECKOUT_DELAYS, SUPPORTED_CURRENCIES } from '@repo/contracts';
 import { ActionForm, Field, SelectField, SubmitButton } from '@/components/form';
 import { Card } from '@/components/ui';
 import { getStore } from '@/lib/session';
@@ -54,6 +54,19 @@ export default async function GeneralSettings({
             label="Time zone"
             defaultValue={store.timezone}
             options={TIMEZONES.map((tz) => ({ value: tz, label: tz }))}
+          />
+          <SelectField
+            name="abandonedCheckoutDelayHours"
+            label="Abandoned checkout emails"
+            defaultValue={String(store.abandonedCheckoutDelayHours ?? 'off')}
+            options={[
+              ...ABANDONED_CHECKOUT_DELAYS.map((h) => ({
+                value: String(h),
+                label: `Send ${h} hour${h === 1 ? '' : 's'} after an unpaid checkout`,
+              })),
+              { value: 'off', label: "Don't send" },
+            ]}
+            hint="Shoppers who left checkout unpaid get one email with a link back to their cart."
           />
         </fieldset>
         {canEdit ? <SubmitButton>Save changes</SubmitButton> : null}

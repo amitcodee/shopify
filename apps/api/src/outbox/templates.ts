@@ -163,3 +163,30 @@ export function disputeEmail(
     ),
   };
 }
+
+export function abandonedCheckoutEmail(
+  to: string,
+  data: {
+    storeName: string;
+    currency: string;
+    lines: OrderEmailData['lines'];
+    recoverUrl: string;
+  },
+): EmailMessage {
+  const order = { ...data, orderNumber: 0, total: 0 };
+  return {
+    to,
+    subject: `You left something in your cart at ${data.storeName}`,
+    text: `Your checkout wasn't completed, so we saved your items:
+
+${lineText(order)}
+
+Pick up where you left off: ${data.recoverUrl}
+
+Prices and availability are confirmed when you check out.`,
+    html: layout(
+      data.storeName,
+      `<p>Your checkout wasn't completed, so we saved your items:</p>${lineHtml(order)}<p><a href="${escapeHtml(data.recoverUrl)}">Return to your cart</a></p><p style="color:#666;font-size:13px">Prices and availability are confirmed when you check out.</p>`,
+    ),
+  };
+}

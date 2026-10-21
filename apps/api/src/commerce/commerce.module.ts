@@ -1,6 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AnalyticsController, AnalyticsService } from '../analytics/analytics.js';
 import { AuthModule } from '../auth/auth.module.js';
+import {
+  AbandonedCheckoutsController,
+  CartRecoveryController,
+} from '../checkout/checkout-recovery.controller.js';
+import { CheckoutRecoveryService } from '../checkout/checkout-recovery.service.js';
 import { CheckoutController } from '../checkout/checkout.controller.js';
 import { CheckoutService } from '../checkout/checkout.service.js';
 import { CustomerAuthService } from '../customers/customer-auth.service.js';
@@ -22,6 +27,8 @@ import { StorefrontModule } from '../storefront/storefront.module.js';
   imports: [AuthModule, StorefrontModule, PaymentsModule, OrdersCoreModule],
   controllers: [
     CheckoutController,
+    CartRecoveryController,
+    AbandonedCheckoutsController,
     OrdersController,
     AdminCustomersController,
     CustomerPrivacyController,
@@ -29,6 +36,7 @@ import { StorefrontModule } from '../storefront/storefront.module.js';
   ],
   providers: [
     CheckoutService,
+    CheckoutRecoveryService,
     CustomerAuthService,
     OrdersService,
     AdminCustomersService,
