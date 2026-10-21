@@ -44,6 +44,7 @@ model User {
   sessions    Session[]
   memberships StoreMember[]
   merchants   Merchant[]
+  apiTokens   ApiToken[]
 }
 
 model Session {
@@ -108,7 +109,7 @@ model Store {
   createdAt                   DateTime    @default(now())
   updatedAt                   DateTime    @updatedAt
 
-  merchant       Merchant          @relation(fields: [merchantId], references: [id])
+  merchant       Merchant              @relation(fields: [merchantId], references: [id])
   members        StoreMember[]
   invitations    StoreInvitation[]
   products       Product[]
@@ -125,6 +126,8 @@ model Store {
   menus          Menu[]
   draftOrders    DraftOrder[]
   giftCards      GiftCard[]
+  apiTokens      ApiToken[]
+  webhooks       WebhookSubscription[]
   subscription   Subscription?
   paymentAccount PaymentAccount?
 
@@ -1117,4 +1120,73 @@ model RateLimitBucket {
   blockedUntil DateTime?
 
   @@index([windowEndsAt])
+}
+
+/// Admin API access token for one store (integrations, scripts). Only a SHA-256 of the token
+/// is stored; it acts with the listed permissions, capped by its creator's current role.
+model ApiToken {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  storeId     String    @db.Uuid
+  name        String
+  tokenHash   String    @unique
+  /// First characters of the token, to recognise it ("cpat_Ab12…").
+  prefix      String
+  permissions String[]
+  createdById String    @db.Uuid
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  store     Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdBy User  @relation(fields: [createdById], references: [id])
+
+  @@index([storeId, createdAt])
+}
+
+/// Outbound webhook: POSTs signed JSON to a merchant URL when a topic's event happens.
+model WebhookSubscription {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  storeId         String    @db.Uuid
+  topic           String
+  url             String
+  /// Signing secret, encrypted with APP_ENCRYPTION_KEY.
+  secretEncrypted String
+  /// Consecutive failed deliveries; the subscription is disabled after too many.
+  failureCount    Int       @default(0)
+  disabledAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  store      Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@unique([storeId, id])
+  @@index([storeId, topic])
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+/// One event for one subscription (written in the same transaction as the change: outbox).
+model WebhookDelivery {
+  id             String                @id @default(uuid(7)) @db.Uuid
+  storeId        String                @db.Uuid
+  subscriptionId String                @db.Uuid
+  topic          String
+  payload        Json
+  status         WebhookDeliveryStatus @default(PENDING)
+  attempts       Int                   @default(0)
+  nextAttemptAt  DateTime              @default(now())
+  lastStatusCode Int?
+  lastError      String?
+  deliveredAt    DateTime?
+  createdAt      DateTime              @default(now())
+
+  subscription WebhookSubscription @relation(fields: [storeId, subscriptionId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([subscriptionId, createdAt])
 }

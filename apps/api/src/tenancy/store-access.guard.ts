@@ -55,7 +55,13 @@ export class StoreAccessGuard implements CanActivate {
       throw new ForbiddenException('This store is suspended. Contact platform support.');
     }
 
-    const permissions = permissionsForRole(member.role, member.permissions);
+    // An access token acts as staff with its own permissions, capped by its creator's role.
+    const apiToken = req.auth?.apiToken;
+    if (apiToken && apiToken.storeId !== storeId) throw new NotFoundException('Store not found.');
+    const rolePermissions = permissionsForRole(member.role, member.permissions);
+    const permissions = apiToken
+      ? rolePermissions.filter((p) => apiToken.permissions.includes(p))
+      : rolePermissions;
     const required = this.reflector.getAllAndOverride<Permission | undefined>(
       REQUIRED_PERMISSION,
       targets,
@@ -64,7 +70,12 @@ export class StoreAccessGuard implements CanActivate {
       throw new ForbiddenException(`Your role does not allow this action (${required}).`);
     }
 
-    req.store = { id: storeId, role: member.role, permissions, currency: member.store.currency };
+    req.store = {
+      id: storeId,
+      role: apiToken ? 'STAFF' : member.role,
+      permissions,
+      currency: member.store.currency,
+    };
     return true;
   }
 }

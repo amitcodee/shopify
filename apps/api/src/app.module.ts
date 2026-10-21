@@ -13,6 +13,8 @@ import type { PrismaClient } from '@repo/db';
 import { DatabaseModule, PLATFORM_DB } from './database/database.module.js';
 import { EmailModule } from './email/email.module.js';
 import { GiftCardsModule } from './gift-cards/gift-cards.module.js';
+import { DeveloperModule } from './webhooks/developer.js';
+import { WebhooksCoreModule } from './webhooks/webhooks.service.js';
 import { HealthModule } from './health/health.module.js';
 import { OnlineStoreModule } from './online-store/online-store.module.js';
 import { PlatformAdminModule } from './platform/platform-admin.module.js';
@@ -44,6 +46,7 @@ export class AppModule {
         }),
         DatabaseModule,
         AuditModule,
+        WebhooksCoreModule,
         PlatformCoreModule,
         EmailModule,
         StorageModule,
@@ -57,6 +60,7 @@ export class AppModule {
         SettingsModule,
         OnlineStoreModule,
         GiftCardsModule,
+        DeveloperModule,
         PlatformAdminModule,
       ],
       providers: [

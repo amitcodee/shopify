@@ -43,5 +43,5 @@ for findings, fixes and accepted risks. Differences from the v0 plan above:
 - **T7 (2026-10-20):** payouts settle to each store's Stripe Connect account; Connect webhooks
   use a separate endpoint and signing secret, and the platform fee is fixed server-side at
   checkout from the store's plan (ADR 0006).
-- **T11:** no URL-fetch features exist, so no SSRF surface.
+- **T11:** the only merchant-chosen URLs are webhooks; deliveries block private/link-local/metadata ranges, pin the resolved IP (no DNS rebinding), never follow redirects and time out after 5 s (ADR 0008).
 - **T12:** per-IP limits are shared by all API instances (PostgreSQL counters, 2026-10-20).

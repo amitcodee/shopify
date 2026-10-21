@@ -24,6 +24,7 @@ import { MediaUrls } from '../storage/storage.module.js';
 import { uniqueHandle } from './handles.js';
 import { productDetailInclude, toProductDto, variantTitle } from './product-mapper.js';
 import { PlanLimits } from '../platform/plans.service.js';
+import { WebhookEmitter } from '../webhooks/webhooks.service.js';
 
 type VariantInput = ProductInputParsed['variants'][number];
 
@@ -54,6 +55,7 @@ export class ProductsService {
     private readonly images: ImageProcessor,
     private readonly media: MediaUrls,
     private readonly limits: PlanLimits,
+    private readonly webhooks: WebhookEmitter,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
   ) {}
 
@@ -166,6 +168,7 @@ export class ProductsService {
           data: { title: created.title, variants: input.variants.length },
           meta,
         });
+        await this.webhooks.emitProduct(tx, store.id, 'products/created', created.id);
         return tx.product.findUniqueOrThrow({
           where: { id: created.id },
           include: productDetailInclude,
@@ -255,6 +258,7 @@ export class ProductsService {
           data: { title: input.title, status: input.status, variants: input.variants.length },
           meta,
         });
+        await this.webhooks.emitProduct(tx, store.id, 'products/updated', productId);
         return tx.product.findUniqueOrThrow({
           where: { id: productId },
           include: productDetailInclude,
@@ -281,6 +285,10 @@ export class ProductsService {
         data: { title: product.title },
         meta,
       });
+      await this.webhooks.emit(tx, store.id, 'products/deleted', () => ({
+        id: product.id,
+        handle: product.handle,
+      }));
       return product.images.map((i) => i.storageKey);
     });
     await Promise.all(keys.map((key) => this.deleteFile(key)));

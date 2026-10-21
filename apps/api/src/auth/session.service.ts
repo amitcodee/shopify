@@ -58,6 +58,37 @@ export class SessionService {
     };
   }
 
+  /**
+   * Admin API access token: valid while not revoked and its creator is still enabled. Store
+   * scoping and permission capping happen in StoreAccessGuard.
+   */
+  async validateApiToken(
+    token: string,
+  ): Promise<{ tokenId: string; storeId: string; permissions: string[]; user: AuthUser } | null> {
+    const row = await this.db.apiToken.findUnique({
+      where: { tokenHash: hashToken(token) },
+      include: { createdBy: true },
+    });
+    if (!row || row.revokedAt || row.createdBy.disabledAt) return null;
+    if (!row.lastUsedAt || Date.now() - row.lastUsedAt.getTime() > TOUCH_INTERVAL_MS) {
+      await this.db.apiToken.update({ where: { id: row.id }, data: { lastUsedAt: new Date() } });
+    }
+    const user = row.createdBy;
+    return {
+      tokenId: row.id,
+      storeId: row.storeId,
+      permissions: row.permissions,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        platformRole: user.platformRole,
+        twoFactorEnabled: user.totpEnabledAt !== null,
+        emailVerified: user.emailVerifiedAt !== null,
+      },
+    };
+  }
+
   async revoke(token: string): Promise<void> {
     await this.db.session.deleteMany({ where: { tokenHash: hashToken(token) } });
   }

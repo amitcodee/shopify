@@ -29,6 +29,7 @@ import {
 } from '../outbox/templates.js';
 import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-provider.js';
 import { GiftCardLedger } from '../gift-cards/gift-card-ledger.js';
+import { WebhookEmitter } from '../webhooks/webhooks.service.js';
 import { GIFT_CARD_PAYMENT, MANUAL_PAYMENT, OrderLifecycle } from './order-lifecycle.service.js';
 
 const detailInclude = {
@@ -77,6 +78,7 @@ export class OrdersService {
     private readonly outbox: OutboxService,
     private readonly audit: AuditService,
     private readonly giftCards: GiftCardLedger,
+    private readonly webhooks: WebhookEmitter,
     @Inject(PAYMENT_PROVIDERS) private readonly providers: Map<string, PaymentProvider>,
   ) {}
 
@@ -280,6 +282,9 @@ export class OrdersService {
           },
         },
       );
+      await this.webhooks.emitOrder(tx, store.id, 'refunds/created', orderId, {
+        refund: { id: pending.refund?.id ?? pending.giftRefund?.id, amount: input.amount },
+      });
       await this.audit.record(tx, {
         storeId: store.id,
         actorUserId: actor.id,
@@ -332,6 +337,7 @@ export class OrdersService {
         },
       });
       await tx.order.update({ where: { id: orderId }, data: { fulfillmentStatus: 'FULFILLED' } });
+      await this.webhooks.emitOrder(tx, store.id, 'orders/fulfilled', orderId);
       await this.lifecycle.event(tx, store.id, orderId, 'fulfilled', 'Order fulfilled.', {
         actorUserId: actor.id,
       });

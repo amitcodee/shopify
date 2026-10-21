@@ -37,7 +37,9 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
 - XSS: React escaping, no merchant HTML, nonce-based CSP on both apps.
 - CSRF: the admin and storefront use server actions (Next.js origin check) with `SameSite=Lax`
   HttpOnly cookies; the API itself is bearer-token based and not cookie-authenticated.
-- SSRF: there is no "fetch a URL" feature; outbound calls go only to fixed provider endpoints.
+- SSRF: the only merchant-chosen outbound URLs are webhooks, sent through a resolver that
+  refuses private/loopback/link-local/metadata addresses and pins the vetted IP (see
+  [ADR 0008](adr/0008-developer-platform.md)); everything else goes to fixed provider endpoints.
 
 ## Accepted risks
 
@@ -128,3 +130,10 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   4 MB and 5000 rows, parsed in memory without evaluation, and every product goes through the
   same schema, plan quota and audit path as the product editor; existing products are never
   overwritten. Tests: `csv.test`, `product-csv.e2e`, `product-csv.spec`.
+- **2026-10-21 — Admin API access tokens and webhooks** ([ADR 0008](adr/0008-developer-platform.md)).
+  Tokens are store-scoped, hashed, shown once, limited to their store's admin routes (not
+  account, platform or token management), and capped at the creator's current role. Webhooks
+  are signed (HMAC-SHA256), queued in the same transaction as the change, delivered without
+  holding database locks, and protected against SSRF (private ranges blocked, DNS pinned, no
+  redirects, 5 s timeout, https in production). Tests: `developer.e2e`, `safe-http.test`,
+  `developer.spec`.

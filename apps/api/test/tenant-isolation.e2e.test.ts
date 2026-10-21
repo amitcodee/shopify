@@ -123,6 +123,8 @@ describe('Tenant isolation', () => {
         'Domain',
         'Subscription',
         'PlatformInvoice',
+        // Looked up by token hash before the store is known; the guard checks its store.
+        'ApiToken',
       ];
       const tenantTables = rows.filter((r) => !globalTables.includes(r.table));
       expect(tenantTables.length).toBeGreaterThan(0);

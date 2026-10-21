@@ -23,6 +23,7 @@ export class MaintenanceService {
       webhooks,
       domains,
       rateLimits,
+      deliveries,
     ] = await Promise.all([
       this.db.session.deleteMany({ where: { expiresAt: { lt: now } } }),
       this.db.customerSession.deleteMany({ where: { expiresAt: { lt: now } } }),
@@ -46,6 +47,10 @@ export class MaintenanceService {
           OR: [{ blockedUntil: null }, { blockedUntil: { lt: now } }],
         },
       }),
+      // Outbound webhook history (payloads hold order data) is kept for 30 days.
+      this.db.webhookDelivery.deleteMany({
+        where: { status: { not: 'PENDING' }, createdAt: { lt: daysAgo(30) } },
+      }),
     ]);
     const result = {
       sessions: sessions.count,
@@ -57,6 +62,7 @@ export class MaintenanceService {
       webhookEvents: webhooks.count,
       unverifiedDomains: domains.count,
       rateLimitBuckets: rateLimits.count,
+      webhookDeliveries: deliveries.count,
     };
     this.logger.log(`Cleanup: ${JSON.stringify(result)}`);
     return result;

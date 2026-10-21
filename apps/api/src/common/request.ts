@@ -24,7 +24,13 @@ export interface RequestMeta {
 }
 
 export interface AppRequest extends Request {
-  auth?: { user: AuthUser; sessionId: string; token: string };
+  auth?: {
+    user: AuthUser;
+    sessionId: string;
+    token: string;
+    /** Set when authenticated with an Admin API access token instead of a session. */
+    apiToken?: { id: string; storeId: string; permissions: string[] };
+  };
   store?: StoreContext;
 }
 

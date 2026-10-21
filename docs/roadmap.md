@@ -81,3 +81,4 @@ Each phase ends with: lint, type check, tests, build all green; docs/threat mode
 - ✅ SEO basics (2026-10-21): per-store `sitemap.xml` (active products, published collections/pages, policies) and `robots.txt`.
 - ✅ Gift cards (2026-10-21): merchant-issued codes (shown once, keyed hash stored), redeemed at checkout for part or all of an order, restored when unpaid orders expire, credited back by refunds; balance history and adjustments. Selling gift cards as products is a follow-up.
 - ✅ Product CSV import/export (2026-10-21): Shopify-style columns, one row per variant; import creates new products through the normal validation and plan limits, skips existing handles and reports problems by row.
+- ✅ Developer platform (2026-10-21): store-scoped Admin API access tokens and signed outbound webhooks with retries and SSRF protection ([ADR 0008](adr/0008-developer-platform.md)).

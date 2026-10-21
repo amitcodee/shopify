@@ -100,6 +100,8 @@ const envSchema = z
     PLATFORM_CNAME_TARGET: z.string().min(1).default('stores.localhost'),
     /** Key material for encrypting secrets at rest and signing short-lived tokens (≥ 32 chars). */
     APP_ENCRYPTION_KEY: z.string().min(32),
+    /** Let webhooks reach private/loopback addresses (default: only outside production). */
+    WEBHOOK_ALLOW_PRIVATE_URLS: z.enum(['true', 'false']).optional(),
     /** Require platform admins to use two-factor authentication (default: on in production). */
     REQUIRE_PLATFORM_2FA: z.enum(['true', 'false']).optional(),
   })
@@ -194,6 +196,12 @@ const envSchema = z
   });
 
 export type Env = z.infer<typeof envSchema>;
+
+export function allowPrivateWebhooks(env: Env): boolean {
+  return env.WEBHOOK_ALLOW_PRIVATE_URLS
+    ? env.WEBHOOK_ALLOW_PRIVATE_URLS === 'true'
+    : env.NODE_ENV !== 'production';
+}
 
 export function requirePlatform2fa(env: Env): boolean {
   return env.REQUIRE_PLATFORM_2FA

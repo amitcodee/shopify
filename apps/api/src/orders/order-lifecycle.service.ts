@@ -3,6 +3,7 @@ import type { OrderLine, Prisma, PrismaClient, TenantTx } from '@repo/db';
 import { DiscountRules } from '../commerce/commerce-rules.js';
 import { PLATFORM_DB, TenantDb } from '../database/database.module.js';
 import { GiftCardLedger } from '../gift-cards/gift-card-ledger.js';
+import { WebhookEmitter } from '../webhooks/webhooks.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import { formatMoney } from '@repo/contracts';
 import {
@@ -41,6 +42,7 @@ export class OrderLifecycle {
     private readonly urls: StoreUrls,
     private readonly discounts: DiscountRules,
     private readonly giftCards: GiftCardLedger,
+    private readonly webhooks: WebhookEmitter,
     @Inject(PLATFORM_DB) private readonly platformDb: PrismaClient,
   ) {}
 
@@ -194,6 +196,7 @@ export class OrderLifecycle {
       },
       include: { lines: true },
     });
+    await this.webhooks.emitOrder(tx, storeId, 'orders/cancelled', orderId);
     await this.event(tx, storeId, orderId, 'cancelled', `Order cancelled (${options.reason}).`, {
       actorUserId: options.actorUserId,
       data: { restocked: options.restock },
@@ -324,6 +327,7 @@ export class OrderLifecycle {
       if (order.cartId) await tx.cart.deleteMany({ where: { id: order.cartId, storeId } });
       await this.completeDraft(tx, storeId, order.id);
       await this.event(tx, storeId, order.id, 'paid', 'Payment received.');
+      await this.webhooks.emitOrder(tx, storeId, 'orders/paid', order.id);
       await this.sendOrderEmails(tx, storeId, order);
     });
   }
@@ -346,6 +350,7 @@ export class OrderLifecycle {
         ? 'Paid in full with a gift card.'
         : 'No payment required (order total is zero).',
     );
+    await this.webhooks.emitOrder(tx, storeId, 'orders/paid', order.id);
     await this.sendOrderEmails(tx, storeId, order);
   }
 
@@ -385,6 +390,7 @@ export class OrderLifecycle {
         actorUserId,
       },
     );
+    await this.webhooks.emitOrder(tx, storeId, 'orders/paid', order.id);
     await this.sendOrderEmails(tx, storeId, order);
   }
 
