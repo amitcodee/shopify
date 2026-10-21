@@ -22,6 +22,7 @@ import { DraftOrdersController, InvoicesController } from '../orders/draft-order
 import { DraftOrdersService } from '../orders/draft-orders.service.js';
 import { OrdersController } from '../orders/orders.controller.js';
 import { OrdersService } from '../orders/orders.service.js';
+import { CustomerReturnsController, ReturnsController, ReturnsService } from '../orders/returns.js';
 import { PaymentsModule } from '../payments/payments.module.js';
 import { StorefrontModule } from '../storefront/storefront.module.js';
 import { DeveloperModule } from '../webhooks/developer.js';
@@ -34,6 +35,8 @@ import { DeveloperModule } from '../webhooks/developer.js';
     CartRecoveryController,
     AbandonedCheckoutsController,
     OrdersController,
+    ReturnsController,
+    CustomerReturnsController,
     DraftOrdersController,
     InvoicesController,
     AdminCustomersController,
@@ -46,6 +49,7 @@ import { DeveloperModule } from '../webhooks/developer.js';
     CheckoutRecoveryService,
     CustomerAuthService,
     OrdersService,
+    ReturnsService,
     DraftOrdersService,
     AdminCustomersService,
     SegmentsService,

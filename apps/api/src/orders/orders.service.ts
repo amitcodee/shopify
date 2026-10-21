@@ -31,6 +31,7 @@ import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-pro
 import { GiftCardLedger } from '../gift-cards/gift-card-ledger.js';
 import { WebhookEmitter } from '../webhooks/webhooks.service.js';
 import { GIFT_CARD_PAYMENT, MANUAL_PAYMENT, OrderLifecycle } from './order-lifecycle.service.js';
+import { toReturnDto } from './return-rules.js';
 
 const detailInclude = {
   lines: true,
@@ -40,6 +41,7 @@ const detailInclude = {
   fulfillments: { orderBy: { createdAt: 'asc' } },
   events: { orderBy: { createdAt: 'asc' } },
   customer: { select: { id: true, email: true, name: true } },
+  returns: { include: { lines: true }, orderBy: { createdAt: 'asc' } },
 } satisfies Prisma.OrderInclude;
 
 type OrderWithDetail = Prisma.OrderGetPayload<{ include: typeof detailInclude }>;
@@ -485,6 +487,7 @@ export class OrdersService {
         createdAt: e.createdAt.toISOString(),
       })),
       refundableAmount: Math.max(0, paidAmount(order) - committedRefunds(order)),
+      returns: order.returns.map((r) => toReturnDto(r, order)),
     };
   }
 }

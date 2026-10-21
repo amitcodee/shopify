@@ -16,7 +16,7 @@ import type { Customer, TenantTx } from '@repo/db';
 import type { z } from 'zod';
 import { PasswordService } from '../auth/password.service.js';
 import { hashToken } from '../auth/session.service.js';
-import { toPublicOrder } from '../checkout/checkout.service.js';
+import { publicOrderInclude, toPublicOrder } from '../checkout/checkout.service.js';
 import { TenantDb } from '../database/database.module.js';
 import { StoreUrls } from '../orders/store-urls.js';
 import { OutboxService } from '../outbox/outbox.service.js';
@@ -186,7 +186,7 @@ export class CustomerAuthService {
     const order = await this.tenantDb.run(shop.id, (tx) =>
       tx.order.findFirst({
         where: { storeId: shop.id, customerId: customer.id, number },
-        include: { lines: true, fulfillments: true },
+        include: publicOrderInclude,
       }),
     );
     if (!order) throw new NotFoundException('Order not found.');

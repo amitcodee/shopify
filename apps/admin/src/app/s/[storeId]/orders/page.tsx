@@ -57,6 +57,12 @@ export default async function OrdersPage({
             >
               Abandoned checkouts
             </Link>
+            <Link
+              href={`${base}/returns`}
+              className="text-sm text-indigo-600 hover:text-indigo-500"
+            >
+              Returns
+            </Link>
             <ButtonLink href={`${base}/drafts`} variant="secondary">
               Draft orders
             </ButtonLink>

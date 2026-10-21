@@ -148,3 +148,8 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   parameterised SQL (no merchant text reaches the query), evaluated under the tenant's RLS
   context. Viewing needs `customers:read`; the CSV export of personal data is recorded in the
   audit log. Tests: `segments.e2e`, `segments.spec`.
+- **2026-10-21 — returns.** Customers can only request returns on their own orders (signed in;
+  another account gets 404), within 30 days of payment, for units not already in a requested,
+  open or closed return; the order row is locked while a return is created so two requests
+  cannot claim the same units. Refunds go through the existing refund path (amount checks,
+  provider/manual/gift-card split, restock clamping). Tests: `returns.e2e`, `account.spec`.

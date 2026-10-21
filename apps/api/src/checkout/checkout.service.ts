@@ -40,6 +40,7 @@ import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-pro
 import { CartService } from '../storefront/cart.service.js';
 import type { ShopContext } from '../storefront/store-resolver.js';
 import { hashToken } from '../auth/session.service.js';
+import { returnedQuantities, returnWindowOpen } from '../orders/return-rules.js';
 import { priceCart, type PricingResult } from './pricing.js';
 
 type CheckoutInput = z.output<typeof checkoutInputSchema>;
@@ -319,7 +320,7 @@ export class CheckoutService {
     const order = await this.tenantDb.run(shop.id, (tx) =>
       tx.order.findFirst({
         where: { storeId: shop.id, accessTokenHash: hashToken(token) },
-        include: { lines: true, fulfillments: { orderBy: { createdAt: 'asc' } } },
+        include: publicOrderInclude,
       }),
     );
     if (!order) throw new NotFoundException('Order not found.');
@@ -575,10 +576,28 @@ export class CheckoutService {
   }
 }
 
+/** What the shopper-facing order views need (lines, shipments, returns). */
+export const publicOrderInclude = {
+  lines: true,
+  fulfillments: { orderBy: { createdAt: 'asc' } },
+  returns: { include: { lines: true }, orderBy: { createdAt: 'asc' } },
+} satisfies Prisma.OrderInclude;
+
 export function toPublicOrder(
   storeName: string,
-  order: Prisma.OrderGetPayload<{ include: { lines: true; fulfillments: true } }>,
+  order: Prisma.OrderGetPayload<{ include: typeof publicOrderInclude }>,
 ): PublicOrder {
+  const returned = returnedQuantities(order.returns);
+  const titles = new Map(order.lines.map((l) => [l.id, l.title]));
+  const lines = order.lines.map((l) => ({
+    id: l.id,
+    title: l.title,
+    variantTitle: l.variantTitle,
+    quantity: l.quantity,
+    unitPrice: l.unitPrice,
+    total: l.unitPrice * l.quantity - l.discountTotal,
+    returnableQuantity: Math.max(0, l.quantity - (returned.get(l.id) ?? 0)),
+  }));
   return {
     number: order.number,
     storeName,
@@ -594,12 +613,16 @@ export function toPublicOrder(
     giftCardAmount: order.giftCardAmount,
     shippingMethod: order.shippingMethod,
     shippingAddress: order.shippingAddress as PublicOrder['shippingAddress'],
-    lines: order.lines.map((l) => ({
-      title: l.title,
-      variantTitle: l.variantTitle,
-      quantity: l.quantity,
-      unitPrice: l.unitPrice,
-      total: l.unitPrice * l.quantity - l.discountTotal,
+    lines,
+    returnable: returnWindowOpen(order) && lines.some((l) => l.returnableQuantity > 0),
+    returns: order.returns.map((r) => ({
+      status: r.status,
+      declineReason: r.declineReason,
+      lines: r.lines.map((rl) => ({
+        title: titles.get(rl.orderLineId) ?? 'Item',
+        quantity: rl.quantity,
+      })),
+      createdAt: r.createdAt.toISOString(),
     })),
     fulfillments: order.fulfillments.map((f) => ({
       trackingCompany: f.trackingCompany,

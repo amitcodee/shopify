@@ -10,6 +10,7 @@ import { ConfirmButton } from '../../confirm-button';
 import { SmallAction } from '../../settings/small-action';
 import { cancelOrderAction, fulfillAction, refundAction, sandboxDisputeAction } from '../actions';
 import { FinancialBadge, FulfillmentBadge, OrderStatusBadge } from '../badges';
+import { ReturnsCard } from '../returns-card';
 
 export default async function OrderPage({
   params,
@@ -209,6 +210,8 @@ export default async function OrderPage({
               </ActionForm>
             </Card>
           ) : null}
+
+          <ReturnsCard order={order} storeId={storeId} canWrite={canWrite} money={money} />
 
           <Card title="Timeline">
             <ol className="space-y-3 text-sm">

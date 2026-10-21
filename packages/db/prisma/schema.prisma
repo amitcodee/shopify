@@ -645,6 +645,7 @@ model Order {
   events       OrderEvent[]
   draftOrders  DraftOrder[]
   giftCard     GiftCard?     @relation(fields: [storeId, giftCardId], references: [storeId, id])
+  returns      Return[]
 
   @@unique([storeId, id])
   @@unique([storeId, number])
@@ -1239,4 +1240,59 @@ model CustomerSegment {
 
   @@unique([storeId, id])
   @@index([storeId, name])
+}
+
+enum ReturnStatus {
+  /// Asked for by the customer; the store has not decided yet.
+  REQUESTED
+  /// Approved: waiting for the items to come back.
+  OPEN
+  DECLINED
+  /// Items received (and refunded, if any amount).
+  CLOSED
+}
+
+enum ReturnReason {
+  SIZE
+  DAMAGED
+  NOT_AS_DESCRIBED
+  WRONG_ITEM
+  CHANGED_MIND
+  OTHER
+}
+
+model Return {
+  id                  String       @id @default(uuid(7)) @db.Uuid
+  storeId             String       @db.Uuid
+  orderId             String       @db.Uuid
+  status              ReturnStatus
+  requestedByCustomer Boolean      @default(false)
+  customerNote        String?
+  declineReason       String?
+  /// Refund issued when the return was closed.
+  refundId            String?      @db.Uuid
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  closedAt            DateTime?
+
+  order Order        @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+  lines ReturnLine[]
+
+  @@unique([storeId, id])
+  @@index([storeId, status, createdAt])
+  @@index([orderId])
+}
+
+model ReturnLine {
+  id          String       @id @default(uuid(7)) @db.Uuid
+  storeId     String       @db.Uuid
+  returnId    String       @db.Uuid
+  orderLineId String       @db.Uuid
+  quantity    Int
+  reason      ReturnReason
+
+  return Return @relation(fields: [storeId, returnId], references: [storeId, id], onDelete: Cascade)
+
+  @@unique([returnId, orderLineId])
+  @@index([orderLineId])
 }

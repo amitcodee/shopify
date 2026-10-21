@@ -44,6 +44,24 @@ test('customer registers, buys while signed in, sees order history, signs out an
   await shopper.getByRole('link', { name: /Order #1001/ }).click();
   await expect(shopper.getByRole('heading', { name: 'Order #1001' })).toBeVisible();
 
+  // Ask for a return; the store approves it and refunds on receipt.
+  await shopper.getByLabel('Quantity of Notebook to return').selectOption('1');
+  await shopper.getByLabel('Reason for returning Notebook').selectOption('DAMAGED');
+  await shopper.getByRole('button', { name: 'Request a return' }).click();
+  await expect(shopper.getByText('Requested — waiting for the store')).toBeVisible();
+
+  await merchant.getByRole('link', { name: 'Orders', exact: true }).first().click();
+  await merchant.getByRole('link', { name: 'Returns' }).click();
+  await merchant.getByRole('link', { name: '#1001' }).click();
+  await merchant.getByRole('button', { name: 'Approve return' }).click();
+  await expect(merchant.getByRole('button', { name: 'Receive and refund' })).toBeVisible();
+  await expect(merchant.getByLabel('Refund (USD)')).toHaveValue('9.50');
+  await merchant.getByRole('button', { name: 'Receive and refund' }).click();
+  await expect(merchant.getByText('closed', { exact: true })).toBeVisible();
+  await expect(merchant.getByText('Refunded', { exact: true }).first()).toBeVisible();
+  await shopper.reload();
+  await expect(shopper.getByText('Received and closed')).toBeVisible();
+
   await shopper.getByRole('link', { name: 'Account', exact: true }).click();
   await shopper.getByRole('button', { name: 'Sign out' }).click();
   await expect(shopper.getByRole('heading', { name: 'New in' })).toBeVisible();

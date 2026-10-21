@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { OrderView } from '@/components/order-view';
 import { sf, StorefrontApiError } from '@/lib/api';
 import { getCustomerToken } from '@/lib/shop';
+import { Returns } from './returns';
 
 export default async function AccountOrderPage({
   params,
@@ -29,6 +30,7 @@ export default async function AccountOrderPage({
       </Link>
       <h1 className="mb-8 mt-2 text-3xl font-bold tracking-tight">Order #{order.number}</h1>
       <OrderView order={order} />
+      <Returns order={order} />
     </>
   );
 }

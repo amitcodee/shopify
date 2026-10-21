@@ -86,3 +86,4 @@ Each phase ends with: lint, type check, tests, build all green; docs/threat mode
 - ✅ Blog (2026-10-21): posts with drafts, scheduled publishing, authors, excerpts and tags at `/blog`; menu link type and sitemap entries.
 - ✅ Gift card products (2026-10-21): products flagged as gift cards (variants = denominations) issue and email one card per unit when paid; never discounted, shipped, taxed or stock-tracked, and not payable with gift cards.
 - ✅ Customer segments (2026-10-21): saved filters (paid orders, spend, last order, signup age, marketing consent, account) with live counts, member lists and audited CSV export.
+- ✅ Returns (2026-10-21): customers request returns from their account within 30 days; staff approve, decline or record returns, then receive and refund (items net of discount plus tax, via the normal refund path) with optional restock.

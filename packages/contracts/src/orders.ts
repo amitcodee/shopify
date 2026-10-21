@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { paginated } from './common.js';
+import { returnSchema, returnStatusSchema } from './returns.js';
 
 export const orderStatusSchema = z.enum(['PENDING_PAYMENT', 'OPEN', 'CANCELLED']);
 export const financialStatusSchema = z.enum([
@@ -138,6 +139,7 @@ export const orderDetailSchema = orderListItemSchema.extend({
   ),
   /** Amount that can still be refunded (paid minus refunded). */
   refundableAmount: z.number().int(),
+  returns: z.array(returnSchema),
 });
 export type OrderDetail = z.infer<typeof orderDetailSchema>;
 
@@ -187,11 +189,24 @@ export const publicOrderSchema = z.object({
   shippingAddress: addressShape,
   lines: z.array(
     z.object({
+      id: z.uuid(),
       title: z.string(),
       variantTitle: z.string(),
       quantity: z.number().int(),
       unitPrice: z.number().int(),
       total: z.number().int(),
+      /** Units that can still be returned (not in a pending or completed return). */
+      returnableQuantity: z.number().int(),
+    }),
+  ),
+  /** True while the customer may request a return (paid, within the return window). */
+  returnable: z.boolean(),
+  returns: z.array(
+    z.object({
+      status: returnStatusSchema,
+      declineReason: z.string().nullable(),
+      lines: z.array(z.object({ title: z.string(), quantity: z.number().int() })),
+      createdAt: z.iso.datetime(),
     }),
   ),
   fulfillments: z.array(

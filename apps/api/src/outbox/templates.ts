@@ -253,3 +253,16 @@ Enter the code at checkout: ${data.shopUrl}`,
     ),
   };
 }
+
+export function returnUpdateEmail(
+  to: string,
+  data: { storeName: string; orderNumber: number; message: string },
+): EmailMessage {
+  return {
+    to,
+    subject: `[${data.storeName}] Return for order #${data.orderNumber}`,
+    text: `${data.message}
+`,
+    html: layout(data.storeName, `<p>${escapeHtml(data.message)}</p>`),
+  };
+}
