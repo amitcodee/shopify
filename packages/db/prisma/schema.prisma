@@ -111,6 +111,8 @@ model Store {
   storefrontPasswordEncrypted String?
   storefrontPasswordChangedAt DateTime?
   passwordMessage             String      @default("")
+  /// Extra currencies shoppers can pay in (see @repo/contracts presentmentCurrencySchema).
+  presentmentCurrencies       Json        @default("[]")
   createdAt                   DateTime    @default(now())
   updatedAt                   DateTime    @updatedAt
 
@@ -635,6 +637,8 @@ model Order {
   /// Gift card applied at checkout and the amount it covers (the rest is paid by the provider).
   giftCardId          String?           @db.Uuid
   giftCardAmount      Int               @default(0)
+  /// Order-currency minor units per store-currency minor unit (1 when sold in the store currency).
+  exchangeRate        Float             @default(1)
   /// Abandoned-checkout recovery for orders that expired unpaid (null = not handled yet).
   recoveryStatus      RecoveryStatus?
   recoveryEmailSentAt DateTime?

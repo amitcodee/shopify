@@ -11,6 +11,8 @@ export const STOREFRONT_HEADERS = {
   customer: 'x-customer-token',
   /** Proof the visitor entered a password-protected store's password. */
   access: 'x-storefront-access',
+  /** Presentment currency the shopper chose (ignored unless the store enabled it). */
+  currency: 'x-storefront-currency',
 } as const;
 
 /** Canonical string signed with HMAC-SHA256: `${host}\n${timestamp}`. */
@@ -32,6 +34,10 @@ export const shopSchema = z.object({
   /** True when the store is password protected and this visitor has not entered it. */
   locked: z.boolean(),
   passwordMessage: z.string(),
+  /** The store's own currency (`currency` is what this shopper sees and pays in). */
+  baseCurrency: z.string(),
+  /** Currencies the shopper can switch between (store currency first). */
+  currencies: z.array(z.string()),
 });
 export type Shop = z.infer<typeof shopSchema>;
 

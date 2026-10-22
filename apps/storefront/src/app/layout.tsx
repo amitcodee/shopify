@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { headers } from 'next/headers';
 import { MenuLink } from '@/components/content';
+import { CurrencySwitcher } from '@/components/currency-switcher';
 import { requestHost } from '@/lib/api';
 import { getCart, getShop, isRootHost } from '@/lib/shop';
 import { themeStyle } from '@/lib/theme';
@@ -134,6 +135,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 className="w-40 rounded-md border border-zinc-300 px-3 py-1.5 text-sm sm:w-56"
               />
             </form>
+            {shop.currencies.length > 1 ? (
+              <CurrencySwitcher
+                current={shop.currency}
+                currencies={shop.currencies}
+                returnPath={path}
+              />
+            ) : null}
             <Link href="/account" className="text-sm text-zinc-700 hover:underline">
               Account
             </Link>

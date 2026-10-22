@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ENV, type Env } from '../config/env.js';
+import { PaymentsModule } from '../payments/payments.module.js';
 import { StorefrontModule } from '../storefront/storefront.module.js';
 import { CommerceSettingsController, CommerceSettingsService } from './commerce-settings.js';
 import {
@@ -11,7 +12,7 @@ import {
 } from './domains.js';
 
 @Module({
-  imports: [StorefrontModule],
+  imports: [StorefrontModule, PaymentsModule],
   controllers: [DomainsController, CommerceSettingsController],
   providers: [
     DomainsService,

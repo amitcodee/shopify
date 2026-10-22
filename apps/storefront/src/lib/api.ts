@@ -13,6 +13,8 @@ const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 /** Cookie holding the password-page access token for a protected store. */
 export const ACCESS_COOKIE = 'storefront_access';
 const LOCKED_DETAIL = 'This store is password protected.';
+/** Cookie holding the shopper's chosen presentment currency. */
+export const CURRENCY_COOKIE = 'currency';
 
 export class StorefrontApiError extends Error {
   constructor(
@@ -61,8 +63,13 @@ export async function sf<T>(path: string, options: SfOptions = {}): Promise<T> {
   if (options.cartToken) requestHeaders.set(STOREFRONT_HEADERS.cart, options.cartToken);
   if (options.customerToken) requestHeaders.set(STOREFRONT_HEADERS.customer, options.customerToken);
   // Password-protected stores: the access token from the password page (HttpOnly cookie).
-  const access = (await cookies()).get(ACCESS_COOKIE)?.value;
+  const jar = await cookies();
+  const access = jar.get(ACCESS_COOKIE)?.value;
   if (access && access.length <= 100) requestHeaders.set(STOREFRONT_HEADERS.access, access);
+  // The shopper's currency choice; the API ignores currencies the store has not enabled.
+  const currency = jar.get(CURRENCY_COOKIE)?.value;
+  if (currency && /^[A-Z]{3}$/.test(currency))
+    requestHeaders.set(STOREFRONT_HEADERS.currency, currency);
   const forwardedFor = incoming.get('x-forwarded-for');
   if (forwardedFor) requestHeaders.set('x-forwarded-for', forwardedFor);
 

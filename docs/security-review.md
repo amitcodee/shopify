@@ -160,3 +160,8 @@ columns; the hostname unique index is replaced by per-store + verified-only inde
   and restore it. Sales lock the variant row before allocating across locations, so concurrent
   orders cannot oversell a location. Tests: `locations.e2e` (total = sum of locations after every
   operation), `locations.spec`.
+- **2026-10-21 — presentment currencies** ([ADR 0009](adr/0009-presentment-currencies.md)). The
+  currency header is only a request: the API honours currencies the merchant enabled and prices
+  every line server-side in that currency, so a shopper cannot choose a cheaper rate. Gateways
+  that cannot charge a currency are refused at save and at checkout. Tests: `currencies.test`,
+  `currencies.e2e`, `currencies.spec`.

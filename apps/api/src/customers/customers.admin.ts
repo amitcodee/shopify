@@ -51,16 +51,17 @@ export class AdminCustomersService {
         }),
         tx.customer.count({ where }),
       ]);
-      const stats = await tx.order.groupBy({
-        by: ['customerId'],
-        where: {
-          storeId,
-          customerId: { in: rows.map((r) => r.id) },
-          financialStatus: { in: [...PAID] },
-        },
-        _count: { _all: true },
-        _sum: { total: true },
-      });
+      // Totals in the store currency (orders paid in other currencies are converted back).
+      const ids = rows.map((r) => r.id);
+      const stats = ids.length
+        ? await tx.$queryRaw<{ customerId: string; orders: number; spent: number }[]>`
+            SELECT "customerId", COUNT(*)::int AS orders,
+                   COALESCE(ROUND(SUM(total / "exchangeRate")), 0)::int AS spent
+            FROM "Order"
+            WHERE "storeId" = ${storeId}::uuid AND "customerId" = ANY(${ids}::uuid[])
+              AND "financialStatus" IN ('PAID', 'PARTIALLY_REFUNDED')
+            GROUP BY "customerId"`
+        : [];
       const byCustomer = new Map(stats.map((s) => [s.customerId, s]));
       return {
         items: rows.map((c) => ({
@@ -69,8 +70,8 @@ export class AdminCustomersService {
           name: c.name,
           hasAccount: c.passwordHash !== null,
           acceptsMarketing: c.acceptsMarketing,
-          ordersCount: byCustomer.get(c.id)?._count._all ?? 0,
-          totalSpent: byCustomer.get(c.id)?._sum.total ?? 0,
+          ordersCount: byCustomer.get(c.id)?.orders ?? 0,
+          totalSpent: byCustomer.get(c.id)?.spent ?? 0,
           createdAt: c.createdAt.toISOString(),
         })),
         page: query.page,

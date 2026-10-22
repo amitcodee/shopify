@@ -19,6 +19,9 @@ import {
   type Discount,
   discountInputSchema,
   parseTheme,
+  type PresentmentCurrency,
+  presentmentCurrenciesInputSchema,
+  presentmentCurrencySchema,
   type ShippingZone,
   type StorefrontAccess,
   storefrontAccessInputSchema,
@@ -40,6 +43,7 @@ import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { UuidParam } from '../common/uuid-param.pipe.js';
 import { ApiZodBody, ZodPipe } from '../common/zod.js';
 import { TenantDb } from '../database/database.module.js';
+import { PaymentAccountsService } from '../payments/payment-accounts.service.js';
 import { StoreResolver } from '../storefront/store-resolver.js';
 import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
 
@@ -74,6 +78,7 @@ export class CommerceSettingsService {
     private readonly audit: AuditService,
     private readonly resolver: StoreResolver,
     @Inject(ENV) private readonly env: Env,
+    private readonly payments: PaymentAccountsService,
   ) {}
 
   private record(
@@ -174,6 +179,46 @@ export class CommerceSettingsService {
     });
     this.resolver.invalidate();
     return this.getStorefrontAccess(storeId);
+  }
+
+  // Presentment currencies
+  async getCurrencies(storeId: string): Promise<PresentmentCurrency[]> {
+    const store = await this.tenantDb.run(storeId, (tx) =>
+      tx.store.findUniqueOrThrow({ where: { id: storeId } }),
+    );
+    return z.array(presentmentCurrencySchema).catch([]).parse(store.presentmentCurrencies);
+  }
+
+  async saveCurrencies(
+    storeId: string,
+    currencies: PresentmentCurrency[],
+    actor: AuthUser,
+    meta: RequestMeta,
+  ): Promise<PresentmentCurrency[]> {
+    await this.tenantDb.run(storeId, async (tx) => {
+      const store = await tx.store.findUniqueOrThrow({ where: { id: storeId } });
+      if (currencies.some((c) => c.currency === store.currency)) {
+        throw new BadRequestException(`${store.currency} is the store currency already.`);
+      }
+      const account = await tx.paymentAccount.findUnique({ where: { storeId } });
+      const unsupported = account
+        ? currencies.filter((c) => !this.payments.supportsCurrency(account.provider, c.currency))
+        : [];
+      if (unsupported.length > 0) {
+        throw new BadRequestException(
+          `Your payment gateway cannot charge in ${unsupported.map((c) => c.currency).join(', ')}.`,
+        );
+      }
+      await tx.store.update({
+        where: { id: storeId },
+        data: { presentmentCurrencies: currencies },
+      });
+      await this.record(tx, storeId, actor, 'currencies.updated', storeId, meta, {
+        currencies: currencies.map((c) => `${c.currency}@${c.rate}`),
+      });
+    });
+    this.resolver.invalidate();
+    return currencies;
   }
 
   // Shipping
@@ -450,6 +495,25 @@ export class CommerceSettingsController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<StorefrontAccess> {
     return this.settings.saveStorefrontAccess(store.id, body, user, meta);
+  }
+
+  @Get('currencies')
+  @RequirePermission('settings:read')
+  currencies(@CurrentStore() store: StoreContext): Promise<PresentmentCurrency[]> {
+    return this.settings.getCurrencies(store.id);
+  }
+
+  @Put('currencies')
+  @RequirePermission('settings:write')
+  @ApiZodBody(presentmentCurrenciesInputSchema)
+  saveCurrencies(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodPipe(presentmentCurrenciesInputSchema))
+    body: z.output<typeof presentmentCurrenciesInputSchema>,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<PresentmentCurrency[]> {
+    return this.settings.saveCurrencies(store.id, body.currencies, user, meta);
   }
 
   @Get('shipping-zones')

@@ -16,6 +16,7 @@ import {
   type CheckoutResult,
   type checkoutInputSchema,
   formatMoney,
+  minorUnitFactor,
   type MockPayment,
   type PublicOrder,
   type ShippingOption,
@@ -38,7 +39,7 @@ import { applicationFee } from '../payments/connect-provider.js';
 import { PaymentAccountsService } from '../payments/payment-accounts.service.js';
 import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-provider.js';
 import { CartService } from '../storefront/cart.service.js';
-import type { ShopContext } from '../storefront/store-resolver.js';
+import { type ShopContext, shopAmount, shopPrice } from '../storefront/store-resolver.js';
 import { hashToken } from '../auth/session.service.js';
 import { returnedQuantities, returnWindowOpen } from '../orders/return-rules.js';
 import { priceCart, type PricingResult } from './pricing.js';
@@ -63,6 +64,8 @@ interface Quote {
     variantTitle: string;
     sku: string | null;
     unitPrice: number;
+    /** Price in the store currency (unitPrice is in the shopper's currency). */
+    basePrice: number;
     quantity: number;
     taxable: boolean;
     requiresShipping: boolean;
@@ -206,6 +209,9 @@ export class CheckoutService {
       // take payments yet.
       const destination =
         quote.amountDue > 0 ? await this.paymentAccounts.requireDestination(tx, shop.id) : null;
+      if (destination && shop.currency !== shop.baseCurrency) {
+        await this.paymentAccounts.requireCurrency(destination.provider, shop.currency);
+      }
 
       const customer = customerId
         ? await tx.customer.findFirstOrThrow({ where: { id: customerId, storeId: shop.id } })
@@ -239,6 +245,9 @@ export class CheckoutService {
           customerId: customer.id,
           email,
           currency: shop.currency,
+          exchangeRate: shop.presentment
+            ? minorUnitFactor(shop.baseCurrency, shop.currency, shop.presentment.rate)
+            : 1,
           subtotal: quote.pricing.subtotal,
           discountTotal: quote.pricing.discountTotal,
           shippingTotal: quote.pricing.shippingTotal,
@@ -361,7 +370,8 @@ export class CheckoutService {
               title: l.productTitle,
               variantTitle: l.variantTitle,
               sku: v.sku,
-              unitPrice: v.price,
+              unitPrice: shopPrice(shop, v.price),
+              basePrice: v.price,
               quantity: l.quantity,
               taxable: v.taxable,
               requiresShipping: v.requiresShipping,
@@ -374,29 +384,34 @@ export class CheckoutService {
         : [];
     });
 
-    const subtotal = lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
+    // Rate conditions and discount minimums are configured in the store currency.
+    const baseSubtotal = lines.reduce((s, l) => s + l.basePrice * l.quantity, 0);
     const requiresShipping = lines.some((l) => l.requiresShipping);
     const destination = { country: input.country, region: input.region };
-    const shippingOptions = await this.shipping.optionsFor(tx, shop.id, destination, {
-      subtotal,
+    const baseOptions = await this.shipping.optionsFor(tx, shop.id, destination, {
+      subtotal: baseSubtotal,
       weightGrams: lines.reduce(
         (s, l) => s + (l.requiresShipping ? l.weightGrams * l.quantity : 0),
         0,
       ),
       requiresShipping,
     });
+    const shippingOptions = baseOptions.map((o) => ({ ...o, price: shopAmount(shop, o.price) }));
     const selectedShipping =
       shippingOptions.find((o) => o.id === input.shippingRateId) ?? shippingOptions[0] ?? null;
     const discount = input.discountCode
-      ? await this.discounts.evaluate(tx, shop.id, input.discountCode, subtotal)
+      ? await this.discounts.evaluate(tx, shop.id, input.discountCode, baseSubtotal)
       : null;
+    const rule = discount?.applied ? discount.rule : null;
+    const discountRule =
+      rule?.type === 'FIXED_AMOUNT' ? { ...rule, value: shopAmount(shop, rule.value) } : rule;
     const tax = input.country
       ? await this.tax.rateFor(tx, shop.id, destination)
       : { rateBps: 0, taxShipping: false };
 
     const pricing = priceCart({
       lines,
-      discount: discount?.applied ? discount.rule : null,
+      discount: discountRule,
       shippingPrice: selectedShipping?.price ?? 0,
       taxRateBps: tax.rateBps,
       taxShipping: tax.taxShipping,

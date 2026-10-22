@@ -14,7 +14,7 @@ import { Reflector } from '@nestjs/core';
 import { STOREFRONT_HEADERS, storefrontSignaturePayload } from '@repo/contracts';
 import type { Request } from 'express';
 import { ENV, type Env } from '../config/env.js';
-import { type ShopContext, StoreResolver } from './store-resolver.js';
+import { type ShopContext, StoreResolver, withPresentment } from './store-resolver.js';
 
 const MAX_SKEW_MS = 5 * 60 * 1000;
 
@@ -95,12 +95,12 @@ export class StorefrontGuard implements CanActivate {
 
     const shop = await this.resolver.resolve(host);
     if (!shop) throw new NotFoundException('Store not found.');
-    req.shop = shop;
+    req.shop = withPresentment(shop, header(req, STOREFRONT_HEADERS.currency));
     const allowLocked = this.reflector.getAllAndOverride<boolean>(ALLOW_LOCKED, [
       context.getHandler(),
       context.getClass(),
     ]);
-    if (!allowLocked && !hasStorefrontAccess(req, shop, this.secret)) {
+    if (!allowLocked && !hasStorefrontAccess(req, req.shop, this.secret)) {
       throw new ForbiddenException('This store is password protected.');
     }
     return true;

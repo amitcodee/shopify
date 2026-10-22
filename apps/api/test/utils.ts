@@ -148,7 +148,7 @@ export function storefrontClient(ctx: TestContext, host: string) {
   return (
     method: Method,
     path: string,
-    tokens: { cart?: string; customer?: string; access?: string } = {},
+    tokens: { cart?: string; customer?: string; access?: string; currency?: string } = {},
   ) => {
     const ts = String(Date.now());
     const agent = ctx.http();
@@ -159,6 +159,7 @@ export function storefrontClient(ctx: TestContext, host: string) {
     if (tokens.cart) req.set(STOREFRONT_HEADERS.cart, tokens.cart);
     if (tokens.customer) req.set(STOREFRONT_HEADERS.customer, tokens.customer);
     if (tokens.access) req.set(STOREFRONT_HEADERS.access, tokens.access);
+    if (tokens.currency) req.set(STOREFRONT_HEADERS.currency, tokens.currency);
     return req;
   };
 }

@@ -3,6 +3,13 @@ import { parseTheme, type Theme } from '@repo/contracts';
 import type { PrismaClient } from '@repo/db';
 import { ENV, type Env } from '../config/env.js';
 import { APP_DB } from '../database/database.module.js';
+import {
+  convertAmount,
+  convertPrice,
+  type PresentmentCurrency,
+  presentmentCurrencySchema,
+} from '@repo/contracts';
+import { z } from 'zod';
 
 export interface ShopContext {
   id: string;
@@ -14,6 +21,33 @@ export interface ShopContext {
   /** Set while the store is password protected; changes whenever the password changes. */
   accessVersion: string | null;
   passwordMessage: string;
+  /** The store's own currency; `currency` is the shopper's presentment currency. */
+  baseCurrency: string;
+  /** Conversion for this request (null when the shopper uses the store currency). */
+  presentment: PresentmentCurrency | null;
+  /** Extra currencies the store sells in. */
+  presentmentCurrencies: PresentmentCurrency[];
+}
+
+const storedCurrencies = z.array(presentmentCurrencySchema).catch([]);
+
+/** Product price as this shopper sees it (converted and rounded per the store's rule). */
+export function shopPrice(shop: ShopContext, amount: number): number {
+  const p = shop.presentment;
+  return p ? convertPrice(amount, shop.baseCurrency, p.currency, p.rate, p.rounding) : amount;
+}
+
+/** Other amounts (shipping, fixed discounts) converted exactly. */
+export function shopAmount(shop: ShopContext, amount: number): number {
+  const p = shop.presentment;
+  return p ? convertAmount(amount, shop.baseCurrency, p.currency, p.rate) : amount;
+}
+
+/** The request's shop in the shopper's chosen currency (if the store enabled it). */
+export function withPresentment(shop: ShopContext, requested: string | undefined): ShopContext {
+  const choice = requested?.toUpperCase();
+  const match = shop.presentmentCurrencies.find((c) => c.currency === choice);
+  return match ? { ...shop, currency: match.currency, presentment: match } : shop;
 }
 
 const CACHE_TTL_MS = 30_000;
@@ -90,6 +124,7 @@ export class StoreResolver {
     passwordProtected: boolean;
     storefrontPasswordChangedAt: Date | null;
     passwordMessage: string;
+    presentmentCurrencies: unknown;
   }): ShopContext {
     return {
       id: store.id,
@@ -103,6 +138,11 @@ export class StoreResolver {
           ? store.storefrontPasswordChangedAt.toISOString()
           : null,
       passwordMessage: store.passwordMessage,
+      baseCurrency: store.currency,
+      presentment: null,
+      presentmentCurrencies: storedCurrencies
+        .parse(store.presentmentCurrencies)
+        .filter((c) => c.currency !== store.currency),
     };
   }
 }

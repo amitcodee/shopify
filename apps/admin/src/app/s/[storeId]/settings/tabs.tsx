@@ -14,6 +14,7 @@ const TABS: Tab[] = [
   { label: 'General', path: '' },
   { label: 'Theme', path: '/theme', permission: 'settings:read' },
   { label: 'Domains', path: '/domains', permission: 'settings:read' },
+  { label: 'Currencies', path: '/currencies', permission: 'settings:read' },
   { label: 'Locations', path: '/locations', permission: 'settings:read' },
   { label: 'Shipping', path: '/shipping', permission: 'settings:read' },
   { label: 'Taxes', path: '/taxes', permission: 'settings:read' },

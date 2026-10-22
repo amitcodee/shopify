@@ -27,3 +27,4 @@ export * from './product-csv.js';
 export * from './developer.js';
 export * from './segments.js';
 export * from './returns.js';
+export * from './currencies.js';

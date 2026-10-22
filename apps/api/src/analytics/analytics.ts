@@ -17,16 +17,16 @@ export class AnalyticsService {
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     return this.tenantDb.run(store.id, async (tx) => {
       const [totals] = await tx.$queryRaw<{ gross: number; orders: number }[]>`
-        SELECT COALESCE(SUM(total), 0)::int AS gross, COUNT(*)::int AS orders
+        SELECT COALESCE(ROUND(SUM(total / "exchangeRate")), 0)::int AS gross, COUNT(*)::int AS orders
         FROM "Order"
         WHERE "storeId" = ${store.id}::uuid AND "paidAt" >= ${since}`;
       const [refunds] = await tx.$queryRaw<{ refunded: number }[]>`
-        SELECT COALESCE(SUM(r.amount), 0)::int AS refunded
-        FROM "Refund" r
+        SELECT COALESCE(ROUND(SUM(r.amount / o."exchangeRate")), 0)::int AS refunded
+        FROM "Refund" r JOIN "Order" o ON o.id = r."orderId"
         WHERE r."storeId" = ${store.id}::uuid AND r.status = 'SUCCEEDED' AND r."createdAt" >= ${since}`;
       const daily = await tx.$queryRaw<{ date: string; sales: number; orders: number }[]>`
         SELECT to_char(d.day, 'YYYY-MM-DD') AS date,
-               COALESCE(SUM(o.total), 0)::int AS sales,
+               COALESCE(ROUND(SUM(o.total / o."exchangeRate")), 0)::int AS sales,
                COUNT(o.id)::int AS orders
         FROM generate_series(date_trunc('day', ${since}::timestamp), date_trunc('day', now()), interval '1 day') AS d(day)
         LEFT JOIN "Order" o ON o."storeId" = ${store.id}::uuid
@@ -35,7 +35,7 @@ export class AnalyticsService {
       const topProducts = await tx.$queryRaw<
         { title: string; quantity: number; revenue: number }[]
       >`
-        SELECT l.title, SUM(l.quantity)::int AS quantity, SUM(l."unitPrice" * l.quantity - l."discountTotal")::int AS revenue
+        SELECT l.title, SUM(l.quantity)::int AS quantity, ROUND(SUM((l."unitPrice" * l.quantity - l."discountTotal") / o."exchangeRate"))::int AS revenue
         FROM "OrderLine" l JOIN "Order" o ON o.id = l."orderId"
         WHERE o."storeId" = ${store.id}::uuid AND o."paidAt" >= ${since}
         GROUP BY l.title ORDER BY revenue DESC LIMIT 5`;

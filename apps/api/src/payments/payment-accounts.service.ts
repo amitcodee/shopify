@@ -293,6 +293,21 @@ export class PaymentAccountsService {
     };
   }
 
+  /** Whether the store's gateway can charge in `currency` (presentment currencies). */
+  supportsCurrency(providerName: string, currency: string): boolean {
+    const provider = this.providers.get(providerName);
+    return Boolean(provider && (!provider.currencies || provider.currencies.includes(currency)));
+  }
+
+  requireCurrency(providerName: string, currency: string): Promise<void> {
+    if (this.supportsCurrency(providerName, currency)) return Promise.resolve();
+    return Promise.reject(
+      new ConflictException(
+        `This store cannot take payments in ${currency}. Switch currency to continue.`,
+      ),
+    );
+  }
+
   /** Applies a verified Connect webhook. Unknown accounts are ignored (logged). */
   async applyWebhook(providerName: string, outcome: ConnectWebhookOutcome): Promise<void> {
     if (outcome.kind === 'account_updated') {

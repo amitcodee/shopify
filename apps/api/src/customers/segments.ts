@@ -89,7 +89,7 @@ function membersQuery(storeId: string, conditions: SegmentCondition[]): Prisma.S
              c."passwordHash" IS NOT NULL AS has_account,
              c."acceptsMarketing" AS accepts_marketing,
              COUNT(o.id)::int AS orders_count,
-             COALESCE(SUM(o.total), 0)::int AS total_spent,
+             COALESCE(ROUND(SUM(o.total / o."exchangeRate")), 0)::int AS total_spent,
              MAX(o."paidAt") AS last_order_at
       FROM "Customer" c
       LEFT JOIN "Order" o ON o."customerId" = c.id AND o."storeId" = c."storeId"

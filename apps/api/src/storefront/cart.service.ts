@@ -6,7 +6,7 @@ import { hashToken } from '../auth/session.service.js';
 import { TenantDb } from '../database/database.module.js';
 import { MediaUrls } from '../storage/storage.module.js';
 import { isVariantAvailable } from './storefront-catalog.service.js';
-import type { ShopContext } from './store-resolver.js';
+import { type ShopContext, shopPrice } from './store-resolver.js';
 
 const CART_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -194,9 +194,9 @@ export class CartService {
         productHandle: variant.product.handle,
         variantTitle: variant.title,
         imageUrl: image ? this.media.url(image.storageKey) : null,
-        unitPrice: variant.price,
+        unitPrice: shopPrice(shop, variant.price),
         quantity: line.quantity,
-        lineTotal: variant.price * line.quantity,
+        lineTotal: shopPrice(shop, variant.price) * line.quantity,
         available,
         maxQuantity: max,
       };

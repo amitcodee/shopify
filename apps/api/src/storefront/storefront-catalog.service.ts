@@ -16,7 +16,7 @@ import { TenantDb } from '../database/database.module.js';
 import { OnlineStoreService } from '../online-store/online-store.service.js';
 import { MediaUrls } from '../storage/storage.module.js';
 import { storefrontAccessToken } from './storefront.guard.js';
-import type { ShopContext } from './store-resolver.js';
+import { type ShopContext, shopPrice } from './store-resolver.js';
 
 interface CardRow {
   id: string;
@@ -76,6 +76,8 @@ export class StorefrontCatalogService {
           policies: [],
           locked: true,
           passwordMessage: shop.passwordMessage,
+          baseCurrency: shop.baseCurrency,
+          currencies: [],
         };
       }
       const collections = await tx.collection.findMany({
@@ -95,6 +97,8 @@ export class StorefrontCatalogService {
         ...navigation,
         locked: false,
         passwordMessage: '',
+        baseCurrency: shop.baseCurrency,
+        currencies: [shop.baseCurrency, ...shop.presentmentCurrencies.map((c) => c.currency)],
       };
     });
   }
@@ -210,7 +214,7 @@ export class StorefrontCatalogService {
         SELECT COUNT(*)::int AS count FROM "Product" p WHERE ${where}`;
 
       return {
-        items: rows.map((r) => this.toCard(r)),
+        items: rows.map((r) => this.toCard(shop, r)),
         page: query.page,
         pageSize: query.pageSize,
         total: counted?.count ?? 0,
@@ -246,8 +250,8 @@ export class StorefrontCatalogService {
         id: v.id,
         title: v.title,
         options: v.options,
-        price: v.price,
-        compareAtPrice: v.compareAtPrice,
+        price: shopPrice(shop, v.price),
+        compareAtPrice: v.compareAtPrice === null ? null : shopPrice(shop, v.compareAtPrice),
         available: isVariantAvailable(v),
         sku: v.sku,
       })),
@@ -300,14 +304,14 @@ export class StorefrontCatalogService {
     }
   }
 
-  private toCard(r: CardRow): ProductCard {
+  private toCard(shop: ShopContext, r: CardRow): ProductCard {
     return {
       id: r.id,
       title: r.title,
       handle: r.handle,
-      minPrice: r.min_price,
-      maxPrice: r.max_price,
-      compareAtPrice: r.compare_at,
+      minPrice: shopPrice(shop, r.min_price),
+      maxPrice: shopPrice(shop, r.max_price),
+      compareAtPrice: r.compare_at === null ? null : shopPrice(shop, r.compare_at),
       available: r.available,
       imageUrl: r.image_key ? this.media.url(r.image_key) : null,
       imageAlt: r.image_alt || r.title,
