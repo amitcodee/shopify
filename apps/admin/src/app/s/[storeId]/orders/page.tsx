@@ -1,6 +1,7 @@
 import { formatMoney, type OrderListItem, type Paginated } from '@repo/contracts';
 import Link from 'next/link';
 import {
+  buttonClass,
   ButtonLink,
   EmptyState,
   formatDateTime,
@@ -11,17 +12,9 @@ import {
 } from '@/components/ui';
 import { api } from '@/lib/api';
 import { FinancialBadge, FulfillmentBadge, OrderStatusBadge } from './badges';
+import { ORDER_VIEWS } from './views';
 
-const VIEWS = [
-  { key: 'all', label: 'All', query: {} },
-  {
-    key: 'unfulfilled',
-    label: 'Unfulfilled',
-    query: { status: 'OPEN', fulfillmentStatus: 'UNFULFILLED' },
-  },
-  { key: 'unpaid', label: 'Awaiting payment', query: { status: 'PENDING_PAYMENT' } },
-  { key: 'cancelled', label: 'Cancelled', query: { status: 'CANCELLED' } },
-] as const;
+const VIEWS = ORDER_VIEWS;
 
 export default async function OrdersPage({
   params,
@@ -63,6 +56,14 @@ export default async function OrdersPage({
             >
               Returns
             </Link>
+            {/* A route handler download, not a page: plain <a>, no client-side navigation. */}
+            <a
+              href={href({ page: undefined }).replace(base, `${base}/export`)}
+              className={buttonClass('ghost')}
+              download
+            >
+              Export
+            </a>
             <ButtonLink href={`${base}/drafts`} variant="secondary">
               Draft orders
             </ButtonLink>

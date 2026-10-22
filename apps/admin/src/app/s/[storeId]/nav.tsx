@@ -37,3 +37,44 @@ export function SideNav({ items, permissions }: { items: NavItem[]; permissions:
     </nav>
   );
 }
+
+/** Phones: the nav collapses behind a "Menu" toggle so every page doesn't open with ten links. */
+export function MobileNav({
+  items,
+  permissions,
+  storefrontUrl,
+}: {
+  items: NavItem[];
+  permissions: Permission[];
+  storefrontUrl: string;
+}) {
+  const pathname = usePathname();
+  const current = items.find((item) =>
+    item.exact ? pathname === item.href : pathname.startsWith(item.href),
+  );
+  return (
+    // Keyed by path so the menu closes after navigating.
+    <details key={pathname} className="group rounded-md border border-slate-200 bg-white">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-medium text-slate-900">
+        <span>
+          <span className="text-slate-500">Menu · </span>
+          {current?.label ?? 'Overview'}
+        </span>
+        <span aria-hidden className="text-slate-400 group-open:rotate-180">
+          ▾
+        </span>
+      </summary>
+      <div className="border-t border-slate-200 p-2">
+        <SideNav items={items} permissions={permissions} />
+        <a
+          href={storefrontUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 block px-3 py-2 text-sm text-indigo-600 hover:text-indigo-500"
+        >
+          View storefront ↗
+        </a>
+      </div>
+    </details>
+  );
+}

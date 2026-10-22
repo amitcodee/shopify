@@ -1,5 +1,7 @@
 import { formatMoney, type PublicOrder } from '@repo/contracts';
 
+const countryName = new Intl.DisplayNames(['en'], { type: 'region' });
+
 function statusLabel(order: PublicOrder): string {
   if (order.status === 'CANCELLED') return 'Cancelled';
   if (order.financialStatus === 'REFUNDED') return 'Refunded';
@@ -56,7 +58,7 @@ export function OrderView({ order }: { order: PublicOrder }) {
             {a.city}
             {a.region ? `, ${a.region}` : ''} {a.postalCode}
             <br />
-            {a.country}
+            {countryName.of(a.country) ?? a.country}
           </address>
           {order.shippingMethod ? (
             <p className="mt-2 text-sm text-zinc-500">{order.shippingMethod}</p>

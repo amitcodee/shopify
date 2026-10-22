@@ -135,7 +135,7 @@ export default async function StoreOverview({
       </div>
 
       {analytics ? (
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
           <Card
             title="Net sales by day"
             description={

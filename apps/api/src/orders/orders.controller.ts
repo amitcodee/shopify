@@ -34,6 +34,17 @@ export class OrdersController {
     return this.orders.list(store.id, query);
   }
 
+  @Get('export')
+  @RequirePermission('orders:read')
+  exportCsv(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @Query(new ZodPipe(orderListQuerySchema)) query: OrderListQuery,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<{ filename: string; csv: string }> {
+    return this.orders.exportCsv(store.id, query, user, meta);
+  }
+
   @Get(':orderId')
   @RequirePermission('orders:read')
   get(

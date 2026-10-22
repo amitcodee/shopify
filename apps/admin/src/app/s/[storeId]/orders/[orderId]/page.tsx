@@ -12,6 +12,8 @@ import { cancelOrderAction, fulfillAction, refundAction, sandboxDisputeAction } 
 import { FinancialBadge, FulfillmentBadge, OrderStatusBadge } from '../badges';
 import { ReturnsCard } from '../returns-card';
 
+const countryName = new Intl.DisplayNames(['en'], { type: 'region' });
+
 export default async function OrderPage({
   params,
 }: {
@@ -39,6 +41,12 @@ export default async function OrderPage({
         back={{ href: `/s/${storeId}/orders`, label: 'Orders' }}
         actions={
           <div className="flex items-center gap-2">
+            <Link
+              href={`/packing-slip/${storeId}/${orderId}`}
+              className="mr-2 text-sm text-indigo-600 hover:text-indigo-500"
+            >
+              Print packing slip
+            </Link>
             <OrderStatusBadge status={order.status} />
             <FinancialBadge status={order.financialStatus} />
             <FulfillmentBadge status={order.fulfillmentStatus} />
@@ -54,7 +62,7 @@ export default async function OrderPage({
           </Alert>
         </div>
       ) : null}
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           <Card title="Items">
             <Table head={['Product', 'SKU', 'Price', 'Qty', 'Total']}>
@@ -257,7 +265,7 @@ export default async function OrderPage({
               {a.city}
               {a.region ? `, ${a.region}` : ''} {a.postalCode}
               <br />
-              {a.country}
+              {countryName.of(a.country) ?? a.country}
               {a.phone ? (
                 <>
                   <br />

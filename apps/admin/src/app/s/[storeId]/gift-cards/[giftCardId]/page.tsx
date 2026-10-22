@@ -41,7 +41,7 @@ export default async function GiftCardPage({
         back={{ href: `/s/${storeId}/gift-cards`, label: 'Gift cards' }}
         actions={<GiftCardStatusBadge status={card.status} />}
       />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card title="Details">
           <DescriptionList
             items={[

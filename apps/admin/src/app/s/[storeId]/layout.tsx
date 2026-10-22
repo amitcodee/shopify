@@ -3,7 +3,7 @@ import { TopBar } from '@/components/top-bar';
 import { Alert } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getCurrentUser, getStore } from '@/lib/session';
-import { type NavItem, SideNav } from './nav';
+import { MobileNav, type NavItem, SideNav } from './nav';
 
 const storefrontOrigin = process.env.STOREFRONT_PUBLIC_URL ?? 'http://{subdomain}.localhost:3200';
 
@@ -21,6 +21,7 @@ export default async function StoreLayout({
     api<{ adminNotice: string; supportEmail: string }>('/auth/platform-notice'),
   ]);
   const base = `/s/${store.id}`;
+  const storefrontUrl = storefrontOrigin.replace('{subdomain}', store.subdomain);
   const items: NavItem[] = [
     { label: 'Overview', href: base, exact: true },
     { label: 'Orders', href: `${base}/orders`, permission: 'orders:read' },
@@ -44,7 +45,7 @@ export default async function StoreLayout({
         <aside className="hidden w-52 shrink-0 md:block">
           <SideNav items={items} permissions={store.permissions} />
           <a
-            href={storefrontOrigin.replace('{subdomain}', store.subdomain)}
+            href={storefrontUrl}
             target="_blank"
             rel="noreferrer"
             className="mt-6 block px-3 text-sm text-indigo-600 hover:text-indigo-500"
@@ -54,7 +55,11 @@ export default async function StoreLayout({
         </aside>
         <main className="min-w-0 flex-1">
           <div className="mb-4 md:hidden">
-            <SideNav items={items} permissions={store.permissions} />
+            <MobileNav
+              items={items}
+              permissions={store.permissions}
+              storefrontUrl={storefrontUrl}
+            />
           </div>
           {notice.adminNotice ? (
             <div className="mb-6">

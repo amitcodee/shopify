@@ -30,18 +30,25 @@ interface CardRow {
   image_alt: string | null;
 }
 
-/** Turns free text into a prefix-matching tsquery: "blue sho" -> "blue:* & sho:*". */
-export function toPrefixTsQuery(input: string): string | null {
+/**
+ * Splits free text into search words. A plural's trailing "s" is dropped ("shirts" -> "shirt")
+ * so prefix matching also finds the singular; the plural still matches.
+ */
+export function searchWords(input: string): string[] {
   const words = input
     .toLowerCase()
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .match(/[\p{L}\p{N}]+/gu);
-  if (!words || words.length === 0) return null;
-  return words
+  return (words ?? [])
     .slice(0, 8)
-    .map((w) => `${w}:*`)
-    .join(' & ');
+    .map((w) => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w));
+}
+
+/** Turns free text into a prefix-matching tsquery: "blue sho" -> "blue:* & sho:*". */
+export function toPrefixTsQuery(input: string): string | null {
+  const words = searchWords(input);
+  return words.length === 0 ? null : words.map((w) => `${w}:*`).join(' & ');
 }
 
 export function isVariantAvailable(v: {
@@ -190,7 +197,13 @@ export class StorefrontCatalogService {
         return { items: [], page: query.page, pageSize: query.pageSize, total: 0 };
       }
       const document = Prisma.sql`app_product_search_document(p.title, p.description, p.tags)`;
-      if (tsQuery) filters.push(Prisma.sql`${document} @@ to_tsquery('simple', ${tsQuery})`);
+      // Every word must match: as a word prefix anywhere, or inside the title ("coat" finds
+      // "Overcoat"). Words are letters and digits only, so they carry no LIKE wildcards.
+      for (const word of query.q ? searchWords(query.q) : []) {
+        filters.push(
+          Prisma.sql`(${document} @@ to_tsquery('simple', ${`${word}:*`}) OR p.title ILIKE ${`%${word}%`})`,
+        );
+      }
 
       const where = Prisma.join(filters, ' AND ');
       const order = this.orderBy(query.sort, tsQuery, document);

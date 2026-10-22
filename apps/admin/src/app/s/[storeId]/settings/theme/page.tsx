@@ -21,7 +21,7 @@ export default async function ThemePage({ params }: { params: Promise<{ storeId:
   const s = theme.settings;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
       <Card
         title="Storefront theme"
         description="Pick a layout and brand your store. Changes are live on save."

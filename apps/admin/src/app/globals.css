@@ -1,1 +1,8 @@
 @import 'tailwindcss';
+
+/* Fieldsets default to min-width: min-content, which lets wide tables push forms off phones. */
+@layer base {
+  fieldset {
+    min-width: 0;
+  }
+}

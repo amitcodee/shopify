@@ -26,7 +26,7 @@ export default async function PlatformOverviewPage() {
         <Stat label="Paid orders (30d)" value={o.paidOrders30d} />
         <Stat label="Stores accepting payments" value={o.storesAcceptingPayments} />
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card title="Stores by plan">
           <Table head={['Plan', 'Stores']}>
             {o.planBreakdown.map((p) => (

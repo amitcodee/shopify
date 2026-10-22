@@ -161,6 +161,13 @@ describe('Storefront', () => {
       expect(shoes.body.items.map((p: { handle: string }) => p.handle)).toEqual([
         'blue-running-shoe',
       ]);
+      // Plurals find the singular, and a word inside the title matches ("unning" in "Running").
+      for (const q of ['shoes', 'blue unning']) {
+        const found = await sf.get('/products').query({ q }).expect(200);
+        expect(found.body.items.map((p: { handle: string }) => p.handle)).toEqual([
+          'blue-running-shoe',
+        ]);
+      }
       const byDescription = await sf.get('/products').query({ q: 'trail' }).expect(200);
       expect(byDescription.body.total).toBe(1);
       const none = await sf.get('/products').query({ q: "'; DROP TABLE" }).expect(200);

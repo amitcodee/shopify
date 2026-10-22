@@ -87,7 +87,7 @@ export default async function BillingPage({
         </div>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {billing.plans.map((p) => {
           const current = p.id === billing.plan.id;
           return (

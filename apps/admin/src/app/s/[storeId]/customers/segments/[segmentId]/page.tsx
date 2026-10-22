@@ -53,7 +53,7 @@ export default async function SegmentPage({
           </a>
         }
       />
-      <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_420px]">
         <Card title="Customers">
           <Table head={['Customer', 'Orders', 'Spent', 'Last order']}>
             {members.items.map((c) => (

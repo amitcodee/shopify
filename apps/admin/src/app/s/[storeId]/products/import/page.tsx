@@ -13,7 +13,7 @@ export default async function ImportProductsPage({
   return (
     <>
       <PageHeader title="Import products" back={{ href: base, label: 'Products' }} />
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         <Card
           title="Upload CSV"
           description="New products are created; products whose handle already exists are skipped, never changed."

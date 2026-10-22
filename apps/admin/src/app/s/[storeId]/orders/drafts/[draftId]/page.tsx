@@ -56,7 +56,7 @@ export default async function DraftPage({
           </Alert>
         </div>
       ) : null}
-      <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
         <DraftForm
           key={draft.updatedAt}
           draft={draft}

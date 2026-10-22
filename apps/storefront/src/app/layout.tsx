@@ -110,11 +110,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           </p>
         ) : null}
         <header className="border-b border-zinc-200">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-4">
-            <Link href="/" className="text-xl font-bold tracking-tight text-brand">
+          {/* Phones: logo + account/cart, then full-width search, then a scrolling menu row. */}
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-3 px-4 py-4">
+            <Link href="/" className="order-1 text-xl font-bold tracking-tight text-brand">
               {shop.name}
             </Link>
-            <nav aria-label="Main" className="flex flex-1 flex-wrap gap-4 text-sm">
+            <nav
+              aria-label="Main"
+              className="order-4 -mx-4 flex w-full gap-4 overflow-x-auto whitespace-nowrap px-4 text-sm md:order-2 md:mx-0 md:w-auto md:flex-1 md:flex-wrap md:overflow-visible md:px-0"
+            >
               {shop.menus.main.map((link) => (
                 <MenuLink
                   key={`${link.title}-${link.href}`}
@@ -123,7 +127,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 />
               ))}
             </nav>
-            <form action="/search" role="search" className="flex">
+            <form action="/search" role="search" className="order-3 flex w-full md:w-auto">
               <label htmlFor="site-search" className="sr-only">
                 Search products
               </label>
@@ -132,22 +136,24 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 name="q"
                 type="search"
                 placeholder="Search"
-                className="w-40 rounded-md border border-zinc-300 px-3 py-1.5 text-sm sm:w-56"
+                className="w-full rounded-md border border-zinc-300 px-3 py-1.5 text-sm md:w-56"
               />
             </form>
-            {shop.currencies.length > 1 ? (
-              <CurrencySwitcher
-                current={shop.currency}
-                currencies={shop.currencies}
-                returnPath={path}
-              />
-            ) : null}
-            <Link href="/account" className="text-sm text-zinc-700 hover:underline">
-              Account
-            </Link>
-            <Link href="/cart" className="text-sm font-medium text-zinc-900 hover:underline">
-              Cart ({cart?.itemCount ?? 0})
-            </Link>
+            <div className="order-2 ml-auto flex items-center gap-4 md:order-4 md:ml-0">
+              {shop.currencies.length > 1 ? (
+                <CurrencySwitcher
+                  current={shop.currency}
+                  currencies={shop.currencies}
+                  returnPath={path}
+                />
+              ) : null}
+              <Link href="/account" className="text-sm text-zinc-700 hover:underline">
+                Account
+              </Link>
+              <Link href="/cart" className="text-sm font-medium text-zinc-900 hover:underline">
+                Cart ({cart?.itemCount ?? 0})
+              </Link>
+            </div>
           </div>
         </header>
         <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">

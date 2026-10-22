@@ -31,7 +31,7 @@ export default async function GiftCardsPage({
         title="Gift cards"
         description="Store credit customers spend at checkout. Codes are shown only once, when issued."
       />
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <form action={base} className="flex gap-2">
             <label htmlFor="gift-card-search" className="sr-only">

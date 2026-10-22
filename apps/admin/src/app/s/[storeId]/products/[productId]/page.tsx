@@ -7,6 +7,7 @@ import { getStore } from '@/lib/session';
 import {
   deleteImageAction,
   deleteProductAction,
+  duplicateProductAction,
   saveProductAction,
   uploadImageAction,
 } from '../actions';
@@ -19,10 +20,10 @@ export default async function ProductPage({
   searchParams,
 }: {
   params: Promise<{ storeId: string; productId: string }>;
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; duplicated?: string }>;
 }) {
   const { storeId, productId } = await params;
-  const { created } = await searchParams;
+  const { created, duplicated } = await searchParams;
   const store = await getStore(storeId);
   let product: Product;
   try {
@@ -45,8 +46,15 @@ export default async function ProductPage({
           <Alert tone="success">Product created.</Alert>
         </div>
       ) : null}
+      {duplicated ? (
+        <div className="mb-6">
+          <Alert tone="success">
+            Draft copy created. Add images, SKUs and stock, then set it to Active.
+          </Alert>
+        </div>
+      ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         <ProductEditor
           key={product.updatedAt}
           product={product}
@@ -114,6 +122,17 @@ export default async function ProductPage({
               </div>
             ) : null}
           </Card>
+
+          {canWrite ? (
+            <Card title="Duplicate">
+              <ActionForm action={duplicateProductAction.bind(null, storeId, productId)}>
+                <p className="text-sm text-slate-600">
+                  Creates a draft copy with the same details, options and prices.
+                </p>
+                <SubmitButton variant="secondary">Duplicate product</SubmitButton>
+              </ActionForm>
+            </Card>
+          ) : null}
 
           {canWrite ? (
             <Card title="Danger zone">
