@@ -26,6 +26,7 @@ export async function saveThemeAction(
   formData: FormData,
 ): Promise<FormState> {
   const text = (key: string) => requiredString(formData, key);
+  const checked = (key: string) => formData.get(key) === 'on';
   try {
     await api(`/admin/stores/${storeId}/theme`, {
       method: 'PUT',
@@ -49,12 +50,31 @@ export async function saveThemeAction(
           gridColumns: integer(formData, 'gridColumns') ?? 4,
           density: text('density'),
           footerStyle: text('footerStyle'),
-          showCollections: formData.get('showCollections') === 'on',
+          showCollections: checked('showCollections'),
           heroTitle: text('heroTitle'),
           heroSubtitle: text('heroSubtitle'),
           heroCta: text('heroCta'),
           featuredTitle: text('featuredTitle'),
           announcement: text('announcement'),
+          stickyHeader: checked('stickyHeader'),
+          cartStyle: text('cartStyle'),
+          showTrustBar: checked('showTrustBar'),
+          trustItem1: text('trustItem1'),
+          trustItem2: text('trustItem2'),
+          trustItem3: text('trustItem3'),
+          showCollectionCarousels: checked('showCollectionCarousels'),
+          showBrandStory: checked('showBrandStory'),
+          brandStoryTitle: text('brandStoryTitle'),
+          brandStoryText: text('brandStoryText'),
+          showBlogPosts: checked('showBlogPosts'),
+          showNewsletter: checked('showNewsletter'),
+          newsletterTitle: text('newsletterTitle'),
+          newsletterText: text('newsletterText'),
+          socialInstagram: text('socialInstagram'),
+          socialFacebook: text('socialFacebook'),
+          socialX: text('socialX'),
+          socialYoutube: text('socialYoutube'),
+          socialTiktok: text('socialTiktok'),
         },
       },
     });

@@ -120,18 +120,70 @@ function combinations(options: { values: string[] }[]): string[][] {
   );
 }
 
-function escapeXml(text: string): string {
-  return text.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
+/** Mixes `hex` toward white (amount > 0) or black (amount < 0). */
+function shade(hex: string, amount: number): string {
+  const target = amount > 0 ? 255 : 0;
+  const channels = [1, 3, 5].map((i) => {
+    const c = parseInt(hex.slice(i, i + 2), 16);
+    return Math.round(c + (target - c) * Math.abs(amount))
+      .toString(16)
+      .padStart(2, '0');
+  });
+  return `#${channels.join('')}`;
 }
 
-async function placeholderImage(title: string, color: string): Promise<Buffer> {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800">
-    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="#0f172a"/></linearGradient></defs>
-    <rect width="800" height="800" fill="url(#g)"/>
-    <text x="400" y="420" font-family="Arial, sans-serif" font-size="44" fill="#fff" text-anchor="middle">${escapeXml(title)}</text>
-  </svg>`;
-  return sharp(Buffer.from(svg)).webp({ quality: 80 }).toBuffer();
+/**
+ * Studio-style placeholder photos without text (the alt text names the product): a soft
+ * backdrop with an object, a close-up, and a flat lay, so galleries and hover images have
+ * something to show.
+ */
+async function placeholderImages(color: string): Promise<Buffer[]> {
+  const light = shade(color, 0.86);
+  const mid = shade(color, 0.55);
+  const dark = shade(color, -0.35);
+  const scenes = [
+    `<rect width="800" height="800" fill="${light}"/>
+     <ellipse cx="400" cy="640" rx="230" ry="34" fill="${dark}" opacity="0.18"/>
+     <rect x="250" y="190" width="300" height="430" rx="46" fill="url(#g)"/>
+     <rect x="290" y="240" width="90" height="300" rx="40" fill="#fff" opacity="0.18"/>`,
+    `<rect width="800" height="800" fill="url(#g)"/>
+     <circle cx="400" cy="400" r="250" fill="${light}" opacity="0.16"/>
+     <circle cx="400" cy="400" r="150" fill="${light}" opacity="0.22"/>
+     <path d="M0 620 Q200 540 400 620 T800 620 V800 H0Z" fill="${dark}" opacity="0.35"/>`,
+    `<rect width="800" height="800" fill="${shade(color, 0.93)}"/>
+     <rect x="120" y="150" width="250" height="250" rx="28" fill="url(#g)"/>
+     <rect x="430" y="150" width="250" height="250" rx="125" fill="${mid}"/>
+     <rect x="120" y="440" width="560" height="210" rx="28" fill="${shade(color, 0.7)}"/>`,
+  ];
+  return Promise.all(
+    scenes.map((scene) => {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800">
+        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${dark}"/></linearGradient></defs>
+        ${scene}
+      </svg>`;
+      return sharp(Buffer.from(svg)).webp({ quality: 82 }).toBuffer();
+    }),
+  );
+}
+
+/** Replaces a product's images with fresh placeholders (seed and dev refresh). */
+export async function seedProductImages(
+  db: PrismaClient,
+  storage: LocalDiskStorage,
+  storeId: string,
+  productId: string,
+  title: string,
+  color: string,
+): Promise<void> {
+  await db.productImage.deleteMany({ where: { storeId, productId } });
+  for (const [position, image] of (await placeholderImages(color)).entries()) {
+    const key = `stores/${storeId}/products/${randomUUID()}.webp`;
+    await storage.put(key, image);
+    await db.productImage.create({
+      data: { storeId, productId, storageKey: key, alt: title, width: 800, height: 800, position },
+    });
+  }
 }
 
 /** Demo catalog for the seeded store; skipped when the store already has products. */
@@ -196,18 +248,7 @@ export async function seedCatalog(db: PrismaClient, storeId: string): Promise<vo
       });
     }
 
-    const key = `stores/${storeId}/products/${randomUUID()}.webp`;
-    await storage.put(key, await placeholderImage(p.title, p.color));
-    await db.productImage.create({
-      data: {
-        storeId,
-        productId: product.id,
-        storageKey: key,
-        alt: p.title,
-        width: 800,
-        height: 800,
-      },
-    });
+    await seedProductImages(db, storage, storeId, product.id, p.title, p.color);
   }
 
   const newArrivals = await db.collection.create({
@@ -250,4 +291,17 @@ export async function seedCatalog(db: PrismaClient, storeId: string): Promise<vo
       ruleTag: 'outdoor',
     },
   });
+}
+
+/** Dev helper: regenerates the demo products' placeholder images in an existing store. */
+export async function refreshDemoImages(db: PrismaClient, storeId: string): Promise<number> {
+  const storage = new LocalDiskStorage(process.env.STORAGE_DIR ?? 'storage');
+  let count = 0;
+  for (const p of PRODUCTS) {
+    const product = await db.product.findFirst({ where: { storeId, title: p.title } });
+    if (!product) continue;
+    await seedProductImages(db, storage, storeId, product.id, p.title, p.color);
+    count++;
+  }
+  return count;
 }

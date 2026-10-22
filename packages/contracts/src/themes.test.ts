@@ -54,7 +54,37 @@ describe('theme templates', () => {
     expect(applied.settings.template).toBe('beauty-classic');
     expect(applied.settings.headerStyle).toBe('centered');
     expect(applied.settings.announcement).toBe('');
+
+    // Sections, words and links stay the merchant's.
+    const custom = {
+      ...current,
+      showNewsletter: false,
+      trustItem1: 'Ships in 24h',
+      socialInstagram: 'https://instagram.com/shop',
+      heroCta: 'Browse',
+    };
+    const restyled = applyThemeTemplate(findThemeTemplate('pets-noir')!, custom).settings;
+    expect(restyled).toMatchObject({
+      showNewsletter: false,
+      trustItem1: 'Ships in 24h',
+      socialInstagram: 'https://instagram.com/shop',
+      heroCta: 'Browse',
+      cardStyle: 'overlay',
+      template: 'pets-noir',
+    });
     expect(defaultTemplateFor('pets')?.id).toBe('pets-minimal');
     expect(defaultTemplateFor('nope')).toBeUndefined();
+  });
+});
+
+describe('theme settings', () => {
+  it('accepts https social links only', () => {
+    const parse = (socialInstagram: string) =>
+      themeInputSchema.safeParse({ preset: 'minimal', settings: { socialInstagram } }).success;
+    expect(parse('https://instagram.com/shop')).toBe(true);
+    expect(parse('')).toBe(true);
+    expect(parse('javascript:alert(1)')).toBe(false);
+    expect(parse('http://instagram.com/shop')).toBe(false);
+    expect(parse('https://')).toBe(false);
   });
 });

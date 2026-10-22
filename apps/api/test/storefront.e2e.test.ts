@@ -273,4 +273,46 @@ describe('Storefront', () => {
       ).expect(404);
     });
   });
+
+  describe('merchandising', () => {
+    it('filters to in-stock products and returns a second image slot on cards', async () => {
+      const base = `/api/v1/admin/stores/${shop.store.id}`;
+      const soldOut = await ctx
+        .http()
+        .post(`${base}/products`)
+        .set(shop.auth)
+        .send({
+          title: 'Gone Hat',
+          status: 'ACTIVE',
+          variants: [{ price: 700, inventoryQuantity: 0 }],
+        })
+        .expect(201);
+
+      const all = await sf.get('/products').expect(200);
+      expect(all.body.items.map((p: { handle: string }) => p.handle)).toContain('gone-hat');
+      expect(all.body.items[0]).toHaveProperty('secondImageUrl', null);
+
+      const inStock = await sf.get('/products').query({ inStock: 'true' }).expect(200);
+      expect(inStock.body.items.map((p: { handle: string }) => p.handle).sort()).toEqual([
+        'blue-running-shoe',
+        'cheap-socks',
+      ]);
+      expect(inStock.body.total).toBe(2);
+
+      await ctx.http().delete(`${base}/products/${soldOut.body.id}`).set(shop.auth).expect(204);
+    });
+
+    it('subscribes newsletter emails as marketing consent without revealing existing customers', async () => {
+      await sf.post('/newsletter').send({ email: ' Fan@Example.com ' }).expect(204);
+      await sf.post('/newsletter').send({ email: 'fan@example.com' }).expect(204);
+      const customers = await ctx.platform.customer.findMany({
+        where: { storeId: shop.store.id, email: 'fan@example.com' },
+      });
+      expect(customers).toHaveLength(1);
+      expect(customers[0]?.acceptsMarketing).toBe(true);
+
+      await sf.post('/newsletter').send({ email: 'not-an-email' }).expect(400);
+      await sf.post('/newsletter').send({ email: 'a@example.com', extra: 1 }).expect(400);
+    });
+  });
 });

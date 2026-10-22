@@ -1,9 +1,24 @@
-import type { ProductCard, ProductCardPage, Shop } from '@repo/contracts';
+import type {
+  Paginated,
+  ProductCard,
+  ProductCardPage,
+  Shop,
+  StorefrontBlogPost,
+} from '@repo/contracts';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
 import { ProductGrid } from '@/components/product-grid';
-import { sf } from '@/lib/api';
-import { getShop } from '@/lib/shop';
+import { BlogPosts } from '@/components/sections/blog-posts';
+import { BrandStory } from '@/components/sections/brand-story';
+import { CollectionCarousel } from '@/components/sections/collection-carousel';
+import {
+  type CollectionFeature,
+  FeaturedCollections,
+} from '@/components/sections/featured-collections';
+import { NewsletterSection } from '@/components/sections/newsletter-section';
+import { SectionHeader } from '@/components/sections/section-header';
+import { TrustBar } from '@/components/sections/trust-bar';
+import { sf, StorefrontApiError } from '@/lib/api';
+import { getShop, getThemePreview } from '@/lib/shop';
 
 interface HeroProps {
   shop: Shop;
@@ -163,55 +178,21 @@ function Hero({ shop, title, subtitle, image }: HeroProps) {
   }
 }
 
-function SectionHeading({ id, children }: { id: string; children: ReactNode }) {
-  return (
-    <h2 id={id} className="text-xl font-semibold tracking-tight sm:text-2xl">
-      {children}
-    </h2>
-  );
-}
+/** Image beside the brand story: left on these layouts, right on the rest. */
+const STORY_IMAGE_FIRST = new Set(['split', 'classic', 'banner', 'catalog']);
 
-/** Collection links: big tiles on the catalog layout, a row of chips elsewhere. */
-function Collections({ shop, tiles }: { shop: Shop; tiles: boolean }) {
-  return (
-    <section aria-labelledby="collections-heading" className="store-section">
-      <div className="mb-5">
-        <SectionHeading id="collections-heading">Collections</SectionHeading>
-      </div>
-      {tiles ? (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {shop.collections.map((c) => (
-            <li key={c.handle}>
-              <Link
-                href={`/collections/${c.handle}`}
-                className="group flex min-h-24 flex-col justify-between gap-4 rounded-lg border border-zinc-200 bg-surface p-4 transition hover:border-zinc-900"
-              >
-                <span className="font-heading text-base font-semibold leading-tight group-hover:underline sm:text-lg">
-                  {c.title}
-                </span>
-                <span aria-hidden="true" className="text-sm text-accent">
-                  Shop →
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <ul className="flex flex-wrap gap-3">
-          {shop.collections.map((c) => (
-            <li key={c.handle}>
-              <Link
-                href={`/collections/${c.handle}`}
-                className="inline-block rounded-[var(--store-button-radius)] border border-zinc-300 px-4 py-2 text-sm hover:border-zinc-900"
-              >
-                {c.title}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
+/** Shown only while previewing a template, when the merchant has not written a story yet. */
+const SAMPLE_STORY = {
+  title: 'Made with care',
+  text:
+    'Use this space to tell shoppers who you are, what you make and why it matters.\n\n' +
+    'Add your own story under Settings → Theme → Customize, and it will appear here.',
+};
+
+/** API errors (e.g. a collection removed meanwhile) hide a section; anything else is rethrown. */
+function orNull<T>(error: unknown): T | null {
+  if (error instanceof StorefrontApiError) return null;
+  throw error;
 }
 
 export default async function HomePage() {
@@ -219,10 +200,53 @@ export default async function HomePage() {
   if (!shop) return null;
   const { preset, settings } = shop.theme;
   const pageSize = settings.gridColumns === 5 ? 10 : settings.gridColumns === 3 ? 9 : 8;
-  const latest = await sf<ProductCardPage>('/products', { query: { pageSize } });
+  // Collection cards use up to six collections; carousels the first three.
+  const collections = shop.collections.slice(
+    0,
+    settings.showCollections ? 6 : settings.showCollectionCarousels ? 3 : 0,
+  );
+  const carousels = settings.showCollectionCarousels ? 3 : 0;
+  const [latest, collectionPages, posts, preview] = await Promise.all([
+    sf<ProductCardPage>('/products', { query: { pageSize } }),
+    Promise.all(
+      collections.map((c, i) =>
+        sf<ProductCardPage>('/products', {
+          query: { collection: c.handle, pageSize: i < carousels ? 12 : 1 },
+        }).catch(orNull<ProductCardPage>),
+      ),
+    ),
+    settings.showBlogPosts
+      ? sf<Paginated<StorefrontBlogPost>>('/blog').then(
+          (page) => page.items.slice(0, 3),
+          (error: unknown) => orNull<StorefrontBlogPost[]>(error) ?? [],
+        )
+      : [],
+    getThemePreview(),
+  ]);
   // Whole rows on wide screens, once there are at least two of them to show.
   const rows = Math.floor(latest.items.length / settings.gridColumns);
   const products = rows >= 2 ? latest.items.slice(0, rows * settings.gridColumns) : latest.items;
+
+  const features: CollectionFeature[] = collections.map((c, i) => {
+    const page = collectionPages[i];
+    return {
+      ...c,
+      total: page?.total ?? null,
+      imageUrl: page?.items.find((p) => p.imageUrl)?.imageUrl ?? null,
+    };
+  });
+
+  // The merchant's story; while previewing a template, sample copy stands in for a missing one.
+  let story: { title: string; text: string } | null = null;
+  if (settings.brandStoryTitle || settings.brandStoryText) {
+    if (settings.showBrandStory)
+      story = { title: settings.brandStoryTitle, text: settings.brandStoryText };
+  } else if (preview) {
+    story = SAMPLE_STORY;
+  }
+  const withImages = latest.items.filter((p) => p.imageUrl);
+  const storyImage =
+    withImages[2]?.secondImageUrl ?? withImages[2]?.imageUrl ?? withImages[0]?.imageUrl ?? null;
 
   return (
     <>
@@ -233,19 +257,50 @@ export default async function HomePage() {
         image={latest.items.find((p) => p.imageUrl)}
       />
 
-      {settings.showCollections && shop.collections.length > 0 ? (
-        <Collections shop={shop} tiles={preset === 'catalog'} />
+      {settings.showTrustBar ? <TrustBar theme={settings} /> : null}
+
+      {settings.showCollections && features.length > 0 ? (
+        <FeaturedCollections collections={features} dense={preset === 'catalog'} />
       ) : null}
 
-      <section aria-labelledby="latest-heading">
-        <div className="mb-5 flex items-end justify-between gap-4">
-          <SectionHeading id="latest-heading">{settings.featuredTitle || 'New in'}</SectionHeading>
-          <Link href="/collections/all" className="shrink-0 text-sm text-zinc-600 hover:underline">
-            View all
-          </Link>
-        </div>
+      <section aria-labelledby="latest-heading" className="store-section">
+        <SectionHeader
+          id="latest-heading"
+          title={settings.featuredTitle || 'New in'}
+          eyebrow="Just landed"
+          href="/collections/all"
+        />
         <ProductGrid products={products} currency={shop.currency} theme={settings} />
       </section>
+
+      {collections.slice(0, carousels).map((c, i) => {
+        const items = collectionPages[i]?.items ?? [];
+        return items.length >= 2 ? (
+          <CollectionCarousel
+            key={c.handle}
+            title={c.title}
+            handle={c.handle}
+            products={items}
+            currency={shop.currency}
+            theme={settings}
+          />
+        ) : null;
+      })}
+
+      {story ? (
+        <BrandStory
+          title={story.title}
+          text={story.text}
+          imageUrl={storyImage}
+          imageFirst={STORY_IMAGE_FIRST.has(preset)}
+        />
+      ) : null}
+
+      {posts.length > 0 ? <BlogPosts posts={posts} /> : null}
+
+      {settings.showNewsletter ? (
+        <NewsletterSection title={settings.newsletterTitle} text={settings.newsletterText} />
+      ) : null}
     </>
   );
 }

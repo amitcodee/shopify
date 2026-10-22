@@ -1,9 +1,17 @@
 import type { Theme } from '@repo/contracts';
 import type { ReactNode } from 'react';
-import { ActionForm, CheckboxField, Field, SelectField, SubmitButton } from '@/components/form';
+import {
+  ActionForm,
+  CheckboxField,
+  Field,
+  SelectField,
+  SubmitButton,
+  TextAreaField,
+} from '@/components/form';
 import {
   BUTTON_OPTIONS,
   CARD_OPTIONS,
+  CART_STYLE_OPTIONS,
   COLUMN_OPTIONS,
   DENSITY_OPTIONS,
   FONT_OPTIONS,
@@ -15,6 +23,14 @@ import {
   RADIUS_OPTIONS,
 } from '@/lib/theme-options';
 import { saveThemeAction } from '../commerce-actions';
+
+const SOCIAL_FIELDS = [
+  { name: 'socialInstagram', label: 'Instagram' },
+  { name: 'socialFacebook', label: 'Facebook' },
+  { name: 'socialX', label: 'X (Twitter)' },
+  { name: 'socialYoutube', label: 'YouTube' },
+  { name: 'socialTiktok', label: 'TikTok' },
+] as const;
 
 const colorClass = 'h-10 w-full cursor-pointer rounded-md border border-slate-300 bg-white p-1';
 
@@ -179,11 +195,6 @@ export function CustomizeForm({
               options={FOOTER_OPTIONS}
             />
           </div>
-          <CheckboxField
-            name="showCollections"
-            label="Show collections on the homepage"
-            defaultChecked={s.showCollections}
-          />
         </Group>
 
         <Group title="Content" description="Applying a template keeps any text you have set here.">
@@ -222,6 +233,113 @@ export function CustomizeForm({
             maxLength={120}
             hint="Shown at the top of every page. Leave empty to hide."
           />
+        </Group>
+
+        <Group title="Header & cart" description="How shoppers move around and buy.">
+          <CheckboxField
+            name="stickyHeader"
+            label="Keep the header visible while scrolling"
+            defaultChecked={s.stickyHeader}
+          />
+          <SelectField
+            name="cartStyle"
+            label="Cart style"
+            defaultValue={s.cartStyle}
+            options={CART_STYLE_OPTIONS}
+            hint="What happens when a shopper adds something to their cart."
+          />
+        </Group>
+
+        <Group
+          title="Homepage sections"
+          description="Sections shown after the hero, in this order. Empty sections are skipped."
+        >
+          <CheckboxField
+            name="showTrustBar"
+            label="Show the trust bar"
+            defaultChecked={s.showTrustBar}
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {(['trustItem1', 'trustItem2', 'trustItem3'] as const).map((name, i) => (
+              <Field
+                key={name}
+                name={name}
+                label={`Trust item ${i + 1}`}
+                defaultValue={s[name]}
+                maxLength={40}
+              />
+            ))}
+          </div>
+          <CheckboxField
+            name="showCollections"
+            label="Show collections on the homepage"
+            defaultChecked={s.showCollections}
+          />
+          <CheckboxField
+            name="showCollectionCarousels"
+            label="Show a product row for each collection"
+            defaultChecked={s.showCollectionCarousels}
+          />
+          <CheckboxField
+            name="showBrandStory"
+            label="Show the brand story"
+            defaultChecked={s.showBrandStory}
+          />
+          <Field
+            name="brandStoryTitle"
+            label="Brand story title"
+            defaultValue={s.brandStoryTitle}
+            maxLength={80}
+          />
+          <TextAreaField
+            name="brandStoryText"
+            label="Brand story text"
+            defaultValue={s.brandStoryText}
+            maxLength={600}
+            rows={4}
+            hint="A few sentences about who you are. Blank lines start a new paragraph."
+          />
+          <CheckboxField
+            name="showBlogPosts"
+            label="Show the latest blog posts"
+            defaultChecked={s.showBlogPosts}
+          />
+          <CheckboxField
+            name="showNewsletter"
+            label="Show the newsletter sign-up"
+            defaultChecked={s.showNewsletter}
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field
+              name="newsletterTitle"
+              label="Newsletter title"
+              defaultValue={s.newsletterTitle}
+              maxLength={80}
+              placeholder="Join our newsletter"
+            />
+            <Field
+              name="newsletterText"
+              label="Newsletter text"
+              defaultValue={s.newsletterText}
+              maxLength={200}
+              placeholder="New arrivals and offers, straight to your inbox."
+            />
+          </div>
+        </Group>
+
+        <Group title="Social links" description="Shown in the footer. Leave empty to hide.">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {SOCIAL_FIELDS.map(({ name, label }) => (
+              <Field
+                key={name}
+                name={name}
+                label={label}
+                type="url"
+                defaultValue={s[name]}
+                placeholder="https://…"
+              />
+            ))}
+          </div>
         </Group>
       </fieldset>
       {canEdit ? <SubmitButton>Save theme</SubmitButton> : null}

@@ -2,6 +2,7 @@ import { Controller, Get, Header } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../auth/auth.guard.js';
 import { PlansService } from './plans.service.js';
+import { PlatformSettingsService } from './platform-settings.service.js';
 
 /** The plan fields safe to show anyone (e.g. on the platform's marketing page). */
 export interface PublicPlan {
@@ -18,7 +19,10 @@ export interface PublicPlan {
 @Public()
 @Controller('public')
 export class PublicPlansController {
-  constructor(private readonly plans: PlansService) {}
+  constructor(
+    private readonly plans: PlansService,
+    private readonly platformSettings: PlatformSettingsService,
+  ) {}
 
   /** Active plans in display order. No auth; ids, defaults and inactive plans stay private. */
   @Get('plans')
@@ -34,5 +38,14 @@ export class PublicPlansController {
       maxOrdersPerMonth: p.maxOrdersPerMonth,
       transactionFeeBps: p.transactionFeeBps,
     }));
+  }
+
+  /** How to reach platform support (for the marketing site's contact page). */
+  @Get('contact')
+  @Header('Cache-Control', 'public, max-age=300')
+  @ApiOkResponse({ description: 'The platform support email address.' })
+  async contact(): Promise<{ supportEmail: string }> {
+    const { supportEmail } = await this.platformSettings.get();
+    return { supportEmail };
   }
 }

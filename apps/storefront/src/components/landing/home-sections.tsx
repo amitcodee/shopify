@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-html-link-for-pages -- the root layout picks the marketing page from the request path, so links between marketing pages must be full page loads, not client navigations. */
 import {
   findThemeTemplate,
   THEME_INDUSTRIES,
@@ -34,6 +35,8 @@ const templates = (ids: string[]) =>
 const eyebrow = 'text-sm font-semibold tracking-wide text-indigo-600';
 const h2 = 'mt-3 text-3xl font-bold tracking-tight text-balance sm:text-5xl';
 const container = 'mx-auto max-w-7xl px-4 sm:px-6';
+const moreLink =
+  'rounded font-semibold text-indigo-600 hover:text-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600';
 
 // ── Hero ────────────────────────────────────────────────────────────────────────
 
@@ -79,7 +82,7 @@ export function TemplateMarquee() {
   const item = (t: ThemeTemplate, copy: number) => (
     <li key={`${t.id}-${copy}`} className="w-60 shrink-0" aria-hidden={copy > 0 || undefined}>
       <a
-        href={`/templates?industry=${t.industry}`}
+        href={`/templates/${t.id}`}
         tabIndex={copy > 0 ? -1 : undefined}
         className="group block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-indigo-600"
       >
@@ -138,12 +141,14 @@ function FeatureCard({
   icon,
   title,
   body,
+  href,
   children,
 }: {
   id: string;
   icon: IconName;
   title: string;
   body: string;
+  href: string;
   children?: React.ReactNode;
 }) {
   return (
@@ -157,6 +162,9 @@ function FeatureCard({
       <h3 className="mt-5 text-xl font-semibold text-slate-900">{title}</h3>
       <p className="mt-2 leading-7 text-slate-600">{body}</p>
       {children}
+      <a href={href} className={`mt-6 self-start text-sm ${moreLink}`}>
+        Explore {title.toLowerCase()} <span aria-hidden="true">→</span>
+      </a>
     </article>
   );
 }
@@ -168,6 +176,9 @@ export function FeatureCards() {
         <div className="max-w-3xl">
           <p className={eyebrow}>One platform</p>
           <h2 className={`${h2} text-slate-900`}>Everything you need to sell online</h2>
+          <a href="/features" className={`mt-5 inline-block ${moreLink}`}>
+            See all features <span aria-hidden="true">→</span>
+          </a>
         </div>
         <article
           id="marketing"
@@ -180,6 +191,12 @@ export function FeatureCards() {
               Run discount codes with schedules and limits, email shoppers who leave checkout
               unfinished, group customers into segments and watch sales on your dashboard.
             </p>
+            <a
+              href="/features/marketing"
+              className="mt-6 inline-block rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              Explore marketing tools
+            </a>
           </div>
           <div aria-hidden="true" className="grid grid-cols-2 gap-3 self-center text-sm">
             {[
@@ -203,18 +220,21 @@ export function FeatureCards() {
             id="online-store"
             icon="layout"
             title="Online store"
+            href="/features/online-store"
             body="A template for your industry, your own pages, blog, menus and policies, a password page for pre-launch, and your own domain with automatic HTTPS."
           />
           <FeatureCard
             id="checkout"
             icon="card"
             title="Checkout"
+            href="/features/checkout"
             body="Prices, stock, discounts, gift cards, shipping and taxes are worked out on the server, then shoppers pay on a secure hosted payment page."
           />
           <FeatureCard
             id="back-office"
             icon="box"
             title="Back office"
+            href="/features/orders"
             body="Run the day-to-day from one admin, on desktop or phone."
           >
             <ul className="mt-5 flex flex-wrap gap-2">
@@ -244,8 +264,6 @@ const CURRENCIES = [
   ['JPY', '¥', 'Japanese yen'],
   ['CAD', '$', 'Canadian dollar'],
   ['AUD', '$', 'Australian dollar'],
-  ['SGD', '$', 'Singapore dollar'],
-  ['AED', 'د.إ', 'UAE dirham'],
 ] as const;
 
 export function SellGlobally() {
@@ -274,8 +292,14 @@ export function SellGlobally() {
               </li>
             ))}
           </ul>
+          <a href="/features/international" className={`mt-8 inline-block ${moreLink}`}>
+            How multi-currency works <span aria-hidden="true">→</span>
+          </a>
         </div>
-        <ul aria-label="Example currencies" className="grid grid-cols-3 gap-3 sm:gap-4">
+        <ul
+          aria-label="Supported currencies"
+          className="grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4"
+        >
           {CURRENCIES.map(([code, symbol, name], i) => (
             <li
               key={code}
@@ -448,6 +472,12 @@ export function CheckoutCarousel() {
             Shoppers move from cart to confirmation in a few steps, and every price is worked out on
             the server — never trusted from the browser.
           </p>
+          <a
+            href="/features/checkout"
+            className="mt-6 inline-block rounded font-semibold text-indigo-300 hover:text-indigo-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
+            Explore checkout <span aria-hidden="true">→</span>
+          </a>
         </div>
       </div>
       <ul
@@ -566,6 +596,9 @@ export function Developers() {
           >
             Read the API docs<span className="sr-only"> (opens in a new tab)</span>
           </a>
+          <a href="/features/developers" className={`mt-8 ml-4 inline-block ${moreLink}`}>
+            Developer features <span aria-hidden="true">→</span>
+          </a>
         </div>
         <ul className="grid gap-4 sm:grid-cols-2">
           {tiles.map((t) => (
@@ -618,6 +651,14 @@ export function Security() {
               </div>
             ))}
           </dl>
+          <p className="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <a href="/features/payments" className={moreLink}>
+              Payments <span aria-hidden="true">→</span>
+            </a>
+            <a href="/security" className={moreLink}>
+              How we protect stores <span aria-hidden="true">→</span>
+            </a>
+          </p>
         </div>
         <div aria-hidden="true" className="relative">
           <div className="absolute -inset-4 -z-10 rounded-[2rem] bg-gradient-to-br from-indigo-100 to-violet-100" />

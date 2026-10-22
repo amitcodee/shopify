@@ -51,7 +51,14 @@ export function TemplateThumb({
       >
         {template.sample.heroTitle}
       </p>
-      <span className="mt-1.5 inline-block px-2 py-0.5 text-[8px] font-medium" style={button}>
+      <span
+        className="mt-1.5 inline-block px-2 py-0.5 text-[8px] font-medium"
+        style={
+          s.buttonStyle === 'solid'
+            ? button
+            : { ...button, color, ...(s.buttonStyle === 'outline' ? { borderColor: color } : {}) }
+        }
+      >
         Shop now
       </span>
     </div>

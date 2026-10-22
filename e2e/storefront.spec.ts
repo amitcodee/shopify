@@ -48,6 +48,10 @@ test('shopper browses a store by subdomain, searches, and manages the cart', asy
   await shopper.getByRole('button', { name: 'Add to cart' }).click();
   await expect(shopper.getByText('Added to cart.')).toBeVisible();
   await expect(shopper.getByRole('link', { name: 'Cart (2)' })).toBeVisible();
+  // Adding opens the slide-out cart; close it to keep shopping.
+  await expect(shopper.getByRole('dialog', { name: 'Your cart' })).toBeVisible();
+  await shopper.keyboard.press('Escape');
+  await expect(shopper.getByRole('dialog', { name: 'Your cart' })).toBeHidden();
 
   // Asking for more than stock is refused with a clear message.
   await shopper.getByLabel('Quantity').fill('2');

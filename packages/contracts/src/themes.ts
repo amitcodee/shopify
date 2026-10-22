@@ -615,23 +615,41 @@ export function defaultTemplateFor(industry: string): ThemeTemplate | undefined 
   return findThemeTemplate(`${industry}-minimal`);
 }
 
-/** Fields that hold the merchant's own words; applying a template keeps any they have set. */
-const COPY_FIELDS = [
-  'heroTitle',
-  'heroSubtitle',
-  'heroCta',
-  'featuredTitle',
-  'announcement',
-] as const;
+/** The look a template controls; everything else (sections, words, links) stays the merchant's. */
+const DESIGN_FIELDS = [
+  'template',
+  'brandColor',
+  'accentColor',
+  'backgroundColor',
+  'surfaceColor',
+  'textColor',
+  'font',
+  'headingFont',
+  'headingCase',
+  'radius',
+  'buttonStyle',
+  'headerStyle',
+  'cardStyle',
+  'imageRatio',
+  'gridColumns',
+  'density',
+  'footerStyle',
+] as const satisfies readonly (keyof ThemeSettings)[];
+
+/** Template copy used only where the merchant has not written their own. */
+const COPY_FIELDS = ['heroSubtitle', 'heroCta', 'featuredTitle'] as const;
 
 /** The theme a store gets when it applies `template` over its current settings. */
 export function applyThemeTemplate(
   template: ThemeTemplate,
   current: ThemeSettings,
 ): { preset: ThemePreset; settings: ThemeSettings } {
-  const settings: ThemeSettings = { ...template.settings };
+  const settings: ThemeSettings = { ...current };
+  for (const field of DESIGN_FIELDS) {
+    (settings as Record<string, unknown>)[field] = template.settings[field];
+  }
   for (const field of COPY_FIELDS) {
-    if (current[field]) settings[field] = current[field];
+    if (!current[field]) settings[field] = template.settings[field];
   }
   return { preset: template.preset, settings };
 }

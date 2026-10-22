@@ -28,6 +28,7 @@ interface CardRow {
   available: boolean;
   image_key: string | null;
   image_alt: string | null;
+  second_image_key: string | null;
 }
 
 /**
@@ -192,6 +193,12 @@ export class StorefrontCatalogService {
         );
       }
 
+      if (query.inStock) {
+        filters.push(
+          Prisma.sql`EXISTS (SELECT 1 FROM "ProductVariant" sv WHERE sv."productId" = p.id AND (NOT sv."trackInventory" OR sv."allowBackorder" OR sv."inventoryQuantity" > 0))`,
+        );
+      }
+
       const tsQuery = query.q ? toPrefixTsQuery(query.q) : null;
       if (query.q && !tsQuery) {
         return { items: [], page: query.page, pageSize: query.pageSize, total: 0 };
@@ -215,7 +222,8 @@ export class StorefrontCatalogService {
                MAX(v."compareAtPrice")::int AS compare_at,
                BOOL_OR(NOT v."trackInventory" OR v."allowBackorder" OR v."inventoryQuantity" > 0) AS available,
                (SELECT i."storageKey" FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position LIMIT 1) AS image_key,
-               (SELECT i.alt FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position LIMIT 1) AS image_alt
+               (SELECT i.alt FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position LIMIT 1) AS image_alt,
+               (SELECT i."storageKey" FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position OFFSET 1 LIMIT 1) AS second_image_key
         FROM "Product" p
         JOIN "ProductVariant" v ON v."productId" = p.id
         WHERE ${where}
@@ -317,6 +325,20 @@ export class StorefrontCatalogService {
     }
   }
 
+  /**
+   * Newsletter sign-up: records marketing consent on the store's customer for this email,
+   * creating a guest customer when needed. The response never reveals whether one existed.
+   */
+  async subscribe(shop: ShopContext, email: string): Promise<void> {
+    await this.tenantDb.run(shop.id, (tx) =>
+      tx.customer.upsert({
+        where: { storeId_email: { storeId: shop.id, email } },
+        create: { storeId: shop.id, email, acceptsMarketing: true },
+        update: { acceptsMarketing: true },
+      }),
+    );
+  }
+
   private toCard(shop: ShopContext, r: CardRow): ProductCard {
     return {
       id: r.id,
@@ -328,6 +350,7 @@ export class StorefrontCatalogService {
       available: r.available,
       imageUrl: r.image_key ? this.media.url(r.image_key) : null,
       imageAlt: r.image_alt || r.title,
+      secondImageUrl: r.second_image_key ? this.media.url(r.second_image_key) : null,
     };
   }
 }

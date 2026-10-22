@@ -7,9 +7,12 @@ import { useId } from 'react';
 export function EmailCapture({
   signupUrl,
   tone = 'dark',
+  template,
 }: {
   signupUrl: string;
   tone?: 'dark' | 'light';
+  /** Template id to start the store with (sent as `template`). */
+  template?: string;
 }) {
   const id = useId();
   const dark = tone === 'dark';
@@ -21,6 +24,7 @@ export function EmailCapture({
         dark ? 'bg-white/10 ring-1 ring-white/20' : 'bg-white ring-1 ring-slate-300'
       }`}
     >
+      {template ? <input type="hidden" name="template" value={template} /> : null}
       <label htmlFor={id} className="sr-only">
         Email address
       </label>

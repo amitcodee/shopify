@@ -33,6 +33,16 @@ export const THEME_DENSITIES = ['compact', 'comfortable', 'spacious'] as const;
 export const THEME_FOOTER_STYLES = ['simple', 'columns', 'dark'] as const;
 export const THEME_HEADING_CASES = ['normal', 'uppercase'] as const;
 
+/** Social profile links: https only, so nothing like `javascript:` can reach an href. */
+const socialUrl = z
+  .string()
+  .trim()
+  .max(200)
+  .refine((v) => v === '' || /^https:\/\/[^\s/]+\.[^\s]+$/i.test(v), 'Use a full https:// link')
+  .default('');
+
+export const THEME_CART_STYLES = ['drawer', 'page'] as const;
+
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use a hex color like #1f2937');
 
 /**
@@ -67,6 +77,29 @@ export const themeSettingsSchema = z.strictObject({
   heroCta: z.string().trim().max(30).default(''),
   featuredTitle: z.string().trim().max(40).default(''),
   announcement: z.string().trim().max(120).default(''),
+  /** Header stays visible while scrolling. */
+  stickyHeader: z.boolean().default(true),
+  /** Adding to cart opens a slide-out cart (drawer) or shows a link to the cart page. */
+  cartStyle: z.enum(THEME_CART_STYLES).default('drawer'),
+  // Homepage sections, in page order after the hero.
+  showTrustBar: z.boolean().default(true),
+  trustItem1: z.string().trim().max(40).default('Secure checkout'),
+  trustItem2: z.string().trim().max(40).default('Order tracking'),
+  trustItem3: z.string().trim().max(40).default('Friendly support'),
+  /** One product row per collection (up to three collections). */
+  showCollectionCarousels: z.boolean().default(true),
+  showBrandStory: z.boolean().default(false),
+  brandStoryTitle: z.string().trim().max(80).default(''),
+  brandStoryText: z.string().trim().max(600).default(''),
+  showBlogPosts: z.boolean().default(true),
+  showNewsletter: z.boolean().default(true),
+  newsletterTitle: z.string().trim().max(80).default(''),
+  newsletterText: z.string().trim().max(200).default(''),
+  socialInstagram: socialUrl,
+  socialFacebook: socialUrl,
+  socialX: socialUrl,
+  socialYoutube: socialUrl,
+  socialTiktok: socialUrl,
 });
 export type ThemeSettings = z.output<typeof themeSettingsSchema>;
 export type ThemeSettingsInput = z.input<typeof themeSettingsSchema>;

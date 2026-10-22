@@ -213,3 +213,124 @@ body {
     text-transform: uppercase;
   }
 }
+
+/* Header, footer and side drawers (src/components/header, footer, cart). */
+html:has(body[data-theme]) {
+  scroll-padding-top: 5rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:has(body[data-theme]) {
+    scroll-behavior: smooth;
+  }
+}
+
+.store-header {
+  background-color: var(--store-bg);
+  border-bottom: 1px solid var(--color-zinc-200);
+}
+.store-header[data-sticky] {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background-color: color-mix(in oklab, var(--store-bg) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+  transition: box-shadow 200ms;
+}
+.store-header[data-scrolled] {
+  box-shadow: 0 10px 30px -18px color-mix(in oklab, var(--store-text) 45%, transparent);
+}
+.store-header .header-search {
+  transition:
+    border-color 150ms,
+    background-color 150ms;
+}
+.store-header .header-search:focus {
+  outline: none;
+  border-color: var(--color-zinc-500);
+  background-color: var(--store-bg);
+}
+
+/* Menu links grow an underline from the left on hover. */
+.nav-link {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0 1px;
+  transition:
+    background-size 250ms,
+    color 150ms;
+}
+.nav-link:hover,
+.nav-link[aria-expanded='true'] {
+  background-size: 100% 1px;
+}
+
+.dropdown-panel {
+  animation: dropdown-in 160ms ease-out;
+}
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+
+/* Side drawers: the overlay fades and the panel slides in; data-state="closing" plays it back. */
+.drawer-overlay {
+  background-color: rgb(0 0 0 / 0.45);
+  animation: drawer-fade 220ms ease-out both;
+}
+.drawer-panel {
+  animation: drawer-slide 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.drawer-left {
+  --drawer-from: -100%;
+}
+.drawer-right {
+  --drawer-from: 100%;
+}
+.drawer-root[data-state='closing'] {
+  pointer-events: none;
+}
+.drawer-root[data-state='closing'] .drawer-overlay {
+  animation: drawer-fade 200ms ease-in reverse both;
+}
+.drawer-root[data-state='closing'] .drawer-panel {
+  animation: drawer-slide-out 200ms ease-in both;
+}
+@keyframes drawer-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes drawer-slide {
+  from {
+    translate: var(--drawer-from) 0;
+  }
+}
+@keyframes drawer-slide-out {
+  to {
+    translate: var(--drawer-from) 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer-overlay,
+  .drawer-panel,
+  .dropdown-panel {
+    animation-duration: 1ms !important;
+  }
+}
+
+/* Quantity steppers type into a bare number field; hide the browser's spin buttons. */
+.qty-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.qty-input::-webkit-inner-spin-button,
+.qty-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.qty-stepper:focus-within {
+  border-color: var(--color-zinc-500);
+}

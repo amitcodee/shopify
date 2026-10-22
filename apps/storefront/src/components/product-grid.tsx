@@ -42,7 +42,7 @@ const COLUMNS: Record<number, string> = {
   5: 'sm:grid-cols-3 lg:grid-cols-5',
 };
 
-const RATIOS: Record<ThemeSettings['imageRatio'], string> = {
+export const RATIOS: Record<ThemeSettings['imageRatio'], string> = {
   square: 'aspect-square',
   portrait: 'aspect-[3/4]',
   landscape: 'aspect-[4/3]',
@@ -71,41 +71,71 @@ const CARDS: Record<
   },
 };
 
+/** Whole-number percentage saved, or 0 when there is no real discount. */
+export function percentOff(price: number, compareAt: number | null | undefined): number {
+  if (compareAt == null || compareAt <= price || compareAt <= 0) return 0;
+  return Math.round(((compareAt - price) / compareAt) * 100);
+}
+
 export function ProductGrid({
   products,
   currency,
   theme,
   maxColumns = 5,
+  collection,
+  layout = 'grid',
 }: {
   products: ProductCard[];
   currency: string;
   theme: ThemeSettings;
   /** Caps the theme's column count (e.g. a short "you may also like" row). */
   maxColumns?: number;
+  /** Collection the shopper is browsing; product links carry it for the breadcrumbs. */
+  collection?: string;
+  /** `row`: a swipeable row on phones (a grid from sm up), for short rows of suggestions. */
+  layout?: 'grid' | 'row';
 }) {
   if (products.length === 0) {
     return <p className="py-12 text-center text-zinc-500">No products found.</p>;
   }
   const columns = COLUMNS[Math.min(theme.gridColumns, maxColumns)] ?? COLUMNS[4];
   const gap = theme.density === 'compact' ? 'gap-x-3 gap-y-6' : 'gap-x-4 gap-y-8 lg:gap-x-6';
+  const query = collection ? `?collection=${encodeURIComponent(collection)}` : '';
+  const list =
+    layout === 'row'
+      ? `-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0 ${gap} [&::-webkit-scrollbar]:hidden`
+      : `grid grid-cols-2 ${gap}`;
   return (
-    <ul className={`grid grid-cols-2 ${gap} ${columns}`}>
+    <ul className={`${list} ${columns}`}>
       {products.map((p) => (
-        <li key={p.id}>
+        <li
+          key={p.id}
+          className={
+            layout === 'row' ? 'relative w-[46%] shrink-0 snap-start sm:w-auto' : 'relative'
+          }
+        >
           {theme.cardStyle === 'overlay' ? (
-            <OverlayCard product={p} currency={currency} ratio={RATIOS[theme.imageRatio]} />
+            <OverlayCard
+              product={p}
+              currency={currency}
+              ratio={RATIOS[theme.imageRatio]}
+              href={`/products/${p.handle}${query}`}
+            />
           ) : (
             <Link
-              href={`/products/${p.handle}`}
+              href={`/products/${p.handle}${query}`}
               className={`group block h-full ${CARDS[theme.cardStyle].card}`}
             >
               <div
-                className={`${RATIOS[theme.imageRatio]} overflow-hidden bg-zinc-100 ${CARDS[theme.cardStyle].image}`}
+                className={`relative ${RATIOS[theme.imageRatio]} overflow-hidden bg-zinc-100 ${CARDS[theme.cardStyle].image}`}
               >
                 <CardImage product={p} />
+                <CardBadges product={p} />
               </div>
               <div className={CARDS[theme.cardStyle].caption}>
-                <h3 className="text-sm text-zinc-900 group-hover:underline">{p.title}</h3>
+                <h3 className="text-sm text-zinc-900 underline-offset-4 group-hover:underline">
+                  {p.title}
+                </h3>
                 <p className="mt-1 text-sm">
                   <Price
                     min={p.minPrice}
@@ -114,7 +144,6 @@ export function ProductGrid({
                     currency={currency}
                   />
                 </p>
-                {!p.available ? <p className="mt-1 text-xs text-zinc-500">Sold out</p> : null}
               </div>
             </Link>
           )}
@@ -124,16 +153,57 @@ export function ProductGrid({
   );
 }
 
+/**
+ * The product image. Where there is a second image it fades in on hover or keyboard focus, on
+ * devices that can hover only (a tap on a phone just opens the product).
+ */
 function CardImage({ product }: { product: ProductCard }) {
-  return product.imageUrl ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={product.imageUrl}
-      alt={product.imageAlt}
-      loading="lazy"
-      className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-    />
-  ) : null;
+  if (!product.imageUrl) return null;
+  const second = product.secondImageUrl;
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={product.imageUrl}
+        alt={product.imageAlt}
+        loading="lazy"
+        className={`h-full w-full object-cover transition duration-700 ease-out ${
+          second
+            ? '[@media(hover:hover)]:group-hover:scale-[1.03]'
+            : 'group-hover:scale-105 group-focus-visible:scale-105'
+        }`}
+      />
+      {second ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={second}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          className="absolute inset-0 hidden h-full w-full object-cover opacity-0 transition duration-500 ease-out group-focus-visible:opacity-100 [@media(hover:hover)]:block [@media(hover:hover)]:group-hover:opacity-100"
+        />
+      ) : null}
+    </>
+  );
+}
+
+/** "Sold out" or "Sale −X%" in the image's top corner. */
+function CardBadges({ product: p }: { product: ProductCard }) {
+  const off = percentOff(p.minPrice, p.compareAtPrice);
+  if (p.available && off === 0) return null;
+  return (
+    <span className="pointer-events-none absolute left-2 top-2 flex flex-col items-start gap-1 sm:left-3 sm:top-3">
+      {!p.available ? (
+        <span className="rounded-sm bg-zinc-900 px-2 py-1 text-[10px] font-semibold uppercase leading-none tracking-wider text-white sm:text-[11px]">
+          Sold out
+        </span>
+      ) : (
+        <span className="rounded-sm bg-accent px-2 py-1 text-[10px] font-semibold uppercase leading-none tracking-wider text-accent-contrast sm:text-[11px]">
+          Sale −{off}%
+        </span>
+      )}
+    </span>
+  );
 }
 
 /** Title and price over the bottom of the image, on a gradient so they stay readable. */
@@ -141,24 +211,22 @@ function OverlayCard({
   product: p,
   currency,
   ratio,
+  href,
 }: {
   product: ProductCard;
   currency: string;
   ratio: string;
+  href: string;
 }) {
   return (
     <Link
-      href={`/products/${p.handle}`}
+      href={href}
       className={`group relative block overflow-hidden rounded-lg bg-zinc-100 ${ratio}`}
     >
       <CardImage product={p} />
-      {!p.available ? (
-        <p className="absolute left-2 top-2 rounded-sm bg-[#000000b3] px-2 py-0.5 text-xs text-[#ffffff]">
-          Sold out
-        </p>
-      ) : null}
+      <CardBadges product={p} />
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#000000d9] via-[#00000066] to-transparent px-3 pb-3 pt-14 text-[#ffffff]">
-        <h3 className="text-sm font-medium group-hover:underline">{p.title}</h3>
+        <h3 className="text-sm font-medium underline-offset-4 group-hover:underline">{p.title}</h3>
         <p className="mt-0.5 text-sm">
           <Price
             min={p.minPrice}
@@ -171,6 +239,21 @@ function OverlayCard({
       </div>
     </Link>
   );
+}
+
+/** Page numbers to show: the first, the last and a window around the current page. */
+function pageWindow(page: number, pages: number): (number | 'gap')[] {
+  const shown = [...new Set([1, page - 1, page, page + 1, pages])]
+    .filter((n) => n >= 1 && n <= pages)
+    .sort((a, b) => a - b);
+  const out: (number | 'gap')[] = [];
+  shown.forEach((n, i) => {
+    const prev = shown[i - 1];
+    if (prev !== undefined && n - prev === 2) out.push(prev + 1);
+    else if (prev !== undefined && n - prev > 2) out.push('gap');
+    out.push(n);
+  });
+  return out;
 }
 
 export function PageLinks({
@@ -186,21 +269,44 @@ export function PageLinks({
 }) {
   const pages = Math.ceil(total / pageSize);
   if (pages <= 1) return null;
+  const box = 'flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-md px-3 transition';
   return (
-    <nav aria-label="Pagination" className="mt-10 flex items-center justify-center gap-4 text-sm">
-      {page > 1 ? (
-        <Link href={hrefFor(page - 1)} className="hover:underline">
-          ← Previous
-        </Link>
-      ) : null}
-      <span className="text-zinc-500">
-        Page {page} of {pages}
-      </span>
-      {page < pages ? (
-        <Link href={hrefFor(page + 1)} className="hover:underline">
-          Next →
-        </Link>
-      ) : null}
+    <nav aria-label="Pagination" className="mt-12 flex justify-center text-sm">
+      <ul className="flex flex-wrap items-center justify-center gap-1">
+        {page > 1 ? (
+          <li>
+            <Link href={hrefFor(page - 1)} rel="prev" className={`${box} hover:bg-zinc-100`}>
+              <span aria-hidden="true">←</span>
+              <span className="sr-only sm:not-sr-only">Previous</span>
+            </Link>
+          </li>
+        ) : null}
+        {pageWindow(page, pages).map((n, i) => (
+          <li key={n === 'gap' ? `gap-${i}` : n}>
+            {n === 'gap' ? (
+              <span className="px-1 text-zinc-400">…</span>
+            ) : n === page ? (
+              <span aria-current="page" className={`${box} bg-zinc-900 font-semibold text-white`}>
+                <span className="sr-only">Page </span>
+                {n}
+              </span>
+            ) : (
+              <Link href={hrefFor(n)} className={`${box} hover:bg-zinc-100`}>
+                <span className="sr-only">Page </span>
+                {n}
+              </Link>
+            )}
+          </li>
+        ))}
+        {page < pages ? (
+          <li>
+            <Link href={hrefFor(page + 1)} rel="next" className={`${box} hover:bg-zinc-100`}>
+              <span className="sr-only sm:not-sr-only">Next</span>
+              <span aria-hidden="true">→</span>
+            </Link>
+          </li>
+        ) : null}
+      </ul>
     </nav>
   );
 }

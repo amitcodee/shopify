@@ -16,6 +16,8 @@ import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import {
   addToCartInputSchema,
   blogListQuerySchema,
+  type NewsletterSignup,
+  newsletterSignupSchema,
   type Paginated,
   type StorefrontBlogPost,
   type Cart,
@@ -92,6 +94,17 @@ export class StorefrontController {
     body: z.output<typeof storefrontPasswordInputSchema>,
   ): Promise<{ accessToken: string }> {
     return this.catalog.unlock(shop, body.password);
+  }
+
+  @Post('newsletter')
+  @HttpCode(204)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiZodBody(newsletterSignupSchema)
+  async newsletter(
+    @CurrentShop() shop: ShopContext,
+    @Body(new ZodPipe(newsletterSignupSchema)) body: NewsletterSignup,
+  ): Promise<void> {
+    await this.catalog.subscribe(shop, body.email);
   }
 
   @Get('sitemap')

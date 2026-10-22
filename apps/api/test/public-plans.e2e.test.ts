@@ -56,4 +56,10 @@ describe('Public plans', () => {
     await ctx.platform.plan.update({ where: { code: 'growth' }, data: { active: true } });
     await ctx.platform.plan.update({ where: { code: 'pro' }, data: { sortOrder: 3 } });
   });
+
+  it('shares only the support email for the contact page', async () => {
+    const res = await ctx.http().get('/api/v1/public/contact').expect(200);
+    expect(Object.keys(res.body)).toEqual(['supportEmail']);
+    expect(res.body.supportEmail).toContain('@');
+  });
 });

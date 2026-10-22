@@ -51,6 +51,8 @@ export const productCardSchema = z.object({
   available: z.boolean(),
   imageUrl: z.string().nullable(),
   imageAlt: z.string(),
+  /** Second product image, shown on hover. */
+  secondImageUrl: z.string().nullable(),
 });
 export type ProductCard = z.infer<typeof productCardSchema>;
 
@@ -61,6 +63,8 @@ export const storefrontProductQuerySchema = z.strictObject({
   q: z.string().trim().max(100).optional(),
   collection: z.string().max(120).optional(),
   sort: productSortSchema.default('newest'),
+  /** Only products with at least one variant that can be bought. */
+  inStock: z.stringbool().optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
   pageSize: z.coerce.number().int().min(1).max(48).default(24),
 });
@@ -164,3 +168,9 @@ export type StorefrontSitemap = z.infer<typeof storefrontSitemapSchema>;
 export const storefrontPasswordInputSchema = z.strictObject({
   password: z.string().min(1).max(100),
 });
+
+/** Storefront newsletter sign-up: subscribes the email to the store's marketing list. */
+export const newsletterSignupSchema = z.strictObject({
+  email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
+});
+export type NewsletterSignup = z.infer<typeof newsletterSignupSchema>;

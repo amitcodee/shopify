@@ -5,23 +5,32 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
   {
     title: 'Platform',
     links: [
-      { label: 'Features', href: '/#features' },
+      { label: 'All features', href: '/features' },
       { label: 'Templates', href: '/templates' },
       { label: 'Pricing', href: '/pricing' },
+      { label: 'Switch to us', href: '/switch' },
+      { label: 'Security', href: '/security' },
     ],
   },
   {
-    title: 'Developers',
+    title: 'Features',
     links: [
-      { label: 'API docs', href: apiDocsUrl, external: true },
-      { label: 'Webhooks', href: '/#developers' },
+      { label: 'Online store', href: '/features/online-store' },
+      { label: 'Checkout', href: '/features/checkout' },
+      { label: 'Payments', href: '/features/payments' },
+      { label: 'Products & inventory', href: '/features/inventory' },
+      { label: 'Orders', href: '/features/orders' },
+      { label: 'Marketing', href: '/features/marketing' },
+      { label: 'Developers', href: '/features/developers' },
     ],
   },
   {
     title: 'Resources',
     links: [
+      { label: 'Guides', href: '/guides' },
       { label: 'FAQ', href: '/pricing#faq' },
-      { label: 'Selling in many currencies', href: '/#sell-globally' },
+      { label: 'Contact', href: '/contact' },
+      { label: 'API docs', href: apiDocsUrl, external: true },
     ],
   },
   {

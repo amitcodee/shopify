@@ -139,14 +139,18 @@ export function TemplateGallery({
           <ul className="mt-10 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
             {shown.map((t) => (
               <li key={t.id} className="flex flex-col">
-                <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-                  <TemplateThumb
-                    template={t}
-                    tiles={t.settings.gridColumns >= 4 ? 4 : 3}
-                    className="h-64"
-                  />
-                </div>
-                <h2 className="mt-4 text-lg font-semibold text-slate-900">{t.name}</h2>
+                <a href={`/templates/${t.id}`} className={`group block rounded-2xl ${focusRing}`}>
+                  <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 transition group-hover:shadow-lg">
+                    <TemplateThumb
+                      template={t}
+                      tiles={t.settings.gridColumns >= 4 ? 4 : 3}
+                      className="h-64"
+                    />
+                  </div>
+                  <h2 className="mt-4 text-lg font-semibold text-slate-900 group-hover:text-indigo-700">
+                    {t.name}
+                  </h2>
+                </a>
                 <p className="text-sm text-slate-500">
                   {t.industryLabel} · {t.styleLabel}
                 </p>

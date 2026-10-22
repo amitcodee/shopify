@@ -1,5 +1,5 @@
 import { Faq } from './faq';
-import { fetchPublicPlans, type PublicPlan } from './plans';
+import { fetchPublicPlans, type PublicPlan } from './public-api';
 import { signupUrl } from './urls';
 
 const usd = (cents: number) =>

@@ -1,6 +1,7 @@
 import {
   THEME_BUTTON_STYLES,
   THEME_CARD_STYLES,
+  THEME_CART_STYLES,
   THEME_DENSITIES,
   THEME_FONT_STACKS,
   THEME_FONTS,
@@ -95,3 +96,8 @@ export const FOOTER_OPTIONS = options(THEME_FOOTER_STYLES, {
 });
 
 export const COLUMN_OPTIONS = [2, 3, 4, 5].map((n) => ({ value: String(n), label: `${n}` }));
+
+export const CART_STYLE_OPTIONS = options(THEME_CART_STYLES, {
+  drawer: 'Slide-out cart',
+  page: 'Cart page',
+});

@@ -1,11 +1,12 @@
 'use client';
+/* eslint-disable @next/next/no-html-link-for-pages -- the root layout picks the marketing page from the request path, so links between marketing pages must be full page loads, not client navigations. */
 
 import { useEffect, useRef, useState } from 'react';
 import { Icon, type IconName } from './icons';
 import { Logo } from './logo';
 import type { MarketingLinks } from './urls';
 
-type MenuId = 'why' | 'products';
+type MenuId = 'why' | 'products' | 'resources';
 
 interface NavLink {
   label: string;
@@ -19,23 +20,31 @@ interface NavGroup {
   items: NavLink[];
 }
 
-const WHY_US: { title: string; body: string; href: string; icon: IconName }[] = [
+interface NavCard {
+  title: string;
+  body: string;
+  href: string;
+  icon: IconName;
+  external?: boolean;
+}
+
+const WHY_US: NavCard[] = [
   {
-    title: 'Get started fast',
-    body: 'Pick a template for your industry, add products and open your store the same day.',
-    href: '/#get-started',
+    title: 'Templates for every industry',
+    body: '108 designs for 12 industries. Pick one when you sign up and open your store the same day.',
+    href: '/templates',
     icon: 'rocket',
   },
   {
     title: 'Switch from another platform',
-    body: 'Bring your catalog over with a Shopify-style product CSV, one row per variant.',
-    href: '/#developers',
+    body: 'Bring your catalog over with a Shopify-style product CSV, then follow the launch checklist.',
+    href: '/switch',
     icon: 'switch',
   },
   {
-    title: 'Built-in checkout & 2FA security',
-    body: 'Hosted card payments through Stripe or Razorpay, and two-factor sign-in for staff.',
-    href: '/#payments',
+    title: 'Security built in',
+    body: 'Database-level store isolation, hosted card payments and two-factor sign-in for staff.',
+    href: '/security',
     icon: 'shield',
   },
 ];
@@ -46,45 +55,45 @@ const PRODUCT_GROUPS: NavGroup[] = [
     icon: 'layout',
     items: [
       { label: 'Templates', href: '/templates' },
-      { label: 'Online store pages & blog', href: '/#online-store' },
-      { label: 'Custom domains', href: '/#online-store' },
+      { label: 'Online store pages & blog', href: '/features/online-store' },
+      { label: 'Custom domains', href: '/features/domains' },
     ],
   },
   {
     title: 'Sell anywhere',
     icon: 'globe',
     items: [
-      { label: 'Multi-currency', href: '/#sell-globally' },
-      { label: 'Draft orders & invoices', href: '/#back-office' },
-      { label: 'Gift cards', href: '/#checkout' },
+      { label: 'Checkout', href: '/features/checkout' },
+      { label: 'Multi-currency', href: '/features/international' },
+      { label: 'Draft orders & invoices', href: '/features/orders' },
     ],
   },
   {
     title: 'Marketing & analytics',
     icon: 'chart',
     items: [
-      { label: 'Discounts', href: '/#marketing' },
-      { label: 'Abandoned checkout emails', href: '/#marketing' },
-      { label: 'Customer segments', href: '/#marketing' },
-      { label: 'Analytics', href: '/#marketing' },
+      { label: 'Discounts & gift cards', href: '/features/marketing' },
+      { label: 'Customer segments', href: '/features/marketing' },
+      { label: 'Abandoned checkout emails', href: '/features/checkout' },
+      { label: 'Analytics', href: '/features/analytics' },
     ],
   },
   {
     title: 'Run your business',
     icon: 'truck',
     items: [
-      { label: 'Inventory & locations', href: '/#back-office' },
-      { label: 'Orders, returns & packing slips', href: '/#back-office' },
-      { label: 'Staff & permissions', href: '/#payments' },
+      { label: 'Products & inventory', href: '/features/inventory' },
+      { label: 'Orders, returns & packing slips', href: '/features/orders' },
+      { label: 'Staff & permissions', href: '/features/staff-security' },
     ],
   },
   {
     title: 'Get paid',
     icon: 'card',
     items: [
-      { label: 'Stripe', href: '/#payments' },
-      { label: 'Razorpay', href: '/#payments' },
-      { label: 'Payouts to your account', href: '/#payments' },
+      { label: 'Stripe Connect', href: '/features/payments' },
+      { label: 'Razorpay', href: '/features/payments' },
+      { label: 'Refunds & chargebacks', href: '/features/payments' },
     ],
   },
 ];
@@ -94,16 +103,43 @@ function extendGroup(links: MarketingLinks): NavGroup {
     title: 'Customize & extend',
     icon: 'code',
     items: [
-      { label: 'Admin API tokens', href: '/#developers' },
-      { label: 'Signed webhooks', href: '/#developers' },
+      { label: 'Developer features', href: '/features/developers' },
+      { label: 'API tokens & webhooks guide', href: '/guides/api-and-webhooks' },
       { label: 'API docs', href: links.apiDocsUrl, external: true },
     ],
   };
 }
 
+function resourceCards(links: MarketingLinks): NavCard[] {
+  return [
+    {
+      title: 'Guides',
+      body: 'Step-by-step help for every part of your admin.',
+      href: '/guides',
+      icon: 'file',
+    },
+    {
+      title: 'Security',
+      body: 'How stores, payments and accounts are protected.',
+      href: '/security',
+      icon: 'shield',
+    },
+    { title: 'Contact', body: 'Email our support team.', href: '/contact', icon: 'mail' },
+    {
+      title: 'API docs',
+      body: 'The OpenAPI reference for the REST API.',
+      href: links.apiDocsUrl,
+      icon: 'code',
+      external: true,
+    },
+  ];
+}
+
 const focusRing =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400';
 const panelLink = `rounded-md text-sm text-slate-600 hover:text-indigo-600 ${focusRing.replace('400', '600')}`;
+const summaryClass =
+  'flex cursor-pointer list-none items-center justify-between py-4 text-lg font-semibold [&::-webkit-details-marker]:hidden';
 
 function Chevron({ open }: { open: boolean }) {
   return (
@@ -156,9 +192,14 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
   const [open, setOpen] = useState<MenuId | null>(null);
   const [drawer, setDrawer] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
-  const buttons = useRef<Record<MenuId, HTMLButtonElement | null>>({ why: null, products: null });
+  const buttons = useRef<Record<MenuId, HTMLButtonElement | null>>({
+    why: null,
+    products: null,
+    resources: null,
+  });
   const drawerButton = useRef<HTMLButtonElement>(null);
   const extend = extendGroup(links);
+  const resources = resourceCards(links);
 
   useEffect(() => {
     if (!open && !drawer) return;
@@ -190,6 +231,8 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
     };
   }, [drawer]);
 
+  const close = () => setOpen(null);
+
   const trigger = (id: MenuId, label: string) => (
     <button
       ref={(el) => {
@@ -209,18 +252,86 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
     </button>
   );
 
+  const directLink = (href: string, label: string) => (
+    <li key={href}>
+      <a
+        href={href}
+        onMouseEnter={close}
+        className={`rounded-md px-3 py-2 text-sm font-medium text-slate-300 hover:text-white ${focusRing}`}
+      >
+        {label}
+      </a>
+    </li>
+  );
+
+  const cardPanel = (id: MenuId, cards: NavCard[]) => (
+    <div
+      id={`menu-${id}`}
+      hidden={open !== id}
+      className="absolute inset-x-0 top-full border-b border-slate-200 bg-white text-slate-900 shadow-2xl"
+    >
+      <ul
+        className={`mx-auto grid max-w-7xl gap-6 px-6 py-8 ${cards.length > 3 ? 'grid-cols-4' : 'grid-cols-3'}`}
+      >
+        {cards.map((card) => (
+          <li key={card.title}>
+            <a
+              href={card.href}
+              onClick={close}
+              {...(card.external ? { target: '_blank', rel: 'noreferrer' } : {})}
+              className="group flex h-full flex-col rounded-2xl bg-gradient-to-br from-slate-50 to-indigo-50 p-6 ring-1 ring-slate-200 transition hover:ring-indigo-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            >
+              <span className="flex size-10 items-center justify-center rounded-lg bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200">
+                <Icon name={card.icon} />
+              </span>
+              <span className="mt-4 font-semibold text-slate-900">
+                {card.title}
+                {card.external ? <ExternalMark /> : null}
+              </span>
+              <span className="mt-1.5 text-sm leading-6 text-slate-600">{card.body}</span>
+              <span className="mt-4 text-sm font-semibold text-indigo-600 group-hover:text-indigo-500">
+                {card.external ? 'Open' : 'Learn more'} <span aria-hidden="true">→</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
+  const drawerGroup = (title: string, items: NavLink[]) => (
+    <details key={title} className="group border-b border-slate-200">
+      <summary className={summaryClass}>
+        {title}
+        <span className="text-slate-400 group-open:rotate-180">
+          <Chevron open={false} />
+        </span>
+      </summary>
+      <ul className="space-y-3 pb-5 pl-1">
+        {items.map((item) => (
+          <li key={item.label}>
+            <LinkItem
+              link={item}
+              className="text-slate-600 hover:text-indigo-600"
+              onClick={() => setDrawer(false)}
+            />
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+
   return (
     <>
       <header
         ref={headerRef}
-        onMouseLeave={() => setOpen(null)}
+        onMouseLeave={close}
         onBlur={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(null);
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) close();
         }}
         className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/95 text-white backdrop-blur"
       >
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- the root layout picks the page from the request path, so marketing links must do full loads */}
           <a href="/" className={`rounded-md ${focusRing}`} aria-label="Commerce Platform home">
             <Logo tone="dark" />
           </a>
@@ -228,20 +339,9 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
             <ul className="flex items-center gap-1">
               <li>{trigger('why', 'Why us')}</li>
               <li>{trigger('products', 'Products')}</li>
-              {[
-                { href: '/templates', label: 'Templates' },
-                { href: '/pricing', label: 'Pricing' },
-              ].map((l) => (
-                <li key={l.href}>
-                  <a
-                    href={l.href}
-                    onMouseEnter={() => setOpen(null)}
-                    className={`rounded-md px-3 py-2 text-sm font-medium text-slate-300 hover:text-white ${focusRing}`}
-                  >
-                    {l.label}
-                  </a>
-                </li>
-              ))}
+              {directLink('/templates', 'Templates')}
+              {directLink('/pricing', 'Pricing')}
+              <li>{trigger('resources', 'Resources')}</li>
             </ul>
           </nav>
           <div className="ml-auto flex items-center gap-2">
@@ -253,7 +353,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
             </a>
             <a
               href={links.signupUrl}
-              className={`whitespace-nowrap rounded-full bg-white px-3.5 py-2 text-sm font-semibold text-slate-950 hover:bg-indigo-100 ${focusRing}`}
+              className={`rounded-full bg-white px-3.5 py-2 text-sm font-semibold whitespace-nowrap text-slate-950 hover:bg-indigo-100 ${focusRing}`}
             >
               Start for free
             </a>
@@ -279,32 +379,8 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
         </div>
 
         {/* Mega-menus */}
-        <div
-          id="menu-why"
-          hidden={open !== 'why'}
-          className="absolute inset-x-0 top-full border-b border-slate-200 bg-white text-slate-900 shadow-2xl"
-        >
-          <ul className="mx-auto grid max-w-7xl grid-cols-3 gap-6 px-6 py-8">
-            {WHY_US.map((card) => (
-              <li key={card.title}>
-                <a
-                  href={card.href}
-                  onClick={() => setOpen(null)}
-                  className="group flex h-full flex-col rounded-2xl bg-gradient-to-br from-slate-50 to-indigo-50 p-6 ring-1 ring-slate-200 transition hover:ring-indigo-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                >
-                  <span className="flex size-10 items-center justify-center rounded-lg bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200">
-                    <Icon name={card.icon} />
-                  </span>
-                  <span className="mt-4 font-semibold text-slate-900">{card.title}</span>
-                  <span className="mt-1.5 text-sm leading-6 text-slate-600">{card.body}</span>
-                  <span className="mt-4 text-sm font-semibold text-indigo-600 group-hover:text-indigo-500">
-                    Learn more →
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {cardPanel('why', WHY_US)}
+        {cardPanel('resources', resources)}
         <div
           id="menu-products"
           hidden={open !== 'products'}
@@ -323,31 +399,41 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
                   <ul className="mt-3 space-y-2 border-l border-slate-200 pl-6">
                     {group.items.map((item) => (
                       <li key={item.label}>
-                        <LinkItem link={item} className={panelLink} onClick={() => setOpen(null)} />
+                        <LinkItem link={item} className={panelLink} onClick={close} />
                       </li>
                     ))}
                   </ul>
                 </div>
               ))}
             </div>
-            <div className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
-              <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <span className="text-indigo-600">
-                  <Icon name={extend.icon} className="size-4" />
-                </span>
-                {extend.title}
-              </p>
-              <ul className="mt-3 space-y-2">
-                {extend.items.map((item) => (
-                  <li key={item.label}>
-                    <LinkItem link={item} className={panelLink} onClick={() => setOpen(null)} />
-                  </li>
-                ))}
-              </ul>
+            <div className="flex flex-col gap-4">
+              <div className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
+                <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <span className="text-indigo-600">
+                    <Icon name={extend.icon} className="size-4" />
+                  </span>
+                  {extend.title}
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {extend.items.map((item) => (
+                    <li key={item.label}>
+                      <LinkItem link={item} className={panelLink} onClick={close} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <a
+                href="/features"
+                onClick={close}
+                className={`rounded-md px-1 text-sm font-semibold text-indigo-600 hover:text-indigo-500 ${focusRing.replace('400', '600')}`}
+              >
+                See all features <span aria-hidden="true">→</span>
+              </a>
             </div>
           </div>
         </div>
       </header>
+
       {/* Phone drawer (outside the header: its backdrop blur would trap a fixed child) */}
       <div
         id="mobile-menu"
@@ -379,50 +465,17 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
           </button>
         </div>
         <nav aria-label="Mobile" className="px-4 pb-10 sm:px-6">
-          <details className="group border-b border-slate-200">
-            <summary className="flex cursor-pointer list-none items-center justify-between py-4 text-lg font-semibold [&::-webkit-details-marker]:hidden">
-              Why us
-              <span className="text-slate-400 group-open:rotate-180">
-                <Chevron open={false} />
-              </span>
-            </summary>
-            <ul className="space-y-3 pb-5">
-              {WHY_US.map((card) => (
-                <li key={card.title}>
-                  <a
-                    href={card.href}
-                    onClick={() => setDrawer(false)}
-                    className="block rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200"
-                  >
-                    <span className="font-semibold">{card.title}</span>
-                    <span className="mt-1 block text-sm text-slate-600">{card.body}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </details>
-          {[...PRODUCT_GROUPS, extend].map((group) => (
-            <details key={group.title} className="group border-b border-slate-200">
-              <summary className="flex cursor-pointer list-none items-center justify-between py-4 text-lg font-semibold [&::-webkit-details-marker]:hidden">
-                {group.title}
-                <span className="text-slate-400 group-open:rotate-180">
-                  <Chevron open={false} />
-                </span>
-              </summary>
-              <ul className="space-y-3 pb-5 pl-1">
-                {group.items.map((item) => (
-                  <li key={item.label}>
-                    <LinkItem
-                      link={item}
-                      className="text-slate-600 hover:text-indigo-600"
-                      onClick={() => setDrawer(false)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </details>
-          ))}
+          {drawerGroup(
+            'Why us',
+            WHY_US.map((c) => ({ label: c.title, href: c.href })),
+          )}
+          {[...PRODUCT_GROUPS, extend].map((group) => drawerGroup(group.title, group.items))}
+          {drawerGroup(
+            'Resources',
+            resources.map((c) => ({ label: c.title, href: c.href, external: c.external })),
+          )}
           {[
+            { href: '/features', label: 'All features' },
             { href: '/templates', label: 'Templates' },
             { href: '/pricing', label: 'Pricing' },
           ].map((l) => (

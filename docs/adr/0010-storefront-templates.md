@@ -29,6 +29,14 @@ our CSP and tenant-isolation guarantees.
   visitor only and the storefront swaps the theme in memory; unknown ids are ignored and
   `off` ends the preview. Password-protected stores stay locked.
 - New stores can pick an industry during onboarding and start with its Minimal template.
+- **Sections and merchant content** live in the same validated settings: sticky header, cart
+  drawer or page, homepage sections (trust bar, featured collections, collection carousels,
+  brand story, latest blog posts, newsletter) with their text, and https-only social links.
+  Templates only change _design_ fields; applying one keeps the merchant's sections, words and
+  links.
+- The newsletter section records marketing consent on the store's customer for that email
+  (`POST /storefront/newsletter`, throttled, same response whether or not the customer
+  existed).
 
 ## Consequences
 
