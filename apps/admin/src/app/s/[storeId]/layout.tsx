@@ -3,9 +3,8 @@ import { TopBar } from '@/components/top-bar';
 import { Alert } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getCurrentUser, getStore } from '@/lib/session';
+import { storefrontUrlFor } from '@/lib/storefront';
 import { MobileNav, type NavItem, SideNav } from './nav';
-
-const storefrontOrigin = process.env.STOREFRONT_PUBLIC_URL ?? 'http://{subdomain}.localhost:3200';
 
 export default async function StoreLayout({
   children,
@@ -21,18 +20,48 @@ export default async function StoreLayout({
     api<{ adminNotice: string; supportEmail: string }>('/auth/platform-notice'),
   ]);
   const base = `/s/${store.id}`;
-  const storefrontUrl = storefrontOrigin.replace('{subdomain}', store.subdomain);
+  const storefrontUrl = storefrontUrlFor(store.subdomain);
   const items: NavItem[] = [
-    { label: 'Overview', href: base, exact: true },
-    { label: 'Orders', href: `${base}/orders`, permission: 'orders:read' },
-    { label: 'Products', href: `${base}/products`, permission: 'products:read' },
-    { label: 'Inventory', href: `${base}/inventory`, permission: 'products:read' },
-    { label: 'Collections', href: `${base}/collections`, permission: 'products:read' },
-    { label: 'Customers', href: `${base}/customers`, permission: 'customers:read' },
-    { label: 'Discounts', href: `${base}/discounts`, permission: 'discounts:write' },
-    { label: 'Gift cards', href: `${base}/gift-cards`, permission: 'orders:read' },
-    { label: 'Online store', href: `${base}/online-store`, permission: 'settings:read' },
-    { label: 'Settings', href: `${base}/settings`, permission: 'settings:read' },
+    { label: 'Overview', icon: 'home', href: base, exact: true },
+    { label: 'Orders', icon: 'orders', href: `${base}/orders`, permission: 'orders:read' },
+    { label: 'Products', icon: 'products', href: `${base}/products`, permission: 'products:read' },
+    {
+      label: 'Inventory',
+      icon: 'inventory',
+      href: `${base}/inventory`,
+      permission: 'products:read',
+    },
+    {
+      label: 'Collections',
+      icon: 'collections',
+      href: `${base}/collections`,
+      permission: 'products:read',
+    },
+    {
+      label: 'Customers',
+      icon: 'customers',
+      href: `${base}/customers`,
+      permission: 'customers:read',
+    },
+    {
+      label: 'Discounts',
+      icon: 'discounts',
+      href: `${base}/discounts`,
+      permission: 'discounts:write',
+    },
+    {
+      label: 'Gift cards',
+      icon: 'giftCards',
+      href: `${base}/gift-cards`,
+      permission: 'orders:read',
+    },
+    {
+      label: 'Online store',
+      icon: 'onlineStore',
+      href: `${base}/online-store`,
+      permission: 'settings:read',
+    },
+    { label: 'Settings', icon: 'settings', href: `${base}/settings`, permission: 'settings:read' },
   ];
 
   return (

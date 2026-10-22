@@ -19,7 +19,7 @@ test('merchant configures theme, shipping, tax and a discount; checkout totals r
   await expect(merchant.getByText('Product created.')).toBeVisible();
 
   // Theme.
-  await merchant.goto(`${settings}/theme`);
+  await merchant.goto(`${settings}/theme?tab=customize`);
   await merchant.getByLabel('Layout').selectOption('bold');
   await merchant.getByLabel('Homepage headline').fill('Light up your desk');
   await merchant.getByLabel('Announcement bar').fill('Use code WELCOME10 for 10% off');

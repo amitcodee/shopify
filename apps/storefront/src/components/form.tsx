@@ -59,11 +59,7 @@ export function Submit({
 }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full rounded-md bg-brand px-4 py-3 text-sm font-semibold text-brand-contrast hover:opacity-90 disabled:opacity-50"
-    >
+    <button type="submit" disabled={pending} className="btn w-full px-4 py-3 text-sm">
       {pending ? pendingLabel : children}
     </button>
   );

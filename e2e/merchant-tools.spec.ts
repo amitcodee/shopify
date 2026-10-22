@@ -27,7 +27,10 @@ test('merchant duplicates a product, exports orders and prints a packing slip; s
   const shopper = await browser.newPage();
   await shopper.goto(storefrontUrl(subdomain, '/search?q=coats'));
   await expect(shopper.getByText('1 result for “coats”')).toBeVisible();
-  await shopper.getByRole('link', { name: /Wool Overcoat/ }).first().click();
+  await shopper
+    .getByRole('link', { name: /Wool Overcoat/ })
+    .first()
+    .click();
   await shopper.getByRole('button', { name: 'Add to cart' }).click();
   await expect(shopper.getByText('Added to cart.')).toBeVisible();
   await shopper.goto(storefrontUrl(subdomain, '/cart'));

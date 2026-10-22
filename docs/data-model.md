@@ -67,14 +67,14 @@ Conventions: UUID primary keys; `store_id uuid not null` on every tenant table (
 
 ## Commerce configuration
 
-| Entity                          | Key fields                                                                                                                                                |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ShippingZone` / `ShippingRate` | store_id, countries[], rate type (flat/weight/price), amount                                                                                              |
-| `TaxRate`                       | store_id, country, region, rate_bps, applies_to_shipping                                                                                                  |
-| `DiscountCode`                  | store_id, code (unique per store, case-insensitive), type (percent/fixed/free_shipping), value, min_subtotal, usage_limit, used_count, starts_at, ends_at |
-| `Theme` / `ThemeSetting`        | store_id, theme template, settings json (validated schema, no raw script)                                                                                 |
-| `NotificationTemplate`          | store_id, event, subject, body (safe templating)                                                                                                          |
-| `WebhookEvent` (inbound)        | provider, event_id (unique), processed_at — idempotent webhook processing                                                                                 |
-| `OutboxEvent`                   | reliable job/email dispatch                                                                                                                               |
+| Entity                          | Key fields                                                                                                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ShippingZone` / `ShippingRate` | store_id, countries[], rate type (flat/weight/price), amount                                                                                                  |
+| `TaxRate`                       | store_id, country, region, rate_bps, applies_to_shipping                                                                                                      |
+| `DiscountCode`                  | store_id, code (unique per store, case-insensitive), type (percent/fixed/free_shipping), value, min_subtotal, usage_limit, used_count, starts_at, ends_at     |
+| `Theme` / `ThemeSetting`        | `Store.themePreset` + `Store.themeSettings` json: layout, colors, fonts and style enums from one of 108 templates (ADR 0010; validated schema, no raw script) |
+| `NotificationTemplate`          | store_id, event, subject, body (safe templating)                                                                                                              |
+| `WebhookEvent` (inbound)        | provider, event_id (unique), processed_at — idempotent webhook processing                                                                                     |
+| `OutboxEvent`                   | reliable job/email dispatch                                                                                                                                   |
 
 The Prisma schema and migrations land in `packages/db` in Phase 2, starting with the Platform + Store & access groups only.

@@ -58,7 +58,7 @@ export default async function CollectionPage({
         </div>
         <SortSelect value={sort} />
       </div>
-      <ProductGrid products={products.items} currency={shop.currency} />
+      <ProductGrid products={products.items} currency={shop.currency} theme={shop.theme.settings} />
       <PageLinks
         page={products.page}
         pageSize={products.pageSize}

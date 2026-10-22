@@ -7,6 +7,8 @@ export function contentSecurityPolicy(options: {
   nonce: string;
   dev: boolean;
   imageOrigins: string[];
+  /** Other origins forms may submit to (e.g. the storefront's sign-up form to the admin). */
+  formActionOrigins?: string[];
   frameAncestors?: "'none'" | "'self'";
 }): string {
   const directives = [
@@ -17,7 +19,7 @@ export function contentSecurityPolicy(options: {
     `font-src 'self' data:`,
     `connect-src 'self'${options.dev ? ' ws: wss:' : ''}`,
     `frame-ancestors ${options.frameAncestors ?? "'none'"}`,
-    `form-action 'self'`,
+    `form-action 'self' ${(options.formActionOrigins ?? []).join(' ')}`.trim(),
     `base-uri 'self'`,
     `object-src 'none'`,
   ];

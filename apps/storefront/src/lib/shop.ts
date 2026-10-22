@@ -1,19 +1,56 @@
 import 'server-only';
-import type { Cart, Shop } from '@repo/contracts';
+import {
+  applyThemeTemplate,
+  type Cart,
+  findThemeTemplate,
+  parseTheme,
+  type Shop,
+  THEME_PREVIEW_PARAM,
+  type ThemeTemplate,
+} from '@repo/contracts';
 import { cookies, headers } from 'next/headers';
 import { cache } from 'react';
 import { isNotFound, requestHost, sf } from './api';
 
 export const CART_COOKIE = 'cart_token';
 
-/** The store for the current host, or null when the host is not a (live) store. */
+/** Session cookie holding the template a visitor is previewing (set by src/proxy.ts). */
+export const THEME_PREVIEW_COOKIE = THEME_PREVIEW_PARAM;
+/** Request header src/proxy.ts uses to pass this request's preview id (or `off`). */
+export const THEME_PREVIEW_HEADER = 'x-theme-preview';
+
+/**
+ * The catalog template this visitor is previewing, if any. The proxy's header wins (it knows
+ * about a `?theme_preview=` on this very request); the cookie covers requests the proxy skips.
+ */
+export const getThemePreview = cache(async (): Promise<ThemeTemplate | null> => {
+  const id =
+    (await headers()).get(THEME_PREVIEW_HEADER) ??
+    (await cookies()).get(THEME_PREVIEW_COOKIE)?.value;
+  return (id && findThemeTemplate(id)) || null;
+});
+
+/**
+ * The store for the current host, or null when the host is not a (live) store. While a
+ * template is being previewed the theme is swapped for this visitor only; nothing is saved.
+ */
 export const getShop = cache(async (): Promise<Shop | null> => {
+  let shop: Shop;
   try {
-    return await sf<Shop>('/shop');
+    shop = await sf<Shop>('/shop');
   } catch (error) {
     if (isNotFound(error)) return null;
     throw error;
   }
+  // Fills defaults for any theme field the API did not send (e.g. one older than this app).
+  shop = { ...shop, theme: parseTheme(shop.theme.preset, shop.theme.settings) };
+  const preview = await getThemePreview();
+  if (!preview) return shop;
+  const theme = applyThemeTemplate(preview, shop.theme.settings);
+  // Sample copy fills in only what the merchant has not written themselves.
+  theme.settings.heroTitle ||= preview.sample.heroTitle;
+  theme.settings.announcement ||= preview.sample.announcement;
+  return { ...shop, theme };
 });
 
 export async function getCartToken(): Promise<string | null> {

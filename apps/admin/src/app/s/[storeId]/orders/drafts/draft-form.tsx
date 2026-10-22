@@ -74,7 +74,10 @@ export function DraftForm({
               const line = draft?.lines[i];
               const item = line ? (line.variantId ? `variant:${line.variantId}` : 'custom') : '';
               return (
-                <div key={i} className="grid grid-cols-1 gap-2 md:grid-cols-[2fr_1.2fr_5rem_7rem_5rem]">
+                <div
+                  key={i}
+                  className="grid grid-cols-1 gap-2 md:grid-cols-[2fr_1.2fr_5rem_7rem_5rem]"
+                >
                   <InlineSelect
                     name={`item-${i}`}
                     label={`Item ${i + 1}`}

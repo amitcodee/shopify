@@ -1,10 +1,15 @@
 'use server';
 
-import { type AuthSession, type LoginResult, safeRelativePath } from '@repo/contracts';
+import {
+  type AuthSession,
+  findThemeTemplate,
+  type LoginResult,
+  safeRelativePath,
+} from '@repo/contracts';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
 import { type FormState, optionalString, requiredString, toFormState } from '@/lib/form';
-import { clearSessionCookie, setSessionCookie } from '@/lib/session';
+import { clearSessionCookie, setSessionCookie, setStartTemplate } from '@/lib/session';
 
 function safeNext(value: FormDataEntryValue | null): string {
   // Only same-origin relative paths: prevents open redirects after login.
@@ -56,6 +61,8 @@ export async function signupAction(_: FormState, formData: FormData): Promise<Fo
   } catch (error) {
     return toFormState(error, formData);
   }
+  const template = findThemeTemplate(String(formData.get('template') ?? ''));
+  if (template) await setStartTemplate(template.id);
   redirect('/verify-email');
 }
 

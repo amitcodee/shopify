@@ -9,11 +9,7 @@ import { addToCartAction } from '@/app/cart/actions';
 function AddButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={disabled || pending}
-      className="w-full rounded-md bg-brand px-6 py-3 text-sm font-semibold text-brand-contrast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-    >
+    <button type="submit" disabled={disabled || pending} className="btn w-full px-6 py-3 text-sm">
       {pending ? 'Adding…' : disabled ? 'Sold out' : 'Add to cart'}
     </button>
   );

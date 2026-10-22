@@ -33,10 +33,7 @@ export default async function SearchPage({
           defaultValue={query}
           className="flex-1 rounded-md border border-zinc-300 px-3 py-2"
         />
-        <button
-          type="submit"
-          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-contrast"
-        >
+        <button type="submit" className="btn px-4 py-2 text-sm">
           Search
         </button>
       </form>
@@ -45,7 +42,11 @@ export default async function SearchPage({
           <p className="mb-6 text-sm text-zinc-600" aria-live="polite">
             {results.total} {results.total === 1 ? 'result' : 'results'} for “{query}”
           </p>
-          <ProductGrid products={results.items} currency={shop.currency} />
+          <ProductGrid
+            products={results.items}
+            currency={shop.currency}
+            theme={shop.theme.settings}
+          />
           <PageLinks
             page={results.page}
             pageSize={results.pageSize}

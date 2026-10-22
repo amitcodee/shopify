@@ -2,24 +2,74 @@ import { z } from 'zod';
 
 // ── Theme ───────────────────────────────────────────────────────────────────────
 
-export const THEME_PRESETS = ['minimal', 'bold', 'classic'] as const;
-export const THEME_FONTS = ['system', 'serif', 'rounded'] as const;
+/** Homepage layouts (the hero and what follows it). */
+export const THEME_PRESETS = [
+  'minimal',
+  'bold',
+  'classic',
+  'split',
+  'fullbleed',
+  'editorial',
+  'catalog',
+  'banner',
+] as const;
+/** System font stacks only: no third-party font requests from storefronts. */
+export const THEME_FONTS = [
+  'system',
+  'serif',
+  'rounded',
+  'mono',
+  'slab',
+  'humanist',
+  'geometric',
+  'condensed',
+] as const;
+export const THEME_RADII = ['none', 'small', 'medium', 'large', 'pill'] as const;
+export const THEME_BUTTON_STYLES = ['solid', 'outline', 'soft'] as const;
+export const THEME_HEADER_STYLES = ['inline', 'centered', 'stacked'] as const;
+export const THEME_CARD_STYLES = ['plain', 'bordered', 'shadow', 'overlay', 'framed'] as const;
+export const THEME_IMAGE_RATIOS = ['square', 'portrait', 'landscape'] as const;
+export const THEME_DENSITIES = ['compact', 'comfortable', 'spacious'] as const;
+export const THEME_FOOTER_STYLES = ['simple', 'columns', 'dark'] as const;
+export const THEME_HEADING_CASES = ['normal', 'uppercase'] as const;
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use a hex color like #1f2937');
 
 /**
  * Merchant theme customization. Deliberately data-only (validated colors, enums, short plain
- * text): merchants cannot inject HTML, CSS or script into storefronts.
+ * text): merchants cannot inject HTML, CSS or script into storefronts. Every field has a
+ * default so themes saved before a field existed still parse.
  */
 export const themeSettingsSchema = z.strictObject({
+  /** Template the design came from (informational; see THEME_TEMPLATES). */
+  template: z.string().trim().max(60).default(''),
   brandColor: hexColor.default('#111827'),
   accentColor: hexColor.default('#4f46e5'),
+  backgroundColor: hexColor.default('#ffffff'),
+  /** Hero panels, cards and other raised areas. */
+  surfaceColor: hexColor.default('#f4f4f5'),
+  textColor: hexColor.default('#18181b'),
   font: z.enum(THEME_FONTS).default('system'),
+  headingFont: z.enum(THEME_FONTS).default('system'),
+  headingCase: z.enum(THEME_HEADING_CASES).default('normal'),
+  radius: z.enum(THEME_RADII).default('medium'),
+  buttonStyle: z.enum(THEME_BUTTON_STYLES).default('solid'),
+  headerStyle: z.enum(THEME_HEADER_STYLES).default('inline'),
+  cardStyle: z.enum(THEME_CARD_STYLES).default('plain'),
+  imageRatio: z.enum(THEME_IMAGE_RATIOS).default('square'),
+  /** Product columns on wide screens. */
+  gridColumns: z.number().int().min(2).max(5).default(4),
+  density: z.enum(THEME_DENSITIES).default('comfortable'),
+  footerStyle: z.enum(THEME_FOOTER_STYLES).default('simple'),
+  showCollections: z.boolean().default(true),
   heroTitle: z.string().trim().max(80).default(''),
   heroSubtitle: z.string().trim().max(200).default(''),
+  heroCta: z.string().trim().max(30).default(''),
+  featuredTitle: z.string().trim().max(40).default(''),
   announcement: z.string().trim().max(120).default(''),
 });
 export type ThemeSettings = z.output<typeof themeSettingsSchema>;
+export type ThemeSettingsInput = z.input<typeof themeSettingsSchema>;
 
 export const themeInputSchema = z.strictObject({
   preset: z.enum(THEME_PRESETS),
@@ -27,6 +77,22 @@ export const themeInputSchema = z.strictObject({
 });
 export type ThemeInput = z.input<typeof themeInputSchema>;
 export type Theme = z.output<typeof themeInputSchema>;
+export type ThemePreset = (typeof THEME_PRESETS)[number];
+export type ThemeFont = (typeof THEME_FONTS)[number];
+
+/** CSS stacks for THEME_FONTS. System fonts only: storefronts never request third-party fonts. */
+export const THEME_FONT_STACKS: Record<ThemeFont, string> = {
+  system: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  serif: '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, Cambria, serif',
+  rounded: 'ui-rounded, "SF Pro Rounded", "Nunito", "Varela Round", system-ui, sans-serif',
+  mono: 'ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace',
+  slab: '"Rockwell", "Roboto Slab", "Courier New", Georgia, serif',
+  humanist:
+    'Seravek, "Gill Sans Nova", Ubuntu, Calibri, "DejaVu Sans", source-sans-pro, sans-serif',
+  geometric: 'Avenir, "Avenir Next", Montserrat, Futura, "Century Gothic", system-ui, sans-serif',
+  condensed:
+    '"Bahnschrift SemiCondensed", "Arial Narrow", "Roboto Condensed", "Helvetica Neue", sans-serif-condensed, sans-serif',
+};
 
 /** Parses stored theme JSON, falling back to defaults for anything invalid. */
 export function parseTheme(preset: string, settings: unknown): Theme {

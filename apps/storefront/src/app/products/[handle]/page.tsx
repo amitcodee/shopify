@@ -133,7 +133,12 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
           <h2 id="related-heading" className="mb-6 text-xl font-semibold">
             You may also like
           </h2>
-          <ProductGrid products={related} currency={shop.currency} />
+          <ProductGrid
+            products={related}
+            currency={shop.currency}
+            theme={shop.theme.settings}
+            maxColumns={4}
+          />
         </section>
       ) : null}
     </>

@@ -1,8 +1,8 @@
-import { SUPPORTED_CURRENCIES } from '@repo/contracts';
+import { SUPPORTED_CURRENCIES, THEME_INDUSTRIES } from '@repo/contracts';
 import { redirect } from 'next/navigation';
 import { ActionForm, Field, SelectField, SubmitButton } from '@/components/form';
 import { TopBar } from '@/components/top-bar';
-import { getCurrentUser } from '@/lib/session';
+import { getCurrentUser, getStartTemplate } from '@/lib/session';
 import { createStoreAction } from './actions';
 
 export const metadata = { title: 'Create a store · Merchant Admin' };
@@ -12,6 +12,7 @@ const storefrontDomain = process.env.STOREFRONT_ROOT_DOMAIN ?? 'localhost:3200';
 export default async function OnboardingPage() {
   const user = await getCurrentUser();
   if (!user.emailVerified) redirect('/verify-email');
+  const startTemplate = await getStartTemplate();
   return (
     <>
       <TopBar user={user} />
@@ -45,6 +46,26 @@ export default async function OnboardingPage() {
               defaultValue="USD"
               options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
             />
+            <SelectField
+              name="industry"
+              label="What will you sell?"
+              defaultValue={startTemplate?.industry ?? ''}
+              hint={
+                startTemplate
+                  ? `Starting with the “${startTemplate.name}” template you picked. You can change it anytime.`
+                  : "We'll start your storefront with a matching template. You can change it anytime."
+              }
+              options={[
+                { value: '', label: 'Something else' },
+                ...THEME_INDUSTRIES.map((industry) => ({
+                  value: industry.id,
+                  label: industry.label,
+                })),
+              ]}
+            />
+            {startTemplate ? (
+              <input type="hidden" name="template" value={startTemplate.id} />
+            ) : null}
             <SubmitButton>Create store</SubmitButton>
           </ActionForm>
         </div>

@@ -120,7 +120,7 @@ export default async function CartPage({
           <Link
             href="/checkout"
             aria-disabled={cart.subtotal === 0}
-            className="mt-6 block rounded-md bg-brand px-4 py-3 text-center text-sm font-semibold text-brand-contrast hover:opacity-90"
+            className="btn mt-6 flex w-full px-4 py-3 text-sm"
           >
             Check out
           </Link>

@@ -82,5 +82,10 @@ test('shopper browses a store by subdomain, searches, and manages the cart', asy
   await shopper.goto(storefrontUrl('no-such-store'));
   await expect(shopper.getByRole('heading', { name: 'Store not found' })).toBeVisible();
   await shopper.goto('http://localhost:3210/');
-  await expect(shopper.getByRole('heading', { name: 'Start your online store' })).toBeVisible();
+  await expect(
+    shopper.getByRole('heading', {
+      level: 1,
+      name: 'Start selling your products online',
+    }),
+  ).toBeVisible();
 });

@@ -1,5 +1,10 @@
 import 'server-only';
-import type { CurrentUser, StoreDetail } from '@repo/contracts';
+import {
+  type CurrentUser,
+  findThemeTemplate,
+  type StoreDetail,
+  type ThemeTemplate,
+} from '@repo/contracts';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
@@ -13,6 +18,29 @@ export async function setSessionCookie(token: string, expiresAt: string): Promis
     path: '/',
     expires: new Date(expiresAt),
   });
+}
+
+const START_TEMPLATE_COOKIE = 'start_template';
+
+/** Remembers the template picked on the marketing site until the merchant creates a store. */
+export async function setStartTemplate(templateId: string): Promise<void> {
+  (await cookies()).set(START_TEMPLATE_COOKIE, templateId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  });
+}
+
+/** The remembered starter template, if it is still in the catalog. */
+export async function getStartTemplate(): Promise<ThemeTemplate | undefined> {
+  const id = (await cookies()).get(START_TEMPLATE_COOKIE)?.value;
+  return id ? findThemeTemplate(id) : undefined;
+}
+
+export async function clearStartTemplate(): Promise<void> {
+  (await cookies()).delete(START_TEMPLATE_COOKIE);
 }
 
 export async function clearSessionCookie(): Promise<void> {
