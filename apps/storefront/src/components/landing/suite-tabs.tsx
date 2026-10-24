@@ -34,7 +34,10 @@ export function SuiteTabs({
   return (
     <div className="sticky top-16 z-30 -mx-4 border-b border-slate-900/[0.06] bg-mist/80 px-4 backdrop-blur-xl backdrop-saturate-150 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
       <div className="flex items-center gap-6">
-        <nav aria-label="Platform areas" className="-mb-px min-w-0 flex-1 overflow-x-auto">
+        <nav
+          aria-label="Platform areas"
+          className="-mb-px min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]"
+        >
           <ul className="flex gap-6 whitespace-nowrap sm:gap-8">
             {tabs.map((t) => (
               <li key={t.id}>

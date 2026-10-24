@@ -85,7 +85,7 @@ export function HomeHero() {
           <h1 className={`text-navy-900 ${display}`}>
             <Blue>Your online store,</Blue>
             <br />
-            built to sell from day one
+            ready to sell today
           </h1>
           <p className={`mt-6 max-w-xl text-slate-600 ${lead}`}>
             Pick one of {TEMPLATE_COUNT} templates, take payments with Stripe or Razorpay, and run

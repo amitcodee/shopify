@@ -123,10 +123,10 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
             </ul>
             <a
               href={signupUrl}
-              className={`mt-9 rounded-full px-4 py-3 text-center text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
+              className={`mt-9 rounded-md px-4 py-3 text-center text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
                 highlight
                   ? 'bg-white text-navy-900 hover:bg-azure-50 focus-visible:outline-white'
-                  : 'bg-navy-950 text-white hover:bg-azure-700 focus-visible:outline-azure-600'
+                  : 'bg-azure-600 text-white hover:bg-azure-700 focus-visible:outline-azure-600'
               }`}
             >
               Start with {plan.name}

@@ -374,7 +374,10 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
               className={`group inline-flex items-center gap-1.5 rounded-md bg-azure-600 px-4 py-2 text-sm font-semibold whitespace-nowrap text-white shadow-[0_1px_2px_rgb(10_34_54/0.2)] transition hover:bg-azure-700 ${focusRing}`}
             >
               Start for free
-              <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">
+              <span
+                aria-hidden="true"
+                className="hidden transition-transform group-hover:translate-x-0.5 sm:inline"
+              >
                 →
               </span>
             </a>

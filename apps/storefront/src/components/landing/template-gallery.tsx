@@ -11,7 +11,7 @@ import { TemplateThumb } from './template-thumb';
 
 const focusRing =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-600';
-const fieldClass = `w-full rounded-full border-0 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm ring-1 ring-slate-900/15 ${focusRing}`;
+const fieldClass = `w-full rounded-md border-0 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm ring-1 ring-slate-900/15 ${focusRing}`;
 
 /** Client-side filters (industry, style, search) over the full template catalog. */
 export function TemplateGallery({
@@ -148,7 +148,7 @@ export function TemplateGallery({
             <button
               type="button"
               onClick={clear}
-              className={`mt-4 rounded-full px-4 py-2 text-sm font-semibold text-slate-900 ring-1 ring-slate-900/15 hover:ring-slate-900/40 ${focusRing}`}
+              className={`mt-4 rounded-md px-4 py-2 text-sm font-semibold text-azure-700 ring-1 ring-azure-600/60 hover:bg-azure-50 ${focusRing}`}
             >
               Clear filters
             </button>
@@ -194,7 +194,7 @@ export function TemplateGallery({
                 <div className="mt-4 flex flex-wrap gap-2">
                   <a
                     href={`${signupUrl}?template=${t.id}`}
-                    className={`rounded-full bg-navy-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-azure-700 ${focusRing}`}
+                    className={`rounded-md bg-azure-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-azure-700 ${focusRing}`}
                   >
                     Start with this template<span className="sr-only">: {t.name}</span>
                   </a>
@@ -202,7 +202,7 @@ export function TemplateGallery({
                     href={`${demoStoreUrl}/?${THEME_PREVIEW_PARAM}=${t.id}`}
                     target="_blank"
                     rel="noreferrer"
-                    className={`rounded-full px-4 py-2 text-sm font-semibold text-slate-900 ring-1 ring-slate-900/15 transition hover:ring-slate-900/40 ${focusRing}`}
+                    className={`rounded-md px-4 py-2 text-sm font-semibold text-azure-700 ring-1 ring-azure-600/60 transition hover:bg-azure-50 ${focusRing}`}
                   >
                     Preview<span className="sr-only"> {t.name} (opens in a new tab)</span>
                   </a>

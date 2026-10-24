@@ -23,7 +23,7 @@ export function IndustryTabs({
 
   return (
     <div>
-      <div className="-mx-4 overflow-x-auto border-b border-slate-900/10 px-4 sm:mx-0 sm:px-0">
+      <div className="-mx-4 overflow-x-auto [scrollbar-width:none] border-b border-slate-900/10 px-4 sm:mx-0 sm:px-0">
         <div role="tablist" aria-label="Industries" className="-mb-px flex gap-6 whitespace-nowrap">
           {tabs.map((t, i) => (
             <button
