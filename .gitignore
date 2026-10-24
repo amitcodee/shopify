@@ -36,6 +36,7 @@ packages/db/src/generated/
 
 # local uploads (dev storage adapter)
 storage/
+!apps/api/src/storage/
 /e2e-results/
 
 # deploy secrets (per service); only *.env.example is tracked
