@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
         <SubmitButton>Send reset link</SubmitButton>
       </ActionForm>
       <p className="mt-6 text-sm text-slate-500">
-        <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+        <Link href="/login" className="font-medium text-brand-600 hover:text-brand-500">
           Back to sign in
         </Link>
       </p>

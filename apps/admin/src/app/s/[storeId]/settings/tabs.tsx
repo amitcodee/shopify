@@ -46,7 +46,7 @@ export function SettingsTabs({
             aria-current={active ? 'page' : undefined}
             className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
               active
-                ? 'border-indigo-600 text-indigo-700'
+                ? 'border-brand-600 text-brand-700'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >

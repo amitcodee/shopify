@@ -76,9 +76,10 @@ function useField(name: string, defaultValue?: string | number | null) {
 }
 
 const controlClass =
-  'block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm ' +
-  'focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ' +
-  'aria-[invalid=true]:border-red-500 disabled:bg-slate-100';
+  'block w-full rounded-lg border-0 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm ' +
+  'ring-1 ring-inset ring-slate-300/90 transition-shadow placeholder:text-slate-400 ' +
+  'hover:ring-slate-400/80 focus:outline-none focus:ring-2 focus:ring-brand-500 ' +
+  'aria-[invalid=true]:ring-red-500 disabled:bg-slate-50 disabled:text-slate-500';
 
 function FieldShell({
   id,
@@ -94,8 +95,8 @@ function FieldShell({
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="block text-sm font-medium text-slate-800">
         {label}
       </label>
       {children}
@@ -213,7 +214,7 @@ export function CheckboxField({
         name={name}
         value={value}
         defaultChecked={defaultChecked}
-        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+        className="mt-0.5 size-4 rounded accent-brand-600"
       />
       <label htmlFor={id} className="text-sm text-slate-700">
         {label}
@@ -224,9 +225,9 @@ export function CheckboxField({
 }
 
 const inlineClass =
-  'block w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm shadow-sm ' +
-  'focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ' +
-  'aria-[invalid=true]:border-red-500 disabled:bg-slate-100';
+  'block w-full rounded-lg border-0 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-sm ' +
+  'ring-1 ring-inset ring-slate-300/90 hover:ring-slate-400/80 focus:outline-none ' +
+  'focus:ring-2 focus:ring-brand-500 aria-[invalid=true]:ring-red-500 disabled:bg-slate-50';
 
 type InlineInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'defaultValue' | 'name'> & {
   name: string;

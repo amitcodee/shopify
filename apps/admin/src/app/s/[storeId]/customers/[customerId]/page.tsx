@@ -99,7 +99,7 @@ export default async function CustomerPage({
             <div className="space-y-3">
               <a
                 href={`/s/${storeId}/customers/${customerId}/export`}
-                className="block text-sm font-medium text-indigo-600 hover:underline"
+                className="block text-sm font-medium text-brand-600 hover:underline"
               >
                 Download customer data (JSON)
               </a>

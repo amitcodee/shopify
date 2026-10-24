@@ -47,7 +47,7 @@ export default async function StoreLayout({
             href={storefrontOrigin.replace('{subdomain}', store.subdomain)}
             target="_blank"
             rel="noreferrer"
-            className="mt-6 block px-3 text-sm text-indigo-600 hover:text-indigo-500"
+            className="mt-6 block px-3 text-sm text-brand-600 hover:text-brand-500"
           >
             View storefront ↗
           </a>

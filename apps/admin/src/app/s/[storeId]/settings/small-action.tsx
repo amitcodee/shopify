@@ -10,7 +10,7 @@ function Button({ label, danger }: { label: string; danger?: boolean }) {
     <button
       type="submit"
       disabled={pending}
-      className={`text-sm font-medium ${danger ? 'text-red-600' : 'text-indigo-600'} hover:underline disabled:opacity-50`}
+      className={`text-sm font-medium ${danger ? 'text-red-600' : 'text-brand-600'} hover:underline disabled:opacity-50`}
     >
       {pending ? '…' : label}
     </button>

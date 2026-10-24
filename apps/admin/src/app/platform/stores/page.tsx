@@ -138,7 +138,7 @@ export default async function PlatformStoresPage({
                         />
                       )}
                       <details>
-                        <summary className="cursor-pointer text-sm text-indigo-600">
+                        <summary className="cursor-pointer text-sm text-brand-600">
                           Change plan…
                         </summary>
                         <ActionForm

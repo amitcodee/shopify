@@ -28,7 +28,7 @@ export default async function ImportProductsPage({
             </p>
             <p>
               Tip:{' '}
-              <a href={`${base}/export`} className="text-indigo-600 hover:underline" download>
+              <a href={`${base}/export`} className="text-brand-600 hover:underline" download>
                 export your products
               </a>{' '}
               to get a file in the right format.

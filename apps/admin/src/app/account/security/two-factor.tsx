@@ -62,7 +62,7 @@ export function TwoFactor({ enabled }: { enabled: boolean }) {
               <code className="mt-1 block break-all rounded bg-slate-100 px-2 py-1 font-mono">
                 {setup.secret}
               </code>
-              <a href={setup.otpauthUrl} className="text-xs text-indigo-600 underline">
+              <a href={setup.otpauthUrl} className="text-xs text-brand-600 underline">
                 Open in an authenticator app on this device
               </a>
             </li>

@@ -98,7 +98,7 @@ export function ReturnsCard({
         ))}
         {canWrite && paid ? (
           <details className="text-sm">
-            <summary className="cursor-pointer text-indigo-600">Create a return</summary>
+            <summary className="cursor-pointer text-brand-600">Create a return</summary>
             <ActionForm
               action={createReturnAction.bind(null, storeId, order.id)}
               className="mt-3 space-y-2"

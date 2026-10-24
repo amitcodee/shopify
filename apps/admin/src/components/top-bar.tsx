@@ -6,7 +6,7 @@ export function TopBar({ user, children }: { user: CurrentUser; children?: React
   return (
     <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4">
       <div className="flex items-center gap-4">
-        <Link href="/stores" className="text-sm font-semibold text-indigo-600">
+        <Link href="/stores" className="text-sm font-semibold text-brand-600">
           Commerce Platform
         </Link>
         {children}

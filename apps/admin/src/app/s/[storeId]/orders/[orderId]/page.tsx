@@ -283,7 +283,7 @@ export default async function OrderPage({
                       ·{' '}
                       <a
                         href={f.trackingUrl}
-                        className="text-indigo-600 underline"
+                        className="text-brand-600 underline"
                         target="_blank"
                         rel="noreferrer noopener"
                       >

@@ -79,7 +79,7 @@ export default async function ShippingPage({ params }: { params: Promise<{ store
           </ul>
           {canEdit ? (
             <details className="mt-3">
-              <summary className="cursor-pointer text-sm font-medium text-indigo-600">
+              <summary className="cursor-pointer text-sm font-medium text-brand-600">
                 Add rate
               </summary>
               <ActionForm

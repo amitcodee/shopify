@@ -159,7 +159,7 @@ export default async function InventoryPage({
                   ) : null}
                   {canWrite && item.trackInventory && multiLocation ? (
                     <details className="mt-2 text-xs">
-                      <summary className="cursor-pointer text-indigo-600">Move stock</summary>
+                      <summary className="cursor-pointer text-brand-600">Move stock</summary>
                       <ActionForm
                         action={transferInventoryAction.bind(null, storeId, item.variantId)}
                         className="mt-2 flex flex-wrap items-center gap-2"

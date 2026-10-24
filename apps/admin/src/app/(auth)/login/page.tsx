@@ -31,13 +31,13 @@ export default async function LoginPage({
       ) : null}
       <LoginForm next={next ?? '/stores'} />
       <p className="mt-4 text-sm">
-        <Link href="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+        <Link href="/forgot-password" className="font-medium text-brand-600 hover:text-brand-500">
           Forgot your password?
         </Link>
       </p>
       <p className="mt-2 text-sm text-slate-500">
         New here?{' '}
-        <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
+        <Link href="/signup" className="font-medium text-brand-600 hover:text-brand-500">
           Create an account
         </Link>
       </p>

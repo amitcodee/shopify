@@ -53,14 +53,11 @@ export default async function OrdersPage({
           <div className="flex items-center gap-4">
             <Link
               href={`${base}/abandoned`}
-              className="text-sm text-indigo-600 hover:text-indigo-500"
+              className="text-sm text-brand-600 hover:text-brand-500"
             >
               Abandoned checkouts
             </Link>
-            <Link
-              href={`${base}/returns`}
-              className="text-sm text-indigo-600 hover:text-indigo-500"
-            >
+            <Link href={`${base}/returns`} className="text-sm text-brand-600 hover:text-brand-500">
               Returns
             </Link>
             <ButtonLink href={`${base}/drafts`} variant="secondary">

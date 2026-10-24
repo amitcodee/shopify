@@ -67,7 +67,7 @@ export default async function DiscountsPage({ params }: { params: Promise<{ stor
                   <Td>
                     <div className="flex gap-3">
                       <form action={toggleDiscountAction.bind(null, storeId, d.id, !d.active)}>
-                        <button type="submit" className="text-xs text-indigo-600 hover:underline">
+                        <button type="submit" className="text-xs text-brand-600 hover:underline">
                           {d.active ? 'Deactivate' : 'Activate'}
                         </button>
                       </form>

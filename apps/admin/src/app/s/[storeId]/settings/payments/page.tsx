@@ -221,7 +221,7 @@ export default async function PaymentsPage({
               <tr key={d.id}>
                 <Td>
                   <Link
-                    className="font-medium text-indigo-600 hover:underline"
+                    className="font-medium text-brand-600 hover:underline"
                     href={`/s/${storeId}/orders/${d.orderId}`}
                   >
                     #{d.orderNumber}
