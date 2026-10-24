@@ -12,7 +12,7 @@ export default async function LoginPage({
   const { next, expired, reset, unlocked } = await searchParams;
   return (
     <>
-      <h1 className="text-xl font-semibold text-slate-900">Sign in</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Sign in</h1>
       <p className="mt-1 text-sm text-slate-500">Manage your stores, products and orders.</p>
       {expired ? (
         <div className="mt-4">

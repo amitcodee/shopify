@@ -1,5 +1,7 @@
+import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { TopBar } from '@/components/top-bar';
+import { AppShell } from '@/components/app-shell';
+import { Icon } from '@/components/icons';
 import { Alert } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getCurrentUser, getStore } from '@/lib/session';
@@ -21,57 +23,116 @@ export default async function StoreLayout({
     api<{ adminNotice: string; supportEmail: string }>('/auth/platform-notice'),
   ]);
   const base = `/s/${store.id}`;
+  const storefrontUrl = storefrontOrigin.replace('{subdomain}', store.subdomain);
   const items: NavItem[] = [
-    { label: 'Overview', href: base, exact: true },
-    { label: 'Orders', href: `${base}/orders`, permission: 'orders:read' },
-    { label: 'Products', href: `${base}/products`, permission: 'products:read' },
-    { label: 'Inventory', href: `${base}/inventory`, permission: 'products:read' },
-    { label: 'Collections', href: `${base}/collections`, permission: 'products:read' },
-    { label: 'Customers', href: `${base}/customers`, permission: 'customers:read' },
-    { label: 'Discounts', href: `${base}/discounts`, permission: 'discounts:write' },
-    { label: 'Gift cards', href: `${base}/gift-cards`, permission: 'orders:read' },
-    { label: 'Online store', href: `${base}/online-store`, permission: 'settings:read' },
-    { label: 'Settings', href: `${base}/settings`, permission: 'settings:read' },
+    { label: 'Overview', href: base, exact: true, icon: 'home' },
+    { label: 'Orders', href: `${base}/orders`, permission: 'orders:read', icon: 'orders' },
+    { label: 'Products', href: `${base}/products`, permission: 'products:read', icon: 'products' },
+    {
+      label: 'Inventory',
+      href: `${base}/inventory`,
+      permission: 'products:read',
+      icon: 'inventory',
+    },
+    {
+      label: 'Collections',
+      href: `${base}/collections`,
+      permission: 'products:read',
+      icon: 'collections',
+    },
+    {
+      label: 'Customers',
+      href: `${base}/customers`,
+      permission: 'customers:read',
+      icon: 'customers',
+    },
+    {
+      label: 'Discounts',
+      href: `${base}/discounts`,
+      permission: 'discounts:write',
+      icon: 'discounts',
+      section: 'Marketing',
+    },
+    {
+      label: 'Gift cards',
+      href: `${base}/gift-cards`,
+      permission: 'orders:read',
+      icon: 'gift',
+      section: 'Marketing',
+    },
+    {
+      label: 'Online store',
+      href: `${base}/online-store`,
+      permission: 'settings:read',
+      icon: 'store',
+      section: 'Sales channels',
+    },
+    {
+      label: 'Settings',
+      href: `${base}/settings`,
+      permission: 'settings:read',
+      icon: 'settings',
+      section: 'Store',
+    },
   ];
 
   return (
-    <div className="min-h-screen">
-      <TopBar user={user}>
-        <span className="text-sm text-slate-400">/</span>
-        <span className="text-sm font-medium text-slate-900">{store.name}</span>
-      </TopBar>
-      <div className="mx-auto flex max-w-7xl gap-8 px-4 py-6">
-        <aside className="hidden w-52 shrink-0 md:block">
-          <SideNav items={items} permissions={store.permissions} />
-          <a
-            href={storefrontOrigin.replace('{subdomain}', store.subdomain)}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-6 block px-3 text-sm text-brand-600 hover:text-brand-500"
+    <AppShell
+      user={user}
+      breadcrumb={
+        <>
+          <span className="md:hidden">/</span>
+          <span className="truncate font-medium text-slate-900">{store.name}</span>
+        </>
+      }
+      sidebarHeader={
+        <Link
+          href="/stores"
+          title="Switch store"
+          className="flex items-center gap-3 rounded-xl bg-shell-raised px-3 py-2.5 ring-1 ring-white/5 transition-colors hover:bg-white/10"
+        >
+          <span
+            aria-hidden
+            className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 text-sm font-semibold text-white"
           >
-            View storefront ↗
-          </a>
-        </aside>
-        <main className="min-w-0 flex-1">
-          <div className="mb-4 md:hidden">
-            <SideNav items={items} permissions={store.permissions} />
-          </div>
-          {notice.adminNotice ? (
-            <div className="mb-6">
-              <Alert tone="info">{notice.adminNotice}</Alert>
-            </div>
-          ) : null}
-          {store.status === 'SUSPENDED' ? (
-            // The API blocks store data while suspended; explain instead of rendering failing pages.
-            <Alert tone="error">
-              This store is suspended by the platform. Your storefront is offline and the admin is
-              locked. Contact {notice.supportEmail} to resolve this.
-            </Alert>
-          ) : (
-            children
-          )}
-        </main>
-      </div>
-    </div>
+            {store.name.slice(0, 1).toUpperCase()}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-white">{store.name}</span>
+            <span className="block truncate text-xs text-slate-400">{store.subdomain}</span>
+          </span>
+          <Icon name="chevronsUpDown" className="size-4 shrink-0 text-slate-500" />
+        </Link>
+      }
+      nav={<SideNav items={items} permissions={store.permissions} />}
+      mobileNav={<SideNav items={items} permissions={store.permissions} variant="strip" />}
+      sidebarFooter={
+        <a
+          href={storefrontUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white"
+        >
+          <Icon name="external" className="size-[18px] text-slate-500" />
+          View storefront
+          <span className="sr-only">(opens in a new tab)</span>
+        </a>
+      }
+    >
+      {notice.adminNotice ? (
+        <div className="mb-6">
+          <Alert tone="info">{notice.adminNotice}</Alert>
+        </div>
+      ) : null}
+      {store.status === 'SUSPENDED' ? (
+        // The API blocks store data while suspended; explain instead of rendering failing pages.
+        <Alert tone="error">
+          This store is suspended by the platform. Your storefront is offline and the admin is
+          locked. Contact {notice.supportEmail} to resolve this.
+        </Alert>
+      ) : (
+        children
+      )}
+    </AppShell>
   );
 }

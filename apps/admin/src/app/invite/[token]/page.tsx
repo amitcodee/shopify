@@ -25,14 +25,18 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
         {!preview ? (
           <>
-            <h1 className="text-xl font-semibold text-slate-900">Invitation not valid</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+              Invitation not valid
+            </h1>
             <p className="mt-2 text-sm text-slate-500">
               This invitation has expired, was revoked, or was already used.
             </p>
           </>
         ) : (
           <>
-            <h1 className="text-xl font-semibold text-slate-900">Join {preview.storeName}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+              Join {preview.storeName}
+            </h1>
             <p className="mt-1 text-sm text-slate-500">
               You were invited as <strong>{preview.role.toLowerCase()}</strong> ({preview.email}).
             </p>

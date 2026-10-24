@@ -11,7 +11,9 @@ export default async function ResetPasswordPage({
   const { token } = await params;
   return (
     <>
-      <h1 className="text-xl font-semibold text-slate-900">Choose a new password</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+        Choose a new password
+      </h1>
       <p className="mt-1 text-sm text-slate-500">
         You&apos;ll be signed out on every device. Two-factor authentication stays on.
       </p>

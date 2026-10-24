@@ -7,7 +7,7 @@ export const metadata = { title: 'Create account · Merchant Admin' };
 export default function SignupPage() {
   return (
     <>
-      <h1 className="text-xl font-semibold text-slate-900">Create your account</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Create your account</h1>
       <p className="mt-1 text-sm text-slate-500">Start selling in minutes.</p>
       <ActionForm action={signupAction} className="mt-6 space-y-4">
         <Field name="name" label="Your name" autoComplete="name" required maxLength={100} />
