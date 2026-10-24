@@ -99,7 +99,7 @@ function Row({
                 <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/10 transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_20px_40px_-20px_rgb(15_23_42/0.45)]">
                   <TemplateThumb template={t} tiles={3} scale={7} className="h-44 sm:h-56" />
                 </div>
-                <p className="mt-3 text-sm font-semibold text-slate-950 group-hover:text-indigo-700 sm:text-base">
+                <p className="mt-3 text-sm font-semibold text-navy-900 group-hover:text-azure-700 sm:text-base">
                   {t.name}
                 </p>
                 <p className="text-xs text-slate-500 sm:text-sm">
@@ -167,7 +167,7 @@ export function TemplateDetail({ template }: { template: ThemeTemplate }) {
               <Eyebrow>
                 {template.industryLabel} · {template.styleLabel}
               </Eyebrow>
-              <h1 className={`mt-5 text-slate-950 ${display}`}>{template.name}</h1>
+              <h1 className={`mt-5 text-navy-900 ${display}`}>{template.name}</h1>
             </div>
             <div>
               <p className={`text-slate-600 ${lead}`}>{template.description}</p>
@@ -207,8 +207,8 @@ export function TemplateDetail({ template }: { template: ThemeTemplate }) {
                 />
               </div>
             </div>
-            <div className="absolute -bottom-8 right-0 hidden w-52 rounded-[2.2rem] bg-slate-950 p-2 shadow-[0_40px_80px_-30px_rgb(15_23_42/0.7)] ring-1 ring-white/10 md:block lg:w-60">
-              <div className="overflow-hidden rounded-[1.75rem]">
+            <div className="absolute -bottom-8 right-0 hidden w-52 rounded-[2.2rem] bg-navy-950 p-2 shadow-[0_40px_80px_-30px_rgb(15_23_42/0.7)] ring-1 ring-white/10 md:block lg:w-60">
+              <div className="overflow-hidden rounded-xl">
                 <TemplateThumb
                   template={template}
                   phone
@@ -251,14 +251,14 @@ export function TemplateDetail({ template }: { template: ThemeTemplate }) {
               ))}
             </ul>
           </div>
-          <dl className="divide-y divide-slate-900/[0.08] self-start rounded-2xl bg-[#f6f4ef] px-1 ring-1 ring-slate-900/[0.06]">
+          <dl className="divide-y divide-slate-900/[0.08] self-start rounded-2xl bg-mist px-1 ring-1 ring-slate-900/[0.06]">
             {tokens.map(([k, v]) => (
               <div
                 key={k}
                 className="grid grid-cols-[8rem_1fr] gap-4 px-5 py-4 text-sm sm:grid-cols-[11rem_1fr]"
               >
                 <dt className="text-slate-500">{k}</dt>
-                <dd className="font-medium text-slate-950">{v}</dd>
+                <dd className="font-medium text-navy-900">{v}</dd>
               </div>
             ))}
           </dl>

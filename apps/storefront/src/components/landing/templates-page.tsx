@@ -20,14 +20,14 @@ export function TemplatesPage({ industry, style }: { industry: string; style: st
       <section className={`relative isolate overflow-hidden ${paper}`}>
         <div
           aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-[radial-gradient(44rem_26rem_at_90%_0%,rgb(99_102_241/0.14),transparent)]"
+          className="absolute inset-0 -z-10 bg-[radial-gradient(44rem_26rem_at_90%_0%,rgb(48_94_255/0.14),transparent)]"
         />
         <div
           className={`${container} grid items-center gap-12 pt-12 pb-16 sm:pt-16 lg:grid-cols-[1fr_1.1fr] lg:pt-20 lg:pb-20`}
         >
           <div className="max-w-2xl">
             <Eyebrow>Template store</Eyebrow>
-            <h1 className={`mt-5 text-slate-950 ${display}`}>Templates for every kind of store</h1>
+            <h1 className={`mt-5 text-navy-900 ${display}`}>Templates for every kind of store</h1>
             <p className={`mt-6 text-slate-600 ${lead}`}>
               {THEME_TEMPLATES.length} templates across {THEME_INDUSTRIES.length} industries and{' '}
               {THEME_STYLES.length} design styles. Preview any of them on a demo store, then start

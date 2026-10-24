@@ -81,16 +81,16 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
         return (
           <li
             key={plan.code}
-            className={`relative flex flex-col rounded-[1.75rem] p-8 sm:p-9 ${
+            className={`relative flex flex-col rounded-xl p-8 sm:p-9 ${
               highlight
-                ? 'bg-[#0b0c14] text-white shadow-[0_40px_80px_-30px_rgb(15_23_42/0.6)] ring-1 ring-slate-950'
-                : 'bg-white text-slate-950 shadow-[0_20px_40px_-30px_rgb(15_23_42/0.35)] ring-1 ring-slate-900/[0.08]'
+                ? 'bg-navy-950 text-white shadow-[0_40px_80px_-30px_rgb(15_23_42/0.6)] ring-1 ring-slate-950'
+                : 'bg-white text-navy-900 shadow-[0_20px_40px_-30px_rgb(15_23_42/0.35)] ring-1 ring-slate-900/[0.08]'
             }`}
           >
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">{plan.name}</h2>
               {highlight && (
-                <p className="rounded-full bg-indigo-500/20 px-3 py-1 text-xs font-semibold text-indigo-200 ring-1 ring-indigo-400/30">
+                <p className="rounded-full bg-azure-500/20 px-3 py-1 text-xs font-semibold text-azure-200 ring-1 ring-azure-400/30">
                   Recommended
                 </p>
               )}
@@ -114,7 +114,7 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
                 'Every feature included',
               ].map((line) => (
                 <li key={line} className="flex gap-2.5">
-                  <span className={`mt-0.5 ${highlight ? 'text-indigo-300' : 'text-indigo-600'}`}>
+                  <span className={`mt-0.5 ${highlight ? 'text-azure-300' : 'text-azure-600'}`}>
                     <Check />
                   </span>
                   {line}
@@ -125,8 +125,8 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
               href={signupUrl}
               className={`mt-9 rounded-full px-4 py-3 text-center text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
                 highlight
-                  ? 'bg-white text-slate-950 hover:bg-indigo-50 focus-visible:outline-white'
-                  : 'bg-slate-950 text-white hover:bg-indigo-700 focus-visible:outline-indigo-600'
+                  ? 'bg-white text-navy-900 hover:bg-azure-50 focus-visible:outline-white'
+                  : 'bg-navy-950 text-white hover:bg-azure-700 focus-visible:outline-azure-600'
               }`}
             >
               Start with {plan.name}
@@ -150,16 +150,16 @@ function Comparison({ plans }: { plans: PublicPlan[] }) {
       values: plans.map((p) => (p.transactionFeeBps === 0 ? 'None' : percent(p.transactionFeeBps))),
     },
   ];
-  const cell = (i: number) => `px-4 py-4 text-center ${i === featured ? 'bg-indigo-50/70' : ''}`;
+  const cell = (i: number) => `px-4 py-4 text-center ${i === featured ? 'bg-azure-50/70' : ''}`;
   return (
     <section aria-labelledby="compare-title" className="bg-white py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionHeading center id="compare-title" eyebrow="Side by side" title="Compare plans" />
-        <div className="relative mt-12 overflow-x-auto rounded-[1.5rem] bg-white ring-1 ring-slate-900/10">
+        <div className="relative mt-12 overflow-x-auto rounded-xl bg-white ring-1 ring-slate-900/10">
           <table className="w-full min-w-[36rem] text-sm">
             <caption className="sr-only">Plan limits and included features</caption>
             <thead>
-              <tr className="border-b border-slate-900/10 bg-[#f6f4ef]">
+              <tr className="border-b border-slate-900/10 bg-mist">
                 <th scope="col" className="px-4 py-4 text-left font-semibold text-slate-900">
                   <span className="sr-only">Feature</span>
                 </th>
@@ -167,7 +167,7 @@ function Comparison({ plans }: { plans: PublicPlan[] }) {
                   <th
                     key={p.code}
                     scope="col"
-                    className={`${cell(i)} font-semibold text-slate-900 ${i === featured ? 'text-indigo-700' : ''}`}
+                    className={`${cell(i)} font-semibold text-slate-900 ${i === featured ? 'text-azure-700' : ''}`}
                   >
                     {p.name}
                   </th>
@@ -187,7 +187,7 @@ function Comparison({ plans }: { plans: PublicPlan[] }) {
                   ))}
                 </tr>
               ))}
-              <tr className="bg-[#f6f4ef]">
+              <tr className="bg-mist">
                 <th
                   scope="colgroup"
                   colSpan={plans.length + 1}
@@ -203,7 +203,7 @@ function Comparison({ plans }: { plans: PublicPlan[] }) {
                   </th>
                   {plans.map((p, i) => (
                     <td key={p.code} className={cell(i).replace('py-4', 'py-3.5')}>
-                      <span className="inline-flex text-indigo-600">
+                      <span className="inline-flex text-azure-600">
                         <Check className="size-5" />
                       </span>
                       <span className="sr-only">Included</span>
@@ -229,11 +229,11 @@ export async function PricingPage() {
       >
         <div
           aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-[radial-gradient(46rem_26rem_at_50%_-10%,rgb(99_102_241/0.16),transparent)]"
+          className="absolute inset-0 -z-10 bg-[radial-gradient(46rem_26rem_at_50%_-10%,rgb(48_94_255/0.16),transparent)]"
         />
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
           <Eyebrow className="justify-center">Pricing</Eyebrow>
-          <h1 className={`mt-5 text-slate-950 ${display}`}>Pick a plan that fits your store</h1>
+          <h1 className={`mt-5 text-navy-900 ${display}`}>Pick a plan that fits your store</h1>
           <p className={`mt-6 text-slate-600 ${lead}`}>
             Every feature is included on every plan — plans differ only in limits and the platform
             fee on sales. Every new store starts with a 14-day trial.
@@ -243,10 +243,8 @@ export async function PricingPage() {
           {plans ? (
             <PlanCards plans={plans} />
           ) : (
-            <div className="mx-auto max-w-lg rounded-[1.75rem] bg-white p-8 text-center ring-1 ring-slate-900/10">
-              <p className="font-semibold text-slate-950">
-                Plan details are unavailable right now.
-              </p>
+            <div className="mx-auto max-w-lg rounded-xl bg-white p-8 text-center ring-1 ring-slate-900/10">
+              <p className="font-semibold text-navy-900">Plan details are unavailable right now.</p>
               <p className="mt-2 text-sm text-slate-600">
                 Please check back shortly — or create your store now and choose a plan from your
                 admin.

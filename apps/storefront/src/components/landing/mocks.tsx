@@ -33,7 +33,7 @@ function Badge({
     green: 'bg-emerald-50 text-emerald-700',
     amber: 'bg-amber-50 text-amber-700',
     slate: 'bg-slate-100 text-slate-600',
-    indigo: 'bg-indigo-50 text-indigo-700',
+    indigo: 'bg-azure-50 text-azure-700',
   };
   return (
     <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${tones[tone]}`}>
@@ -117,7 +117,7 @@ const MOCKS: Record<MockKind, () => ReactNode> = {
               {f}
             </div>
           ))}
-          <div className="flex items-center justify-between rounded-lg bg-indigo-50 px-3 py-2 text-xs ring-1 ring-indigo-300">
+          <div className="flex items-center justify-between rounded-lg bg-azure-50 px-3 py-2 text-xs ring-1 ring-azure-300">
             <span>Standard shipping</span>
             <span>$5.00</span>
           </div>
@@ -181,7 +181,7 @@ const MOCKS: Record<MockKind, () => ReactNode> = {
           ['Canvas tote', 'CT-1', '48', '120'],
         ]}
       />
-      <div className="mt-4 flex items-center justify-between rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
+      <div className="mt-4 flex items-center justify-between rounded-lg bg-azure-50 px-3 py-2 text-xs text-azure-700">
         <span>Transfer 10 × Linen shirt · L</span>
         <span>Warehouse → Main</span>
       </div>
@@ -192,7 +192,7 @@ const MOCKS: Record<MockKind, () => ReactNode> = {
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="green">Paid</Badge>
         <Badge tone="amber">Unfulfilled</Badge>
-        <span className="ml-auto text-xs font-medium text-indigo-600">Print packing slip</span>
+        <span className="ml-auto text-xs font-medium text-azure-600">Print packing slip</span>
       </div>
       <div className="mt-4 space-y-2.5 rounded-xl p-4 ring-1 ring-slate-200">
         <p className="text-sm font-semibold">Fulfill order</p>
@@ -208,7 +208,7 @@ const MOCKS: Record<MockKind, () => ReactNode> = {
           Mark as fulfilled
         </div>
       </div>
-      <ol className="mt-4 space-y-2 border-l-2 border-indigo-200 pl-4 text-xs text-slate-600">
+      <ol className="mt-4 space-y-2 border-l-2 border-azure-200 pl-4 text-xs text-slate-600">
         <li>Payment captured</li>
         <li>Confirmation email sent</li>
         <li className="text-slate-400">Return requested · awaiting review</li>
@@ -281,7 +281,7 @@ const MOCKS: Record<MockKind, () => ReactNode> = {
           {bars.map((h, i) => (
             <span
               key={i}
-              className="flex-1 rounded-t bg-gradient-to-t from-indigo-500 to-violet-400"
+              className="flex-1 rounded-t bg-gradient-to-t from-azure-500 to-violet-400"
               style={{ height: `${h}%` }}
             />
           ))}
@@ -313,7 +313,7 @@ const MOCKS: Record<MockKind, () => ReactNode> = {
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs ring-1 ring-slate-200"
           >
             <span
-              className={`flex size-4 items-center justify-center rounded text-[10px] text-white ${on ? 'bg-indigo-600' : 'ring-1 ring-slate-300'}`}
+              className={`flex size-4 items-center justify-center rounded text-[10px] text-white ${on ? 'bg-azure-600' : 'ring-1 ring-slate-300'}`}
             >
               {on ? '✓' : ''}
             </span>
@@ -348,7 +348,7 @@ const MOCKS: Record<MockKind, () => ReactNode> = {
       </div>
       <div className="mt-4 rounded-xl bg-slate-50 p-4">
         <p className="flex items-center gap-2 text-sm font-semibold">
-          <Icon name="lock" className="size-4 text-indigo-600" />
+          <Icon name="lock" className="size-4 text-azure-600" />
           Two-factor authentication
           <span className="ml-auto">
             <Badge tone="green">On</Badge>

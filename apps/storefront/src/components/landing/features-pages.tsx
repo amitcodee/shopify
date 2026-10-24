@@ -72,7 +72,7 @@ function AreaCard({ area }: { area: FeatureArea }) {
   return (
     <a
       href={`/features/${area.slug}`}
-      className={`group flex h-full flex-col overflow-hidden rounded-[1.5rem] bg-white ring-1 ring-slate-900/[0.08] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgb(15_23_42/0.4)] ${focusRing}`}
+      className={`group flex h-full flex-col overflow-hidden rounded-xl bg-white ring-1 ring-slate-900/[0.08] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgb(15_23_42/0.4)] ${focusRing}`}
     >
       <span className="relative block aspect-[16/10] overflow-hidden bg-slate-200">
         <span className="block size-full transition duration-700 group-hover:scale-[1.04]">
@@ -83,9 +83,9 @@ function AreaCard({ area }: { area: FeatureArea }) {
         </span>
       </span>
       <span className="flex flex-1 flex-col p-6 sm:p-7">
-        <span className="text-lg font-semibold tracking-tight text-slate-950">{area.name}</span>
+        <span className="text-lg font-semibold tracking-tight text-navy-900">{area.name}</span>
         <span className="mt-2 text-[0.9375rem] leading-7 text-slate-600">{area.summary}</span>
-        <span className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-semibold text-indigo-700">
+        <span className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-semibold text-azure-700">
           Explore {area.name.toLowerCase()} <Arrow />
         </span>
       </span>
@@ -113,13 +113,13 @@ export function FeaturesHub() {
         }
         aside={
           <div className="grid grid-cols-[1.25fr_1fr] gap-3 sm:gap-4">
-            <div className="row-span-2 overflow-hidden rounded-[1.5rem] shadow-[0_30px_60px_-30px_rgb(15_23_42/0.5)] ring-1 ring-slate-900/10">
+            <div className="row-span-2 overflow-hidden rounded-xl shadow-[0_30px_60px_-30px_rgb(15_23_42/0.5)] ring-1 ring-slate-900/10">
               <Photo name="boutique-interior" priority position="40% center" />
             </div>
-            <div className="aspect-[4/3] overflow-hidden rounded-[1.5rem] ring-1 ring-slate-900/10">
+            <div className="aspect-[4/3] overflow-hidden rounded-xl ring-1 ring-slate-900/10">
               <Photo name="packing-orders" priority />
             </div>
-            <div className="aspect-[4/3] overflow-hidden rounded-[1.5rem] ring-1 ring-slate-900/10">
+            <div className="aspect-[4/3] overflow-hidden rounded-xl ring-1 ring-slate-900/10">
               <Photo name="checkout-counter" priority />
             </div>
           </div>
@@ -134,7 +134,7 @@ export function FeaturesHub() {
             <li key={a.slug} className="shrink-0">
               <a
                 href={`/features/${a.slug}`}
-                className={`flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-700 ring-1 ring-slate-900/10 transition hover:bg-slate-950 hover:text-white hover:ring-slate-950 ${focusRing}`}
+                className={`flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-700 ring-1 ring-slate-900/10 transition hover:bg-navy-950 hover:text-white hover:ring-slate-950 ${focusRing}`}
               >
                 <Icon name={a.icon} className="size-4" />
                 {a.name}
@@ -212,7 +212,7 @@ export function FeaturePage({ area }: { area: FeatureArea }) {
                 <ul className="mt-3 space-y-2.5">
                   {area.capabilities.slice(0, 3).map((c) => (
                     <li key={c.title} className="flex items-center gap-2.5 text-sm font-medium">
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-azure-50 text-azure-600">
                         <Icon name={c.icon} className="size-4" />
                       </span>
                       {c.title}
@@ -249,7 +249,7 @@ export function FeaturePage({ area }: { area: FeatureArea }) {
           <div className="relative min-w-0 lg:order-1">
             <div
               aria-hidden="true"
-              className="absolute -inset-6 -z-0 rounded-[2.5rem] bg-[radial-gradient(closest-side,rgb(99_102_241/0.16),transparent)]"
+              className="absolute -inset-6 -z-0 rounded-[2.5rem] bg-[radial-gradient(closest-side,rgb(48_94_255/0.16),transparent)]"
             />
             <div className="relative">
               <FeatureMock kind={area.showcase.mock} />
@@ -264,7 +264,7 @@ export function FeaturePage({ area }: { area: FeatureArea }) {
       >
         <div
           aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-[radial-gradient(40rem_22rem_at_100%_0%,rgb(99_102_241/0.25),transparent)]"
+          className="absolute inset-0 -z-10 bg-[radial-gradient(40rem_22rem_at_100%_0%,rgb(48_94_255/0.25),transparent)]"
         />
         <div className={container}>
           <SectionHeading

@@ -10,7 +10,7 @@ import { useDeferredValue, useEffect, useState } from 'react';
 import { TemplateThumb } from './template-thumb';
 
 const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-600';
 const fieldClass = `w-full rounded-full border-0 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm ring-1 ring-slate-900/15 ${focusRing}`;
 
 /** Client-side filters (industry, style, search) over the full template catalog. */
@@ -132,7 +132,7 @@ export function TemplateGallery({
                 onClick={() => setIndustry(i.id)}
                 className={`rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 transition ${focusRing} ${
                   industry === i.id
-                    ? 'bg-slate-950 text-white ring-slate-950'
+                    ? 'bg-navy-950 text-white ring-slate-950'
                     : 'bg-white text-slate-700 ring-slate-900/15 hover:ring-slate-900/40'
                 }`}
               >
@@ -144,9 +144,7 @@ export function TemplateGallery({
 
         {shown.length === 0 ? (
           <div className="py-24 text-center">
-            <p className="text-lg font-semibold text-slate-950">
-              No templates match those filters.
-            </p>
+            <p className="text-lg font-semibold text-navy-900">No templates match those filters.</p>
             <button
               type="button"
               onClick={clear}
@@ -160,7 +158,7 @@ export function TemplateGallery({
             {shown.map((t) => (
               <li key={t.id} className="flex flex-col">
                 <a href={`/templates/${t.id}`} className={`group block rounded-2xl ${focusRing}`}>
-                  <div className="overflow-hidden rounded-2xl bg-[#f6f4ef] p-2.5 ring-1 ring-slate-900/[0.07] transition duration-300 group-hover:shadow-[0_24px_48px_-24px_rgb(15_23_42/0.45)]">
+                  <div className="overflow-hidden rounded-2xl bg-mist p-2.5 ring-1 ring-slate-900/[0.07] transition duration-300 group-hover:shadow-[0_24px_48px_-24px_rgb(15_23_42/0.45)]">
                     <div className="overflow-hidden rounded-xl shadow-sm ring-1 ring-slate-900/10">
                       <TemplateThumb
                         template={t}
@@ -171,7 +169,7 @@ export function TemplateGallery({
                     </div>
                   </div>
                   <div className="mt-4 flex items-start justify-between gap-3">
-                    <h2 className="text-lg font-semibold tracking-tight text-slate-950 group-hover:text-indigo-700">
+                    <h2 className="text-lg font-semibold tracking-tight text-navy-900 group-hover:text-azure-700">
                       {t.name}
                     </h2>
                     <span aria-hidden="true" className="mt-1.5 flex -space-x-1">
@@ -196,7 +194,7 @@ export function TemplateGallery({
                 <div className="mt-4 flex flex-wrap gap-2">
                   <a
                     href={`${signupUrl}?template=${t.id}`}
-                    className={`rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 ${focusRing}`}
+                    className={`rounded-full bg-navy-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-azure-700 ${focusRing}`}
                   >
                     Start with this template<span className="sr-only">: {t.name}</span>
                   </a>

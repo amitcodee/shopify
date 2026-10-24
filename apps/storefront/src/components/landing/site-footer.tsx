@@ -44,16 +44,16 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
 
 export function SiteFooter() {
   return (
-    <footer className="bg-[#0b0c14] text-slate-400">
+    <footer className="border-t border-slate-900/[0.08] bg-white text-slate-600">
       <div className="mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.2fr_3fr] lg:px-8">
         <div>
-          <Logo tone="dark" />
+          <Logo tone="light" />
           <p className="mt-5 max-w-xs text-sm leading-6">
             Everything you need to start, run and grow an online store.
           </p>
           <a
             href={signupUrl}
-            className="mt-6 inline-flex rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-indigo-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="mt-6 inline-flex rounded-md bg-azure-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-azure-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-600"
           >
             Start for free
           </a>
@@ -61,7 +61,7 @@ export function SiteFooter() {
         <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-4">
           {COLUMNS.map((col) => (
             <div key={col.title}>
-              <h2 className="text-xs font-semibold tracking-[0.14em] text-slate-200 uppercase">
+              <h2 className="text-xs font-semibold tracking-[0.08em] text-navy-900 uppercase">
                 {col.title}
               </h2>
               <ul className="mt-4 space-y-3 text-sm">
@@ -69,7 +69,7 @@ export function SiteFooter() {
                   <li key={l.label}>
                     <a
                       href={l.href}
-                      className="rounded hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
+                      className="rounded text-azure-700 hover:text-azure-900 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-600"
                       {...(l.external ? { target: '_blank', rel: 'noreferrer' } : {})}
                     >
                       {l.label}
@@ -82,8 +82,8 @@ export function SiteFooter() {
           ))}
         </nav>
       </div>
-      <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs sm:flex-row sm:justify-between sm:px-6 lg:px-8">
+      <div className="border-t border-slate-900/[0.08] bg-mist">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:justify-between sm:px-6 lg:px-8">
           <p>© {new Date().getFullYear()} Commerce Platform</p>
           <p>Plan prices are in US dollars. Your store can sell in many currencies.</p>
         </div>

@@ -31,11 +31,11 @@ function GuideCard({ guide }: { guide: Guide }) {
   return (
     <a
       href={`/guides/${guide.slug}`}
-      className={`group flex h-full gap-5 rounded-[1.5rem] bg-white p-6 ring-1 ring-slate-900/[0.08] transition hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-24px_rgb(15_23_42/0.4)] sm:p-7 ${focusRing}`}
+      className={`group flex h-full gap-5 rounded-xl bg-white p-6 ring-1 ring-slate-900/[0.08] transition hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-24px_rgb(15_23_42/0.4)] sm:p-7 ${focusRing}`}
     >
       <IconTile name={guide.icon} />
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="text-base font-semibold tracking-tight text-slate-950 group-hover:text-indigo-700">
+        <span className="text-base font-semibold tracking-tight text-navy-900 group-hover:text-azure-700">
           {guide.title}
         </span>
         <span className="mt-1.5 text-[0.9375rem] leading-7 text-slate-600">{guide.summary}</span>
@@ -73,12 +73,12 @@ export function GuidesHub() {
             <li key={c.name}>
               <a
                 href={`#${categoryId(c.name)}`}
-                className={`group flex h-full flex-col rounded-[1.5rem] bg-[#f6f4ef] p-6 ring-1 ring-slate-900/[0.06] transition hover:bg-white hover:shadow-[0_20px_40px_-24px_rgb(15_23_42/0.4)] ${focusRing}`}
+                className={`group flex h-full flex-col rounded-xl bg-mist p-6 ring-1 ring-slate-900/[0.06] transition hover:bg-white hover:shadow-[0_20px_40px_-24px_rgb(15_23_42/0.4)] ${focusRing}`}
               >
                 <IconTile name={c.icon} />
-                <span className="mt-5 font-semibold text-slate-950">{c.name}</span>
+                <span className="mt-5 font-semibold text-navy-900">{c.name}</span>
                 <span className="mt-1 text-sm leading-6 text-slate-600">{c.blurb}</span>
-                <span className="mt-auto pt-4 text-xs font-semibold text-indigo-700">
+                <span className="mt-auto pt-4 text-xs font-semibold text-azure-700">
                   {GUIDES.filter((g) => g.category === c.name).length} guides
                 </span>
               </a>
@@ -113,11 +113,11 @@ export function GuidesHub() {
       })}
       <section className="bg-white py-20 sm:py-24">
         <div className={container}>
-          <div className="flex flex-col items-start justify-between gap-6 rounded-[1.75rem] bg-[#f6f4ef] p-8 ring-1 ring-slate-900/[0.06] sm:flex-row sm:items-center sm:p-10">
+          <div className="flex flex-col items-start justify-between gap-6 rounded-xl bg-mist p-8 ring-1 ring-slate-900/[0.06] sm:flex-row sm:items-center sm:p-10">
             <div className="flex gap-5">
               <IconTile name="mail" className="hidden sm:flex" />
               <div>
-                <h2 className="text-xl font-semibold tracking-tight text-slate-950">
+                <h2 className="text-xl font-semibold tracking-tight text-navy-900">
                   Can’t find what you need?
                 </h2>
                 <p className="mt-1 leading-7 text-slate-600">
@@ -149,29 +149,29 @@ export function GuidePage({ guide }: { guide: Guide }) {
   const sideLink = (active: boolean) =>
     `block rounded-lg px-3 py-1.5 text-sm transition ${focusRing} ${
       active
-        ? 'bg-white font-semibold text-slate-950 shadow-sm ring-1 ring-slate-900/10'
-        : 'text-slate-600 hover:bg-white/70 hover:text-slate-950'
+        ? 'bg-white font-semibold text-navy-900 shadow-sm ring-1 ring-slate-900/10'
+        : 'text-slate-600 hover:bg-white/70 hover:text-navy-900'
     }`;
   return (
     <>
       <section className={`relative isolate overflow-hidden ${paper}`}>
         <div
           aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-[radial-gradient(40rem_22rem_at_90%_-10%,rgb(99_102_241/0.12),transparent)]"
+          className="absolute inset-0 -z-10 bg-[radial-gradient(40rem_22rem_at_90%_-10%,rgb(48_94_255/0.12),transparent)]"
         />
         <div className={`${container} pt-10 pb-14 sm:pt-14 sm:pb-16`}>
           <Breadcrumbs items={[{ label: 'Guides', href: '/guides' }, { label: guide.title }]} />
           <div className="mt-8 max-w-3xl">
             <Eyebrow>{guide.category}</Eyebrow>
-            <h1 className={`mt-5 text-slate-950 ${display}`}>{guide.title}</h1>
+            <h1 className={`mt-5 text-navy-900 ${display}`}>{guide.title}</h1>
             <p className={`mt-6 text-slate-600 ${lead}`}>{guide.intro}</p>
             <p className="mt-8 flex flex-wrap items-center gap-3 text-sm text-slate-600">
               <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-slate-900/10">
-                <Icon name="stack" className="size-4 text-indigo-600" />
+                <Icon name="stack" className="size-4 text-azure-600" />
                 {guide.steps.length} steps
               </span>
               <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-slate-900/10">
-                <Icon name="layout" className="size-4 text-indigo-600" />
+                <Icon name="layout" className="size-4 text-azure-600" />
                 In your admin: <span className="font-semibold text-slate-900">{guide.where}</span>
               </span>
             </p>
@@ -186,7 +186,7 @@ export function GuidePage({ guide }: { guide: Guide }) {
           {/* All guides */}
           <nav
             aria-label="All guides"
-            className="hidden self-start rounded-[1.5rem] bg-[#f6f4ef] p-4 ring-1 ring-slate-900/[0.06] lg:sticky lg:top-24 lg:block"
+            className="hidden self-start rounded-xl bg-mist p-4 ring-1 ring-slate-900/[0.06] lg:sticky lg:top-24 lg:block"
           >
             {CATEGORIES.map(({ name }) => (
               <div key={name} className="mt-4 first:mt-0">
@@ -225,11 +225,11 @@ export function GuidePage({ guide }: { guide: Guide }) {
                       className="absolute top-12 bottom-2 left-5 w-px bg-slate-900/10"
                     />
                   ) : null}
-                  <span className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-950 text-sm font-semibold text-white shadow-[0_0_0_6px_white]">
+                  <span className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-navy-950 text-sm font-semibold text-white shadow-[0_0_0_6px_white]">
                     {i + 1}
                   </span>
                   <div className="min-w-0 pt-1.5">
-                    <h3 className="text-lg font-semibold tracking-tight text-slate-950 sm:text-xl">
+                    <h3 className="text-lg font-semibold tracking-tight text-navy-900 sm:text-xl">
                       {step.title}
                     </h3>
                     <p className="mt-2.5 text-[1.0625rem] leading-8 text-slate-700">{step.body}</p>
@@ -240,18 +240,18 @@ export function GuidePage({ guide }: { guide: Guide }) {
             {guide.tips && guide.tips.length > 0 ? (
               <aside
                 aria-labelledby="tips"
-                className="mt-14 rounded-[1.5rem] border-l-4 border-indigo-500 bg-indigo-50/70 p-6 sm:p-7"
+                className="mt-14 rounded-xl border-l-4 border-azure-500 bg-azure-50/70 p-6 sm:p-7"
               >
-                <h2 id="tips" className="flex items-center gap-2 font-semibold text-indigo-950">
-                  <Icon name="shield" className="size-5 text-indigo-600" />
+                <h2 id="tips" className="flex items-center gap-2 font-semibold text-azure-950">
+                  <Icon name="shield" className="size-5 text-azure-600" />
                   Good to know
                 </h2>
-                <ul className="mt-4 space-y-3 text-indigo-950/80">
+                <ul className="mt-4 space-y-3 text-azure-950/80">
                   {guide.tips.map((tip) => (
                     <li key={tip} className="flex gap-3 leading-7">
                       <span
                         aria-hidden="true"
-                        className="mt-3 size-1.5 shrink-0 rounded-full bg-indigo-400"
+                        className="mt-3 size-1.5 shrink-0 rounded-full bg-azure-400"
                       />
                       {tip}
                     </li>
@@ -263,12 +263,12 @@ export function GuidePage({ guide }: { guide: Guide }) {
               {prev ? (
                 <a
                   href={`/guides/${prev.slug}`}
-                  className={`group rounded-[1.25rem] p-5 ring-1 ring-slate-900/10 transition hover:bg-[#f6f4ef] ${focusRing}`}
+                  className={`group rounded-[1.25rem] p-5 ring-1 ring-slate-900/10 transition hover:bg-mist ${focusRing}`}
                 >
                   <span className="block text-sm text-slate-500">
                     <span aria-hidden="true">← </span>Previous guide
                   </span>
-                  <span className="mt-1 block font-semibold text-slate-950">{prev.title}</span>
+                  <span className="mt-1 block font-semibold text-navy-900">{prev.title}</span>
                 </a>
               ) : (
                 <span className="hidden sm:block" />
@@ -276,12 +276,12 @@ export function GuidePage({ guide }: { guide: Guide }) {
               {next ? (
                 <a
                   href={`/guides/${next.slug}`}
-                  className={`group rounded-[1.25rem] p-5 text-right ring-1 ring-slate-900/10 transition hover:bg-[#f6f4ef] ${focusRing}`}
+                  className={`group rounded-[1.25rem] p-5 text-right ring-1 ring-slate-900/10 transition hover:bg-mist ${focusRing}`}
                 >
                   <span className="block text-sm text-slate-500">
                     Next guide<span aria-hidden="true"> →</span>
                   </span>
-                  <span className="mt-1 block font-semibold text-slate-950">{next.title}</span>
+                  <span className="mt-1 block font-semibold text-navy-900">{next.title}</span>
                 </a>
               ) : null}
             </div>
@@ -300,7 +300,7 @@ export function GuidePage({ guide }: { guide: Guide }) {
                   <li key={step.title}>
                     <a
                       href={`#step-${i + 1}`}
-                      className={`-ml-px block border-l border-transparent py-1 pl-4 text-sm text-slate-600 hover:border-slate-950 hover:text-slate-950 ${focusRing}`}
+                      className={`-ml-px block border-l border-transparent py-1 pl-4 text-sm text-slate-600 hover:border-slate-950 hover:text-navy-900 ${focusRing}`}
                     >
                       {step.title}
                     </a>
@@ -318,9 +318,9 @@ export function GuidePage({ guide }: { guide: Guide }) {
                     <li key={a.slug}>
                       <a
                         href={`/features/${a.slug}`}
-                        className={`flex items-center gap-2 rounded text-sm font-medium text-slate-700 hover:text-indigo-700 ${focusRing}`}
+                        className={`flex items-center gap-2 rounded text-sm font-medium text-slate-700 hover:text-azure-700 ${focusRing}`}
                       >
-                        <Icon name={a.icon} className="size-4 text-indigo-600" />
+                        <Icon name={a.icon} className="size-4 text-azure-600" />
                         {a.name}
                       </a>
                     </li>
@@ -328,8 +328,8 @@ export function GuidePage({ guide }: { guide: Guide }) {
                 </ul>
               </div>
             ) : null}
-            <div className="rounded-[1.25rem] bg-[#f6f4ef] p-5 ring-1 ring-slate-900/[0.06]">
-              <h2 className="text-sm font-semibold text-slate-950">Still stuck?</h2>
+            <div className="rounded-[1.25rem] bg-mist p-5 ring-1 ring-slate-900/[0.06]">
+              <h2 className="text-sm font-semibold text-navy-900">Still stuck?</h2>
               <p className="mt-1 text-sm leading-6 text-slate-600">Our support team can help.</p>
               <a
                 href="/contact"

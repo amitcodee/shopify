@@ -141,8 +141,8 @@ function resourceCards(links: MarketingLinks): NavCard[] {
 }
 
 const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600';
-const panelLink = `rounded-md text-sm text-slate-600 hover:text-indigo-700 ${focusRing}`;
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-600';
+const panelLink = `rounded-md text-sm text-slate-600 hover:text-azure-700 ${focusRing}`;
 const summaryClass =
   'flex cursor-pointer list-none items-center justify-between py-4 text-lg font-semibold [&::-webkit-details-marker]:hidden';
 
@@ -248,8 +248,8 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
       aria-controls={`menu-${id}`}
       onClick={() => setOpen(open === id ? null : id)}
       onMouseEnter={() => setOpen(id)}
-      className={`flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-medium transition hover:bg-slate-900/5 hover:text-slate-950 ${
-        open === id ? 'bg-slate-900/5 text-slate-950' : 'text-slate-700'
+      className={`flex items-center gap-1 rounded-md px-3 py-2 text-[0.9375rem] font-medium transition hover:text-azure-700 ${
+        open === id ? 'text-azure-700' : 'text-navy-900'
       } ${focusRing}`}
     >
       {label}
@@ -262,7 +262,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
       <a
         href={href}
         onMouseEnter={close}
-        className={`rounded-full px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-900/5 hover:text-slate-950 ${focusRing}`}
+        className={`rounded-md px-3 py-2 text-[0.9375rem] font-medium text-navy-900 transition hover:text-azure-700 ${focusRing}`}
       >
         {label}
       </a>
@@ -284,7 +284,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
               href={card.href}
               onClick={close}
               {...(card.external ? { target: '_blank', rel: 'noreferrer' } : {})}
-              className={`group flex h-full flex-col overflow-hidden rounded-2xl bg-[#f6f4ef] ring-1 ring-slate-900/[0.06] transition hover:bg-white hover:shadow-lg hover:ring-slate-900/10 ${focusRing}`}
+              className={`group flex h-full flex-col overflow-hidden rounded-xl bg-mist ring-1 ring-slate-900/[0.06] transition hover:bg-white hover:shadow-lg hover:ring-slate-900/10 ${focusRing}`}
             >
               {card.photo ? (
                 <span className="block aspect-[16/8] overflow-hidden">
@@ -297,16 +297,16 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
               ) : null}
               <span className="flex flex-1 flex-col p-6">
                 {card.photo ? null : (
-                  <span className="mb-4 flex size-10 items-center justify-center rounded-xl bg-white text-indigo-600 shadow-sm ring-1 ring-slate-900/10">
+                  <span className="mb-4 flex size-10 items-center justify-center rounded-xl bg-white text-azure-600 shadow-sm ring-1 ring-slate-900/10">
                     <Icon name={card.icon} />
                   </span>
                 )}
-                <span className="font-semibold text-slate-950">
+                <span className="font-semibold text-navy-900">
                   {card.title}
                   {card.external ? <ExternalMark /> : null}
                 </span>
                 <span className="mt-1.5 text-sm leading-6 text-slate-600">{card.body}</span>
-                <span className="mt-auto pt-4 text-sm font-semibold text-indigo-700">
+                <span className="mt-auto pt-4 text-sm font-semibold text-azure-700">
                   {card.external ? 'Open' : 'Learn more'} <span aria-hidden="true">→</span>
                 </span>
               </span>
@@ -330,7 +330,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
           <li key={item.label}>
             <LinkItem
               link={item}
-              className="text-slate-600 hover:text-indigo-600"
+              className="text-slate-600 hover:text-azure-600"
               onClick={() => setDrawer(false)}
             />
           </li>
@@ -347,7 +347,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
         onBlur={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) close();
         }}
-        className="sticky top-0 z-50 border-b border-slate-900/[0.08] bg-white/85 text-slate-900 backdrop-blur-xl backdrop-saturate-150"
+        className="sticky top-0 z-50 border-b border-slate-900/[0.06] bg-white/75 text-slate-900 shadow-[0_1px_0_rgb(255_255_255/0.6)_inset] backdrop-blur-xl backdrop-saturate-150"
       >
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
           <a href="/" className={`rounded-md ${focusRing}`} aria-label="Commerce Platform home">
@@ -365,15 +365,18 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
           <div className="ml-auto flex items-center gap-2">
             <a
               href={links.loginUrl}
-              className={`hidden rounded-full px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900/5 hover:text-slate-950 sm:block ${focusRing}`}
+              className={`hidden rounded-md px-3.5 py-2 text-sm font-semibold text-azure-700 ring-1 ring-azure-600/60 transition hover:bg-azure-50 sm:block ${focusRing}`}
             >
               Log in
             </a>
             <a
               href={links.signupUrl}
-              className={`rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-indigo-700 ${focusRing}`}
+              className={`group inline-flex items-center gap-1.5 rounded-md bg-azure-600 px-4 py-2 text-sm font-semibold whitespace-nowrap text-white shadow-[0_1px_2px_rgb(10_34_54/0.2)] transition hover:bg-azure-700 ${focusRing}`}
             >
               Start for free
+              <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">
+                →
+              </span>
             </a>
             <button
               ref={drawerButton}
@@ -381,7 +384,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
               aria-expanded={drawer}
               aria-controls="mobile-menu"
               onClick={() => setDrawer(true)}
-              className={`-mr-1 rounded-md p-2 text-slate-700 hover:text-slate-950 lg:hidden ${focusRing}`}
+              className={`-mr-1 rounded-md p-2 text-slate-700 hover:text-navy-900 lg:hidden ${focusRing}`}
             >
               <span className="sr-only">Open menu</span>
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-6">
@@ -408,8 +411,8 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
             <div className="grid grid-cols-3 gap-x-8 gap-y-8">
               {PRODUCT_GROUPS.map((group) => (
                 <div key={group.title}>
-                  <p className="flex items-center gap-2.5 text-sm font-semibold text-slate-950">
-                    <span className="flex size-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                  <p className="flex items-center gap-2.5 text-sm font-semibold text-navy-900">
+                    <span className="flex size-7 items-center justify-center rounded-lg bg-azure-50 text-azure-600">
                       <Icon name={group.icon} className="size-4" />
                     </span>
                     {group.title}
@@ -425,13 +428,13 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
               ))}
             </div>
             <div className="flex flex-col gap-4">
-              <div className="overflow-hidden rounded-2xl bg-[#f6f4ef] ring-1 ring-slate-900/[0.06]">
+              <div className="overflow-hidden rounded-xl bg-mist ring-1 ring-slate-900/[0.06]">
                 <span className="block aspect-[16/8] overflow-hidden">
                   <Photo name="laptop-shop-counter" alt="" />
                 </span>
                 <div className="p-5">
                   <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <span className="text-indigo-600">
+                    <span className="text-azure-600">
                       <Icon name={extend.icon} className="size-4" />
                     </span>
                     {extend.title}
@@ -448,7 +451,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
               <a
                 href="/features"
                 onClick={close}
-                className={`rounded-md px-1 text-sm font-semibold text-indigo-700 hover:text-indigo-600 ${focusRing}`}
+                className={`rounded-md px-1 text-sm font-semibold text-azure-700 hover:text-azure-600 ${focusRing}`}
               >
                 See all features <span aria-hidden="true">→</span>
               </a>
@@ -474,7 +477,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
               setDrawer(false);
               drawerButton.current?.focus();
             }}
-            className="-mr-1 rounded-md p-2 text-slate-600 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-indigo-600"
+            className="-mr-1 rounded-md p-2 text-slate-600 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-azure-600"
           >
             <span className="sr-only">Close menu</span>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-6">
@@ -514,13 +517,13 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
           <div className="mt-8 grid gap-3">
             <a
               href={links.signupUrl}
-              className="rounded-full bg-slate-950 px-5 py-3 text-center font-semibold text-white"
+              className="rounded-md bg-azure-600 px-5 py-3 text-center font-semibold text-white"
             >
               Start for free
             </a>
             <a
               href={links.loginUrl}
-              className="rounded-full px-5 py-3 text-center font-semibold text-slate-900 ring-1 ring-slate-300"
+              className="rounded-md px-5 py-3 text-center font-semibold text-azure-700 ring-1 ring-azure-600/60"
             >
               Log in
             </a>

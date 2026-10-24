@@ -75,7 +75,7 @@ export function SwitchPage() {
                   products.csv
                 </div>
                 <pre className="overflow-hidden p-4 font-mono text-[10.5px] leading-6 text-slate-300">
-                  <span className="text-indigo-300">Handle,Title,Option1 Value,Price</span>
+                  <span className="text-azure-300">Handle,Title,Option1 Value,Price</span>
                   {'\n'}linen-shirt,Linen shirt,S,55.00{'\n'}linen-shirt,,M,55.00{'\n'}
                   canvas-tote,Canvas tote,,30.00
                 </pre>
@@ -161,7 +161,7 @@ export function SwitchPage() {
               Read the product guide <Arrow />
             </a>
           </div>
-          <div className="min-w-0 self-center rounded-[1.75rem] bg-white p-6 ring-1 ring-slate-900/[0.08] sm:p-8">
+          <div className="min-w-0 self-center rounded-xl bg-white p-6 ring-1 ring-slate-900/[0.08] sm:p-8">
             <h3 className="text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase">
               Columns the import understands
             </h3>
@@ -169,7 +169,7 @@ export function SwitchPage() {
               {CSV_COLUMNS.map((c) => (
                 <li
                   key={c}
-                  className="rounded-lg bg-[#f6f4ef] px-2.5 py-1 font-mono text-xs text-slate-700 ring-1 ring-slate-900/[0.06]"
+                  className="rounded-lg bg-mist px-2.5 py-1 font-mono text-xs text-slate-700 ring-1 ring-slate-900/[0.06]"
                 >
                   {c}
                 </li>
@@ -221,7 +221,7 @@ export function SwitchPage() {
               title="Your launch checklist"
               intro="Work through these in your admin, then turn off the password page."
             />
-            <div className="mt-10 hidden aspect-[4/3] overflow-hidden rounded-[1.5rem] ring-1 ring-white/10 lg:block">
+            <div className="mt-10 hidden aspect-[4/3] overflow-hidden rounded-xl ring-1 ring-white/10 lg:block">
               <Photo name="packing-orders" />
             </div>
           </div>
@@ -241,7 +241,7 @@ export function SwitchPage() {
                   href={href}
                   className="group flex items-center gap-4 rounded-2xl bg-white/[0.04] px-5 py-4 text-slate-100 ring-1 ring-white/10 transition hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-slate-950">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-navy-900">
                     {i + 1}
                   </span>
                   <span className="flex-1">{item}</span>
@@ -351,7 +351,7 @@ export function SecurityPage() {
                 className="flex items-center gap-4 rounded-2xl bg-white/[0.06] p-5 ring-1 ring-white/10 backdrop-blur"
                 style={{ marginLeft: `${i * 1.5}rem` }}
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-semibold text-slate-950">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-semibold text-navy-900">
                   {i + 1}
                 </span>
                 <div>
@@ -374,10 +374,10 @@ export function SecurityPage() {
             {SECURITY_AREAS.map((area) => (
               <li
                 key={area.title}
-                className="rounded-[1.5rem] bg-[#f6f4ef] p-7 ring-1 ring-slate-900/[0.06] sm:p-8"
+                className="rounded-xl bg-mist p-7 ring-1 ring-slate-900/[0.06] sm:p-8"
               >
                 <IconTile name={area.icon} />
-                <h3 className="mt-5 text-lg font-semibold tracking-tight text-slate-950">
+                <h3 className="mt-5 text-lg font-semibold tracking-tight text-navy-900">
                   {area.title}
                 </h3>
                 <div className="mt-4 text-sm leading-6">
@@ -442,11 +442,11 @@ export function ContactPage({ supportEmail }: { supportEmail: string | null }) {
       <section className={`bg-white ${section}`}>
         <div className={`${container} grid gap-5 lg:grid-cols-3`}>
           <div
-            className={`relative isolate flex flex-col overflow-hidden rounded-[1.75rem] ${ink} p-8 text-white sm:p-9`}
+            className={`relative isolate flex flex-col overflow-hidden rounded-xl ${ink} p-8 text-white sm:p-9`}
           >
             <div
               aria-hidden="true"
-              className="absolute inset-0 -z-10 bg-[radial-gradient(30rem_18rem_at_100%_0%,rgb(99_102_241/0.35),transparent)]"
+              className="absolute inset-0 -z-10 bg-[radial-gradient(30rem_18rem_at_100%_0%,rgb(48_94_255/0.35),transparent)]"
             />
             <IconTile name="mail" dark />
             <h2 className="mt-6 text-2xl font-semibold tracking-tight">Email support</h2>
@@ -490,25 +490,25 @@ export function ContactPage({ supportEmail }: { supportEmail: string | null }) {
             <a
               key={card.title}
               href={card.href}
-              className={`group flex flex-col rounded-[1.75rem] bg-[#f6f4ef] p-8 ring-1 ring-slate-900/[0.06] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_24px_48px_-24px_rgb(15_23_42/0.4)] sm:p-9 ${focusRing}`}
+              className={`group flex flex-col rounded-xl bg-mist p-8 ring-1 ring-slate-900/[0.06] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_24px_48px_-24px_rgb(15_23_42/0.4)] sm:p-9 ${focusRing}`}
             >
               <IconTile name={card.icon} />
-              <h2 className="mt-6 text-2xl font-semibold tracking-tight text-slate-950">
+              <h2 className="mt-6 text-2xl font-semibold tracking-tight text-navy-900">
                 {card.title}
               </h2>
               <p className="mt-2 leading-7 text-slate-600">{card.body}</p>
-              <span className="mt-auto inline-flex items-center gap-1 pt-8 text-sm font-semibold text-indigo-700">
+              <span className="mt-auto inline-flex items-center gap-1 pt-8 text-sm font-semibold text-azure-700">
                 {card.cta} <Arrow />
               </span>
             </a>
           ))}
         </div>
         <div className={`${container} mt-5`}>
-          <div className="flex flex-col items-start justify-between gap-6 rounded-[1.75rem] p-8 ring-1 ring-slate-900/10 sm:flex-row sm:items-center sm:p-9">
+          <div className="flex flex-col items-start justify-between gap-6 rounded-xl p-8 ring-1 ring-slate-900/10 sm:flex-row sm:items-center sm:p-9">
             <div className="flex gap-5">
               <IconTile name="code" className="hidden sm:flex" />
               <div>
-                <h2 className="text-lg font-semibold text-slate-950">Building an integration?</h2>
+                <h2 className="text-lg font-semibold text-navy-900">Building an integration?</h2>
                 <p className="mt-1 leading-7 text-slate-600">
                   The OpenAPI reference documents the REST API, and the{' '}
                   <a href="/guides/api-and-webhooks" className={textLink}>

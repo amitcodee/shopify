@@ -8,38 +8,44 @@ import { signupUrl } from './urls';
  * The marketing site's design system: layout, type scale, buttons and the building blocks every
  * page shares, so the whole site reads as one product.
  *
- * Surfaces: white, `paper` (warm off-white) and `ink` (near-black) sections alternate; indigo is
- * the single accent. Type: one display size for h1, one headline size for h2.
+ * Surfaces: white, `paper` (cool mist) and `ink` (deep navy) sections alternate; azure blue is
+ * the accent and leaf green highlights a phrase in a heading. Type: the display face for h1/h2,
+ * Inter Tight for text (both set by MarketingShell). Buttons are crisp 6px rectangles; floating
+ * UI sits on frosted `glass`.
  */
 
 export const container = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8';
-export const paper = 'bg-[#f6f4ef]';
-export const ink = 'bg-[#0b0c14]';
-export const section = 'py-20 sm:py-28 lg:py-32';
+export const paper = 'bg-mist';
+export const ink = 'bg-navy-950';
+export const section = 'py-20 sm:py-24 lg:py-28';
 
-export const display =
-  'text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.035em] text-balance sm:text-6xl lg:text-[4.5rem]';
-export const headline =
-  'text-[2rem] leading-[1.08] font-semibold tracking-[-0.03em] text-balance sm:text-5xl';
+/** The display typeface (TASA Orbiter), for headings. */
+export const displayFace = 'font-[family-name:var(--font-display)]';
+export const display = `${displayFace} text-[2.5rem] leading-[1.08] font-medium tracking-[-0.03em] text-balance sm:text-[3.25rem] lg:text-[3.75rem]`;
+export const headline = `${displayFace} text-[2rem] leading-[1.1] font-semibold tracking-[-0.025em] text-balance sm:text-[2.75rem] lg:text-[3.25rem]`;
 export const lead = 'text-lg leading-8 text-pretty sm:text-xl sm:leading-[1.6]';
+/** Frosted glass for chips and cards floating over photos and gradients. */
+export const glass =
+  'bg-white/60 shadow-[0_8px_32px_-12px_rgb(10_34_54/0.25)] ring-1 ring-white/70 backdrop-blur-xl backdrop-saturate-150';
+export const glassDark = 'bg-white/[0.07] ring-1 ring-white/15 backdrop-blur-xl';
 
 export const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-600';
 const focusRingLight =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
 const button =
-  'inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold whitespace-nowrap transition';
+  'inline-flex items-center justify-center gap-2 rounded-md px-5 py-3 text-sm font-semibold whitespace-nowrap transition';
 
 /** Primary action on light surfaces. */
-export const buttonPrimary = `${button} bg-slate-950 text-white shadow-sm hover:bg-indigo-700 ${focusRing}`;
+export const buttonPrimary = `${button} bg-azure-600 text-white shadow-[0_1px_2px_rgb(10_34_54/0.2)] hover:bg-azure-700 ${focusRing}`;
 /** Secondary action on light surfaces. */
-export const buttonSecondary = `${button} bg-white text-slate-900 shadow-sm ring-1 ring-slate-900/15 hover:ring-slate-900/30 ${focusRing}`;
+export const buttonSecondary = `${button} bg-white text-azure-700 ring-1 ring-azure-600/60 hover:bg-azure-50 ${focusRing}`;
 /** Primary action on dark surfaces and photos. */
-export const buttonLight = `${button} bg-white text-slate-950 hover:bg-indigo-50 ${focusRingLight}`;
+export const buttonLight = `${button} bg-white text-navy-900 hover:bg-azure-50 ${focusRingLight}`;
 /** Secondary action on dark surfaces and photos. */
 export const buttonGhostDark = `${button} text-white ring-1 ring-white/35 hover:bg-white/10 ${focusRingLight}`;
-export const textLink = `rounded font-semibold text-indigo-700 underline-offset-4 hover:underline ${focusRing}`;
-export const textLinkDark = `rounded font-semibold text-indigo-200 underline-offset-4 hover:underline ${focusRingLight}`;
+export const textLink = `rounded font-semibold text-azure-700 underline-offset-4 hover:underline ${focusRing}`;
+export const textLinkDark = `rounded font-semibold text-azure-200 underline-offset-4 hover:underline ${focusRingLight}`;
 
 /** Small → used after link text. */
 export function Arrow() {
@@ -63,12 +69,12 @@ export function Eyebrow({
   return (
     <p
       className={`flex items-center gap-2 text-xs font-semibold tracking-[0.14em] uppercase ${
-        dark ? 'text-indigo-200' : 'text-indigo-700'
+        dark ? 'text-azure-200' : 'text-azure-700'
       } ${className}`}
     >
       <span
         aria-hidden="true"
-        className={`h-px w-6 ${dark ? 'bg-indigo-300/60' : 'bg-indigo-600/50'}`}
+        className={`h-px w-6 ${dark ? 'bg-azure-300/60' : 'bg-azure-600/50'}`}
       />
       {children}
     </p>
@@ -89,8 +95,8 @@ export function IconTile({
     <span
       className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
         dark
-          ? 'bg-white/10 text-indigo-200 ring-1 ring-white/15'
-          : 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-900/10'
+          ? 'bg-white/10 text-azure-200 ring-1 ring-white/15'
+          : 'bg-white text-azure-600 shadow-sm ring-1 ring-slate-900/10'
       } ${className}`}
     >
       <Icon name={name} />
@@ -159,14 +165,14 @@ export function PageHero({
   const centered = center && !aside;
   return (
     <section
-      className={`relative isolate overflow-hidden ${dark ? `${ink} text-white` : `${paper} text-slate-950`}`}
+      className={`relative isolate overflow-hidden ${dark ? `${ink} text-white` : `${paper} text-navy-900`}`}
     >
       <div
         aria-hidden="true"
         className={`absolute inset-0 -z-10 ${
           dark
-            ? 'bg-[radial-gradient(48rem_28rem_at_85%_-10%,rgb(99_102_241/0.35),transparent),radial-gradient(36rem_24rem_at_-10%_110%,rgb(168_85_247/0.18),transparent)]'
-            : 'bg-[radial-gradient(44rem_26rem_at_90%_-10%,rgb(99_102_241/0.12),transparent),radial-gradient(30rem_20rem_at_0%_100%,rgb(251_191_36/0.10),transparent)]'
+            ? 'bg-[radial-gradient(48rem_28rem_at_85%_-10%,rgb(48_94_255/0.35),transparent),radial-gradient(36rem_24rem_at_-10%_110%,rgb(22_163_95/0.18),transparent)]'
+            : 'bg-[radial-gradient(44rem_26rem_at_90%_-10%,rgb(48_94_255/0.12),transparent),radial-gradient(30rem_20rem_at_0%_100%,rgb(251_191_36/0.10),transparent)]'
         }`}
       />
       <div
@@ -235,7 +241,7 @@ export function SectionHeading({
           size === 'lg'
             ? headline
             : 'text-2xl leading-tight font-semibold tracking-[-0.02em] text-balance sm:text-3xl'
-        } ${dark ? 'text-white' : 'text-slate-950'}`}
+        } ${dark ? 'text-white' : 'text-navy-900'}`}
       >
         {title}
       </h2>
@@ -260,10 +266,10 @@ export function IconGrid({
         const inner = (
           <>
             <IconTile name={item.icon} />
-            <h3 className="mt-5 text-base font-semibold text-slate-950">{item.title}</h3>
+            <h3 className="mt-5 text-base font-semibold text-navy-900">{item.title}</h3>
             <p className="mt-2 text-[0.9375rem] leading-7 text-slate-600">{item.body}</p>
             {item.href ? (
-              <span className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-semibold text-indigo-700">
+              <span className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-semibold text-azure-700">
                 Learn more <Arrow />
               </span>
             ) : null}
@@ -308,8 +314,8 @@ export function Steps({
             <span
               className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
                 dark
-                  ? 'bg-white text-slate-950'
-                  : 'bg-slate-950 text-white shadow-[0_0_0_6px_rgb(99_102_241/0.12)]'
+                  ? 'bg-white text-navy-900'
+                  : 'bg-navy-950 text-white shadow-[0_0_0_6px_rgb(48_94_255/0.12)]'
               }`}
             >
               {i + 1}
@@ -321,7 +327,7 @@ export function Steps({
               />
             ) : null}
           </div>
-          <h3 className={`mt-6 text-lg font-semibold ${dark ? 'text-white' : 'text-slate-950'}`}>
+          <h3 className={`mt-6 text-lg font-semibold ${dark ? 'text-white' : 'text-navy-900'}`}>
             {step.title}
           </h3>
           <p className={`mt-2 leading-7 ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
@@ -348,13 +354,13 @@ export function CtaBand({
 }) {
   return (
     <section className="px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-      <div className="relative isolate mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-slate-950 text-white">
+      <div className="relative isolate mx-auto max-w-7xl overflow-hidden rounded-xl bg-navy-950 text-white">
         <div className="absolute inset-0 -z-20">
           <Photo name={photo} alt="" />
         </div>
         <div
           aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,rgb(11_12_20/0.94)_0%,rgb(11_12_20/0.82)_45%,rgb(11_12_20/0.35)_100%)]"
+          className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,rgb(10_34_54/0.94)_0%,rgb(10_34_54/0.82)_45%,rgb(10_34_54/0.35)_100%)]"
         />
         <div className="max-w-2xl px-6 py-16 sm:px-12 sm:py-20 lg:px-16 lg:py-24">
           <h2 className={headline}>{title}</h2>
@@ -377,7 +383,7 @@ export function CheckList({ items, dark = false }: { items: ReactNode[]; dark?: 
         <li key={i} className="flex gap-3">
           <span
             className={`mt-1 flex size-5 shrink-0 items-center justify-center rounded-full ${
-              dark ? 'bg-indigo-400/20 text-indigo-200' : 'bg-indigo-600/10 text-indigo-700'
+              dark ? 'bg-azure-400/20 text-azure-200' : 'bg-azure-600/10 text-azure-700'
             }`}
           >
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" className="size-3.5">
@@ -423,7 +429,7 @@ export function PhotoPanel({
   return (
     <div className={`relative ${overlay ? 'pb-6 sm:pb-0' : ''} ${className}`}>
       <div
-        className={`overflow-hidden rounded-[1.75rem] bg-slate-200 shadow-[0_30px_60px_-30px_rgb(15_23_42/0.45)] ring-1 ring-slate-900/10 ${ratio}`}
+        className={`overflow-hidden rounded-xl bg-slate-200 shadow-[0_30px_60px_-30px_rgb(15_23_42/0.45)] ring-1 ring-slate-900/10 ${ratio}`}
       >
         <Photo name={photo} alt={alt} priority={priority} position={position} />
       </div>

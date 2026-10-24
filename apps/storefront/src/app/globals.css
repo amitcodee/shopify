@@ -5,6 +5,28 @@
  * are `inline`: utilities resolve the store variables where they are used, not at :root. Plain
  * CSS below reads the --store-* variables directly for the same reason.
  */
+/* The platform marketing site's palette (stores use the --store-* colors below). */
+@theme {
+  --color-azure-50: #eef3ff;
+  --color-azure-100: #dfe8ff;
+  --color-azure-200: #c5d4ff;
+  --color-azure-300: #9db5ff;
+  --color-azure-400: #6e8dff;
+  --color-azure-500: #4a6cff;
+  --color-azure-600: #305eff;
+  --color-azure-700: #2347e6;
+  --color-azure-800: #1f3bb8;
+  --color-azure-900: #1f3790;
+  --color-azure-950: #162257;
+  --color-navy-900: #192839;
+  --color-navy-950: #0a2236;
+  --color-leaf-300: #6fe0a0;
+  --color-leaf-400: #34c77b;
+  --color-leaf-500: #16a35f;
+  --color-leaf-600: #0f8a4f;
+  --color-mist: #f2f5f9;
+}
+
 @theme inline {
   --color-brand: var(--store-brand, #111827);
   --color-brand-contrast: var(--store-brand-contrast, #ffffff);

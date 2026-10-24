@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { bodyFont, displayFont } from './fonts';
 import { SiteFooter } from './site-footer';
 import { SiteNav } from './site-nav';
 import { marketingLinks } from './urls';
@@ -12,7 +13,9 @@ const KEYFRAMES = `
 /** Nav, page and footer shared by the platform's marketing pages on the root host. */
 export function MarketingShell({ children }: { children: ReactNode }) {
   return (
-    <div className="relative flex min-h-screen flex-col overflow-x-clip bg-white text-slate-900">
+    <div
+      className={`${bodyFont.variable} ${displayFont.variable} relative flex min-h-screen flex-col overflow-x-clip bg-white font-[family-name:var(--font-body)] text-slate-900 antialiased`}
+    >
       <style>{KEYFRAMES}</style>
       <a
         href="#main"
