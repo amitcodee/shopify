@@ -11,6 +11,14 @@ import {
   Statements,
   SwitchBanner,
 } from './landing/home-sections';
+import {
+  ControlCenter,
+  HowItWorks,
+  PricingTeaser,
+  SellWorldwide,
+  StatsBand,
+  TemplateShowcase,
+} from './landing/home-more';
 import { MarketingShell } from './landing/marketing-shell';
 
 /** The platform's own home page, served on the root host (no store subdomain). */
@@ -19,11 +27,17 @@ export function PlatformLanding() {
     <>
       <HomeHero />
       <IndustryStrip />
+      <StatsBand />
       <SwitchBanner />
       <PlatformSuite />
+      <ControlCenter />
       <IndustriesTabs />
+      <SellWorldwide />
+      <TemplateShowcase />
+      <HowItWorks />
       <Statements />
       <Developers />
+      <PricingTeaser />
       <HomeFaq />
       <GetStarted />
     </>

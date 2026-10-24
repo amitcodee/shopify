@@ -1,3 +1,4 @@
+import { LEGAL_DOCS } from './legal-data';
 import { Logo } from './logo';
 import { apiDocsUrl, loginUrl, signupUrl } from './urls';
 
@@ -9,7 +10,6 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
       { label: 'Templates', href: '/templates' },
       { label: 'Pricing', href: '/pricing' },
       { label: 'Switch to us', href: '/switch' },
-      { label: 'Security', href: '/security' },
     ],
   },
   {
@@ -29,23 +29,30 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
     links: [
       { label: 'Guides', href: '/guides' },
       { label: 'FAQ', href: '/pricing#faq' },
-      { label: 'Contact', href: '/contact' },
       { label: 'API docs', href: apiDocsUrl, external: true },
-    ],
-  },
-  {
-    title: 'Account',
-    links: [
       { label: 'Log in', href: loginUrl },
       { label: 'Start for free', href: signupUrl },
     ],
+  },
+  {
+    title: 'Company',
+    links: [
+      { label: 'About us', href: '/about' },
+      { label: 'Contact', href: '/contact' },
+      { label: 'Security', href: '/security' },
+      { label: 'Legal', href: '/legal' },
+    ],
+  },
+  {
+    title: 'Legal',
+    links: LEGAL_DOCS.map((d) => ({ label: d.title, href: `/legal/${d.slug}` })),
   },
 ];
 
 export function SiteFooter() {
   return (
     <footer className="border-t border-slate-900/[0.08] bg-white text-slate-600">
-      <div className="mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.2fr_3fr] lg:px-8">
+      <div className="mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1fr_3.4fr] lg:px-8">
         <div>
           <Logo tone="light" />
           <p className="mt-5 max-w-xs text-sm leading-6">
@@ -58,7 +65,7 @@ export function SiteFooter() {
             Start for free
           </a>
         </div>
-        <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+        <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-5">
           {COLUMNS.map((col) => (
             <div key={col.title}>
               <h2 className="text-xs font-semibold tracking-[0.08em] text-navy-900 uppercase">
@@ -85,7 +92,23 @@ export function SiteFooter() {
       <div className="border-t border-slate-900/[0.08] bg-mist">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:justify-between sm:px-6 lg:px-8">
           <p>© {new Date().getFullYear()} Commerce Platform</p>
-          <p>Plan prices are in US dollars. Your store can sell in many currencies.</p>
+          <ul className="flex flex-wrap gap-x-5 gap-y-1">
+            {[
+              ['Terms', '/legal/terms'],
+              ['Privacy', '/legal/privacy'],
+              ['Cookies', '/legal/cookies'],
+            ].map(([label, href]) => (
+              <li key={href}>
+                <a
+                  href={href}
+                  className="rounded hover:text-navy-900 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-600"
+                >
+                  {label}
+                </a>
+              </li>
+            ))}
+            <li>Plan prices are in US dollars.</li>
+          </ul>
         </div>
       </div>
     </footer>

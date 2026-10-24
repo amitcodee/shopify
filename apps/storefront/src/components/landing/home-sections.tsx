@@ -78,6 +78,14 @@ export function HomeHero() {
         aria-hidden="true"
         className="absolute inset-0 -z-10 bg-[radial-gradient(60rem_34rem_at_100%_0%,rgb(223_232_255/0.9),transparent_70%),linear-gradient(to_bottom,white,rgb(242_245_249))]"
       />
+      {/* A soft ribbon sweeping behind the hero picture, and faint guide lines framing the page. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      >
+        <div className="absolute -top-1/3 right-[-12%] h-[160%] w-[44rem] rotate-[32deg] rounded-[50%] bg-[conic-gradient(from_200deg,rgb(48_94_255/0.0),rgb(48_94_255/0.35),rgb(110_224_160/0.30),rgb(157_181_255/0.35),rgb(48_94_255/0.0))] opacity-80 blur-3xl" />
+        <div className="mx-auto h-full max-w-7xl border-x border-dashed border-slate-900/[0.06]" />
+      </div>
       <div
         className={`${container} grid items-center gap-12 pt-12 pb-12 sm:pt-16 lg:grid-cols-[1fr_1.08fr] lg:gap-10 lg:pt-20 lg:pb-16`}
       >

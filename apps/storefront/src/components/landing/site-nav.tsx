@@ -131,6 +131,18 @@ function resourceCards(links: MarketingLinks): NavCard[] {
     },
     { title: 'Contact', body: 'Email our support team.', href: '/contact', icon: 'mail' },
     {
+      title: 'About us',
+      body: 'Why we built Commerce Platform and what we stand for.',
+      href: '/about',
+      icon: 'rocket',
+    },
+    {
+      title: 'Legal',
+      body: 'Terms, privacy, cookies and our other policies.',
+      href: '/legal',
+      icon: 'lock',
+    },
+    {
       title: 'API docs',
       body: 'The OpenAPI reference for the REST API.',
       href: links.apiDocsUrl,
@@ -276,7 +288,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
       className="absolute inset-x-0 top-full border-b border-slate-900/10 bg-white text-slate-900 shadow-[0_30px_60px_-30px_rgb(15_23_42/0.35)]"
     >
       <ul
-        className={`mx-auto grid max-w-7xl gap-5 px-8 py-8 ${cards.length > 3 ? 'grid-cols-4' : 'grid-cols-3'}`}
+        className={`mx-auto grid max-w-7xl gap-5 px-8 py-8 ${cards.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}
       >
         {cards.map((card) => (
           <li key={card.title}>

@@ -18,12 +18,48 @@ test('marketing site pages render on the root host and 404 on store hosts', asyn
     page.getByRole('link', { name: /Start with this template/ }).first(),
   ).toHaveAttribute('href', /signup\?template=beauty-classic/);
 
-  for (const path of ['/pricing', '/switch', '/security', '/guides', '/contact']) {
+  for (const path of ['/pricing', '/switch', '/security', '/guides', '/contact', '/about']) {
     const res = await page.goto(root(path));
     expect(res?.status(), path).toBe(200);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   }
   expect((await page.goto(root('/features/not-a-feature')))?.status()).toBe(404);
+});
+
+test('legal pages, the cookie notice and the platform sitemap', async ({ page }) => {
+  await page.goto(root('/legal'));
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Policies, in plain language' }),
+  ).toBeVisible();
+  for (const slug of [
+    'terms',
+    'privacy',
+    'cookies',
+    'acceptable-use',
+    'billing',
+    'data-processing',
+  ]) {
+    const res = await page.goto(root(`/legal/${slug}`));
+    expect(res?.status(), slug).toBe(200);
+    await expect(page.getByRole('navigation', { name: 'On this page' })).toBeVisible();
+  }
+  // The cookie policy lists the real cookie names.
+  await page.goto(root('/legal/cookies'));
+  await expect(page.getByRole('cell', { name: 'cart_token' })).toBeVisible();
+  expect((await page.goto(root('/legal/not-a-policy')))?.status()).toBe(404);
+
+  // Only essential cookies, so the notice just informs; dismissing it sticks across pages.
+  await page.goto(root('/'));
+  const notice = page.getByRole('region', { name: 'Cookie notice' });
+  await expect(notice).toBeVisible();
+  await notice.getByRole('button', { name: 'OK' }).click();
+  await expect(notice).toBeHidden();
+  await page.goto(root('/pricing'));
+  await expect(page.getByRole('region', { name: 'Cookie notice' })).toBeHidden();
+
+  const sitemap = await (await page.goto(root('/sitemap.xml')))?.text();
+  expect(sitemap).toContain('/legal/privacy');
+  expect(sitemap).toContain('/features/checkout');
 });
 
 test('shoppers join a store newsletter from the homepage', async ({ browser }) => {
