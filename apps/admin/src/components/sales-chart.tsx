@@ -9,7 +9,7 @@ interface Day {
 const WIDTH = 720;
 const HEIGHT = 200;
 const PAD = { top: 12, right: 8, bottom: 24, left: 8 };
-const BAR = '#4f46e5'; // validated: lightness band, chroma, contrast vs white surface
+const BAR = 'var(--color-brand-500)'; // #5964f6 — validated: lightness band, chroma, contrast vs white
 
 /**
  * Daily sales bars (single series: the card title names it, so no legend). Each day has a
@@ -65,7 +65,15 @@ export function SalesChart({ days, currency }: { days: Day[]; currency: string }
               : `M${x},${baseline} V${baseline - h + r} Q${x},${baseline - h} ${x + r},${baseline - h} H${x + barW - r} Q${x + barW},${baseline - h} ${x + barW},${baseline - h + r} V${baseline} Z`;
           return (
             <g key={d.date} className="group">
-              {path ? <path d={path} fill={BAR} className="group-hover:opacity-80" /> : null}
+              <rect
+                x={PAD.left + i * slot}
+                y={PAD.top}
+                width={slot}
+                height={plotH}
+                rx={3}
+                className="fill-transparent group-hover:fill-slate-100"
+              />
+              {path ? <path d={path} fill={BAR} className="pointer-events-none" /> : null}
               <rect
                 x={PAD.left + i * slot}
                 y={PAD.top}

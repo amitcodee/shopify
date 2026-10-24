@@ -7,20 +7,65 @@ import {
   type PaymentsOverview,
 } from '@repo/contracts';
 import Link from 'next/link';
+import { Icon, type IconName } from '@/components/icons';
 import { SalesChart } from '@/components/sales-chart';
-import { Alert, Card, PageHeader, Table, Td } from '@/components/ui';
+import { Alert, Card, PageHeader } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
 
-function Stat({ label, value, href }: { label: string; value: number | string; href?: string }) {
+type StatTone = 'neutral' | 'attention' | 'critical';
+
+const STAT_TONES: Record<StatTone, string> = {
+  neutral: 'bg-brand-50 text-brand-600 ring-brand-100',
+  attention: 'bg-amber-50 text-amber-600 ring-amber-100',
+  critical: 'bg-red-50 text-red-600 ring-red-100',
+};
+
+function Stat({
+  label,
+  value,
+  href,
+  icon,
+  hint,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: number | string;
+  href?: string;
+  icon: IconName;
+  hint?: string;
+  tone?: StatTone;
+}) {
   const body = (
-    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-slate-900">{value}</p>
+    <div className="flex h-full flex-col rounded-xl bg-white p-5 shadow-card ring-1 ring-slate-900/[0.06] transition group-hover:shadow-pop group-hover:ring-brand-500/25">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-slate-500">{label}</p>
+        <span
+          className={`grid size-8 shrink-0 place-items-center rounded-lg ring-1 ring-inset ${STAT_TONES[tone]}`}
+        >
+          <Icon name={icon} className="size-[18px]" />
+        </span>
+      </div>
+      <p className="tabular mt-3 text-[28px] leading-none font-semibold tracking-tight text-slate-950">
+        {value}
+      </p>
+      {hint || href ? (
+        <p className="mt-auto flex items-center justify-between gap-2 pt-3 text-xs text-slate-500">
+          <span>{hint}</span>
+          {href ? (
+            <span
+              aria-hidden
+              className="font-medium text-brand-600 opacity-0 transition group-hover:opacity-100"
+            >
+              View →
+            </span>
+          ) : null}
+        </p>
+      ) : null}
     </div>
   );
   return href ? (
-    <Link href={href} className="block hover:opacity-90">
+    <Link href={href} className="group block h-full rounded-xl">
       {body}
     </Link>
   ) : (
@@ -62,21 +107,25 @@ export default async function StoreOverview({
     can('settings:read') ? api<PaymentsOverview>(`/admin/stores/${storeId}/payments`) : null,
   ]);
   const money = (n: number) => formatMoney(n, store.currency);
+  const topRevenue = analytics?.topProducts[0]?.revenue || 1;
 
   return (
     <>
       <PageHeader
         title={`Welcome to ${store.name}`}
-        description="Your store at a glance."
+        description={`Here’s how your store is doing over the last ${days} days.`}
         actions={
           analytics ? (
-            <nav aria-label="Date range" className="flex gap-1">
+            <nav
+              aria-label="Date range"
+              className="flex rounded-lg bg-white p-1 shadow-sm ring-1 ring-slate-900/[0.07]"
+            >
               {RANGES.map((r) => (
                 <Link
                   key={r}
                   href={`${base}?days=${r}`}
                   aria-current={r === days ? 'page' : undefined}
-                  className={`rounded-md px-3 py-1.5 text-sm ${r === days ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                  className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${r === days ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
                 >
                   {r} days
                 </Link>
@@ -110,12 +159,30 @@ export default async function StoreOverview({
         </div>
       ) : null}
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
         {analytics ? (
           <>
-            <Stat label={`Net sales (${days}d)`} value={money(analytics.netSales)} />
-            <Stat label="Orders" value={analytics.orderCount} href={`${base}/orders`} />
-            <Stat label="Average order value" value={money(analytics.averageOrderValue)} />
+            <Stat
+              label={`Net sales (${days}d)`}
+              value={money(analytics.netSales)}
+              icon="discounts"
+              hint={
+                analytics.refunded > 0 ? `${money(analytics.refunded)} refunded` : 'Paid orders'
+              }
+            />
+            <Stat
+              label="Orders"
+              value={analytics.orderCount}
+              href={`${base}/orders`}
+              icon="orders"
+              hint={`Last ${days} days`}
+            />
+            <Stat
+              label="Average order value"
+              value={money(analytics.averageOrderValue)}
+              icon="plans"
+              hint="Per paid order"
+            />
           </>
         ) : null}
         {toFulfill ? (
@@ -123,6 +190,9 @@ export default async function StoreOverview({
             label="To fulfill"
             value={toFulfill.total}
             href={`${base}/orders?view=unfulfilled`}
+            icon="inventory"
+            tone={toFulfill.total > 0 ? 'attention' : 'neutral'}
+            hint={toFulfill.total > 0 ? 'Awaiting shipment' : 'All caught up'}
           />
         ) : null}
         {lowStock ? (
@@ -130,12 +200,15 @@ export default async function StoreOverview({
             label="Low-stock variants"
             value={lowStock.total}
             href={`${base}/inventory?lowStock=true`}
+            icon="products"
+            tone={lowStock.total > 0 ? 'critical' : 'neutral'}
+            hint={lowStock.total > 0 ? 'Reorder soon' : 'Stock is healthy'}
           />
         ) : null}
       </div>
 
       {analytics ? (
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
           <Card
             title="Net sales by day"
             description={
@@ -146,19 +219,41 @@ export default async function StoreOverview({
           >
             <SalesChart days={analytics.daily} currency={store.currency} />
           </Card>
-          <Card title="Top products">
+          <Card title="Top products" description="By revenue in this period.">
             {analytics.topProducts.length === 0 ? (
-              <p className="text-sm text-slate-500">No sales in this period yet.</p>
+              <div className="py-8 text-center">
+                <Icon name="products" className="mx-auto size-8 text-slate-300" />
+                <p className="mt-2 text-sm text-slate-500">No sales in this period yet.</p>
+              </div>
             ) : (
-              <Table head={['Product', 'Units', 'Revenue']}>
-                {analytics.topProducts.map((p) => (
-                  <tr key={p.title}>
-                    <Td>{p.title}</Td>
-                    <Td>{p.quantity}</Td>
-                    <Td>{money(p.revenue)}</Td>
-                  </tr>
+              <ol className="space-y-4">
+                {analytics.topProducts.map((p, index) => (
+                  <li key={p.title}>
+                    <div className="flex items-baseline justify-between gap-3 text-sm">
+                      <span className="flex min-w-0 items-baseline gap-2">
+                        <span className="tabular w-4 shrink-0 text-xs text-slate-400">
+                          {index + 1}
+                        </span>
+                        <span className="truncate font-medium text-slate-900">{p.title}</span>
+                      </span>
+                      <span className="tabular shrink-0 font-medium text-slate-900">
+                        {money(p.revenue)}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 ml-6 flex items-center gap-2">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-brand-500"
+                          style={{ width: `${Math.max(4, (p.revenue / topRevenue) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="tabular w-16 shrink-0 text-right text-xs text-slate-500">
+                        {p.quantity} {p.quantity === 1 ? 'unit' : 'units'}
+                      </span>
+                    </div>
+                  </li>
                 ))}
-              </Table>
+              </ol>
             )}
           </Card>
         </div>
