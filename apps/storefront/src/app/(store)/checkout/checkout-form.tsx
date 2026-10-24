@@ -4,6 +4,7 @@ import { type CheckoutPreview, formatMoney } from '@repo/contracts';
 import { useActionState, useState, useTransition } from 'react';
 import { FollowRedirect } from '@/components/follow-redirect';
 import { Notice, Submit, TextField } from '@/components/form';
+import { srcSetFor } from '@/lib/images';
 import { placeOrderAction, previewAction } from './actions';
 
 const COUNTRIES: [string, string][] = [
@@ -276,6 +277,8 @@ export function CheckoutForm({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={line.imageUrl}
+                    srcSet={srcSetFor(line.imageUrl, line.imageRenditions)}
+                    sizes="64px"
                     alt=""
                     className="h-full w-full rounded-[var(--radius-md)] object-cover"
                   />

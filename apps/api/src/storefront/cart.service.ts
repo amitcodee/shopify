@@ -3,6 +3,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import type { Cart as CartDto, CreatedCart } from '@repo/contracts';
 import type { Prisma, TenantTx } from '@repo/db';
 import { hashToken } from '../auth/session.service.js';
+import { imageRenditions } from '../catalog/product-mapper.js';
 import { isProductLive, liveProductWhere } from '../catalog/product-visibility.js';
 import { TenantDb } from '../database/database.module.js';
 import { MediaUrls } from '../storage/storage.module.js';
@@ -17,14 +18,18 @@ const cartInclude = {
     include: {
       variant: {
         include: {
-          image: { select: { storageKey: true } },
+          image: { select: { storageKey: true, renditionWidths: true } },
           product: {
             select: {
               title: true,
               handle: true,
               status: true,
               publishedAt: true,
-              images: { orderBy: { position: 'asc' }, take: 1, select: { storageKey: true } },
+              images: {
+                orderBy: { position: 'asc' },
+                take: 1,
+                select: { storageKey: true, renditionWidths: true },
+              },
             },
           },
         },
@@ -198,6 +203,7 @@ export class CartService {
         productHandle: variant.product.handle,
         variantTitle: variant.title,
         imageUrl: image ? this.media.url(image.storageKey) : null,
+        imageRenditions: image ? imageRenditions(image, this.media) : [],
         unitPrice: shopPrice(shop, variant.price),
         quantity: line.quantity,
         lineTotal: shopPrice(shop, variant.price) * line.quantity,

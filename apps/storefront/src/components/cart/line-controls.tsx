@@ -2,7 +2,7 @@
 
 import type { CartLine } from '@repo/contracts';
 import { useState, useSyncExternalStore, useTransition } from 'react';
-import { removeLineAction, updateLineAction } from '@/app/cart/actions';
+import { removeLineAction, updateLineAction } from '@/app/(store)/cart/actions';
 import { MinusIcon, PlusIcon } from '@/components/header/icons';
 
 const subscribeNothing = () => () => {};

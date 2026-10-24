@@ -9,7 +9,7 @@ import { PlatformSite } from '@/components/platform-landing';
 import { requestHost } from '@/lib/api';
 import { getCart, getShop, getThemePreview, isRootHost } from '@/lib/shop';
 import { themeAttributes, themeStyle } from '@/lib/theme';
-import { PasswordForm } from './password/password-form';
+import { PasswordForm } from './(store)/password/password-form';
 import './globals.css';
 
 // Per-request rendering is required for the CSP nonce (see src/proxy.ts) to reach Next's scripts.
@@ -38,29 +38,18 @@ export async function generateMetadata(): Promise<Metadata> {
 /** Paths that belong to one shopper and keep working while the store is locked. */
 const LOCK_EXEMPT = ['/orders/', '/invoices/', '/checkout/pay/'];
 
-function StoreNotFound() {
-  return (
-    <main className="mx-auto max-w-xl px-6 py-24 text-center">
-      <h1 className="text-2xl font-semibold text-zinc-900">Store not found</h1>
-      <p className="mt-2 text-zinc-600">This store does not exist or is currently unavailable.</p>
-    </main>
-  );
-}
-
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const host = await requestHost();
   const shop = await getShop();
 
+  // No store: pages still render so store-only routes answer 404 (app/(store)/layout.tsx), and
+  // not-found.tsx shows the marketing 404 or "Store not found".
   if (!shop) {
     const path = (await headers()).get('x-pathname') ?? '/';
     return (
       <html lang="en">
         <body className="min-h-screen bg-white text-zinc-900 antialiased">
-          {isRootHost(host) ? (
-            <PlatformSite path={path}>{children}</PlatformSite>
-          ) : (
-            <StoreNotFound />
-          )}
+          {isRootHost(host) ? <PlatformSite path={path}>{children}</PlatformSite> : children}
         </body>
       </html>
     );

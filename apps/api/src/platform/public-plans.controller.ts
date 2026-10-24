@@ -4,6 +4,8 @@ import { Public } from '../auth/auth.guard.js';
 import { PlansService } from './plans.service.js';
 import { PlatformSettingsService } from './platform-settings.service.js';
 
+const RESERVED_EMAIL_DOMAIN = /@(?:[^@]+\.)?example\.(?:com|net|org)$/i;
+
 /** The plan fields safe to show anyone (e.g. on the platform's marketing page). */
 export interface PublicPlan {
   code: string;
@@ -40,12 +42,15 @@ export class PublicPlansController {
     }));
   }
 
-  /** How to reach platform support (for the marketing site's contact page). */
+  /**
+   * How to reach platform support (for the marketing site's contact page). Null until an operator
+   * sets a real address: the default sits on a reserved example domain (RFC 2606) nobody reads.
+   */
   @Get('contact')
   @Header('Cache-Control', 'public, max-age=300')
-  @ApiOkResponse({ description: 'The platform support email address.' })
-  async contact(): Promise<{ supportEmail: string }> {
+  @ApiOkResponse({ description: 'The platform support email address, or null if not set.' })
+  async contact(): Promise<{ supportEmail: string | null }> {
     const { supportEmail } = await this.platformSettings.get();
-    return { supportEmail };
+    return { supportEmail: RESERVED_EMAIL_DOMAIN.test(supportEmail) ? null : supportEmail };
   }
 }

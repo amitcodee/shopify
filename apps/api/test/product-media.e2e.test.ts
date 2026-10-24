@@ -483,6 +483,7 @@ describe('Product media, fields, scheduling, list and bulk actions', () => {
         .send({ variantId: blue!.id, quantity: 1 })
         .expect(201);
       expect(line.body.lines[0].imageUrl).toBe(images[1]!.url);
+      expect(line.body.lines[0].imageRenditions).toEqual(images[1]!.renditions);
 
       // The database refuses another product's image even without the API's checks.
       await expect(

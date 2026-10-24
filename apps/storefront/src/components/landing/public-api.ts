@@ -34,8 +34,8 @@ export async function fetchPublicPlans(): Promise<PublicPlan[] | null> {
   return plans && plans.length > 0 ? plans : null;
 }
 
-/** The platform support address for the contact page; null when unavailable. */
+/** The platform support address for the contact page; null when unset or unavailable. */
 export async function fetchSupportEmail(): Promise<string | null> {
-  const contact = await getPublic('contact', z.object({ supportEmail: z.email() }));
+  const contact = await getPublic('contact', z.object({ supportEmail: z.email().nullable() }));
   return contact?.supportEmail ?? null;
 }

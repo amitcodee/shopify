@@ -1,4 +1,5 @@
 import type { Paginated, ProductCardPage, StorefrontBlogPost } from '@repo/contracts';
+import { notFound } from 'next/navigation';
 import { ProductGrid } from '@/components/product-grid';
 import { BlogPosts } from '@/components/sections/blog-posts';
 import { BrandStory } from '@/components/sections/brand-story';
@@ -35,7 +36,8 @@ function orNull<T>(error: unknown): T | null {
 
 export default async function HomePage() {
   const shop = await getShop();
-  if (!shop) return null;
+  // The root host renders the marketing home in the layout instead; other store-less hosts 404.
+  if (!shop) notFound();
   const { preset, settings } = shop.theme;
   const style = themeStyleId(shop.theme);
   const pageSize = settings.gridColumns === 5 ? 10 : settings.gridColumns === 3 ? 9 : 8;

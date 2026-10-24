@@ -464,8 +464,8 @@ export function ContactPage({ supportEmail }: { supportEmail: string | null }) {
               </>
             ) : (
               <p className="mt-2 leading-7 text-slate-300">
-                Our support address is unavailable right now. Please try again shortly — or sign in
-                to your admin, where the support contact is shown.
+                A support email address isn&rsquo;t listed here yet. The guides and FAQ below cover
+                most setup questions.
               </p>
             )}
           </div>

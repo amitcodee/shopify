@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { BagIcon, CloseIcon } from '@/components/header/icons';
 import { useDrawer } from '@/components/header/use-drawer';
+import { srcSetFor } from '@/lib/images';
 import { CART_ADDED_EVENT, CART_OPEN_EVENT } from './cart-events';
 import { CartLineControls } from './line-controls';
 import { lineProblem } from './line-status';
@@ -117,6 +118,8 @@ export function CartDrawer({ cart }: { cart: Cart | null }) {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={line.imageUrl}
+                      srcSet={srcSetFor(line.imageUrl, line.imageRenditions)}
+                      sizes="80px"
                       alt=""
                       loading={index < 4 ? undefined : 'lazy'}
                       decoding="async"

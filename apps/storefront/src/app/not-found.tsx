@@ -1,19 +1,19 @@
 import Link from 'next/link';
 import { SearchIcon } from '@/components/header/icons';
-import { getShop } from '@/lib/shop';
+import { PlatformNotFound } from '@/components/platform-landing';
+import { requestHost } from '@/lib/api';
+import { getShop, isRootHost } from '@/lib/shop';
 
 export default async function NotFound() {
   const shop = await getShop();
-  // Hosts without a store (the platform site) keep a plain message.
   if (!shop) {
+    // The root host gets the marketing 404; any other host without a store is an unknown store.
+    if (isRootHost(await requestHost())) return <PlatformNotFound />;
     return (
-      <div className="py-24 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Page not found</h1>
-        <p className="mt-2 text-zinc-600">The page you are looking for does not exist.</p>
-        <Link href="/" className="mt-6 inline-block text-sm font-medium underline">
-          Back to the store
-        </Link>
-      </div>
+      <main className="mx-auto max-w-xl px-6 py-24 text-center">
+        <h1 className="text-2xl font-semibold text-zinc-900">Store not found</h1>
+        <p className="mt-2 text-zinc-600">This store does not exist or is currently unavailable.</p>
+      </main>
     );
   }
 

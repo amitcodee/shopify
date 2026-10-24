@@ -14,31 +14,6 @@ import {
 } from './landing/home-sections';
 import { MarketingShell } from './landing/marketing-shell';
 
-/**
- * Marketing routes served on the root host besides `/`; `*` matches one path segment. Each route
- * also exists on store hosts, where its page calls notFound().
- */
-export const PLATFORM_PAGES = [
-  '/pricing',
-  '/templates',
-  '/templates/*',
-  '/features',
-  '/features/*',
-  '/switch',
-  '/security',
-  '/guides',
-  '/guides/*',
-  '/contact',
-];
-
-function isPlatformPage(path: string): boolean {
-  const parts = path.split('/');
-  return PLATFORM_PAGES.some((pattern) => {
-    const want = pattern.split('/');
-    return want.length === parts.length && want.every((p, i) => p === '*' || p === parts[i]);
-  });
-}
-
 /** The platform's own home page, served on the root host (no store subdomain). */
 export function PlatformLanding() {
   return (
@@ -75,12 +50,11 @@ export function PlatformNotFound() {
   );
 }
 
-/** Root-host routing: the home page, the marketing pages (rendered by their routes), or a 404. */
+/**
+ * Root-host routing: the home page, or the route's own page. Marketing routes render; store-only
+ * routes (app/(store)) and unknown paths reach not-found.tsx, which shows PlatformNotFound.
+ */
 export function PlatformSite({ path, children }: { path: string; children: ReactNode }) {
   const page = path.replace(/\/+$/, '') || '/';
-  return (
-    <MarketingShell>
-      {page === '/' ? <PlatformLanding /> : isPlatformPage(page) ? children : <PlatformNotFound />}
-    </MarketingShell>
-  );
+  return <MarketingShell>{page === '/' ? <PlatformLanding /> : children}</MarketingShell>;
 }

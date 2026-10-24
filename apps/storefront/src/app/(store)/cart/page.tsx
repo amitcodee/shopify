@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { CartLineControls } from '@/components/cart/line-controls';
 import { lineProblem } from '@/components/cart/line-status';
 import { ArrowRightIcon, BagIcon } from '@/components/header/icons';
+import { srcSetFor } from '@/lib/images';
 import { getCart, getShop } from '@/lib/shop';
 
 export const metadata = { title: 'Cart' };
@@ -84,6 +85,8 @@ export default async function CartPage({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={line.imageUrl}
+                  srcSet={srcSetFor(line.imageUrl, line.imageRenditions)}
+                  sizes="(min-width: 640px) 112px, 96px"
                   alt=""
                   loading={index < 4 ? undefined : 'lazy'}
                   decoding="async"

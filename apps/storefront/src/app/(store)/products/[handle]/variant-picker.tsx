@@ -4,7 +4,7 @@ import { formatMoney, type StorefrontProduct } from '@repo/contracts';
 import Link from 'next/link';
 import { type ReactNode, useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { addToCartAction } from '@/app/cart/actions';
+import { addToCartAction } from '@/app/(store)/cart/actions';
 import { Accordion } from '@/components/product/accordion';
 import { ProductIcon } from '@/components/product/icons';
 import { announceVariantImage, initialVariant } from '@/components/product/variant-image';

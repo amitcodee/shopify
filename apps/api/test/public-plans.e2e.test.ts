@@ -57,9 +57,17 @@ describe('Public plans', () => {
     await ctx.platform.plan.update({ where: { code: 'pro' }, data: { sortOrder: 3 } });
   });
 
-  it('shares only the support email for the contact page', async () => {
-    const res = await ctx.http().get('/api/v1/public/contact').expect(200);
-    expect(Object.keys(res.body)).toEqual(['supportEmail']);
-    expect(res.body.supportEmail).toContain('@');
+  it('shares only the support email for the contact page, hiding the placeholder', async () => {
+    const before = await ctx.http().get('/api/v1/public/contact').expect(200);
+    expect(before.body).toEqual({ supportEmail: null });
+
+    await ctx.platform.platformSetting.upsert({
+      where: { key: 'platform' },
+      update: { value: { supportEmail: 'help@shops.test' } },
+      create: { key: 'platform', value: { supportEmail: 'help@shops.test' } },
+    });
+    const after = await ctx.http().get('/api/v1/public/contact').expect(200);
+    expect(after.body).toEqual({ supportEmail: 'help@shops.test' });
+    await ctx.platform.platformSetting.deleteMany({ where: { key: 'platform' } });
   });
 });

@@ -156,6 +156,8 @@ export const cartLineSchema = z.object({
   productHandle: z.string(),
   variantTitle: z.string(),
   imageUrl: z.string().nullable(),
+  /** Smaller WebP copies of the line image for `srcset` (narrowest first). */
+  imageRenditions: z.array(z.object({ width: z.number().int(), url: z.string() })).optional(),
   unitPrice: z.number().int(),
   quantity: z.number().int(),
   lineTotal: z.number().int(),

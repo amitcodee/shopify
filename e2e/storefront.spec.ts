@@ -83,13 +83,22 @@ test('shopper browses a store by subdomain, searches, and manages the cart', asy
   expect(robots).toContain(`Sitemap: ${storefrontUrl(subdomain, '/sitemap.xml')}`);
 
   // Unknown subdomains show a not-found page; the bare domain shows the platform landing.
-  await shopper.goto(storefrontUrl('no-such-store'));
+  const unknown = await shopper.goto(storefrontUrl('no-such-store'));
+  expect(unknown?.status()).toBe(404);
   await expect(shopper.getByRole('heading', { name: 'Store not found' })).toBeVisible();
-  await shopper.goto('http://localhost:3210/');
+  expect((await shopper.goto(storefrontUrl('no-such-store', '/cart')))?.status()).toBe(404);
+  const landing = await shopper.goto('http://localhost:3210/');
+  expect(landing?.status()).toBe(200);
   await expect(
     shopper.getByRole('heading', {
       level: 1,
       name: 'Start selling your products online',
     }),
   ).toBeVisible();
+  // Store-only routes and unknown paths are real 404s on the platform site.
+  for (const path of ['/products/anything', '/cart', '/no-such-page']) {
+    expect((await shopper.goto(`http://localhost:3210${path}`))?.status()).toBe(404);
+    await expect(shopper.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+  }
+  expect((await shopper.goto('http://localhost:3210/pricing'))?.status()).toBe(200);
 });
