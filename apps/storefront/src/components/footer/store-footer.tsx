@@ -46,7 +46,10 @@ export function StoreFooter({ shop }: { shop: Shop }) {
 
   if (style === 'simple') {
     return (
-      <footer className="store-footer mt-8 border-t border-zinc-200 py-12 text-sm text-zinc-500">
+      <footer
+        data-section="footer"
+        className="store-footer mt-8 border-t border-zinc-200 py-12 text-sm text-zinc-500"
+      >
         <div className="store-container flex flex-col items-center gap-5 text-center">
           <SocialLinks settings={s} className="justify-center" />
           {hasLinks ? (
@@ -73,6 +76,7 @@ export function StoreFooter({ shop }: { shop: Shop }) {
   const shopLinks = shop.collections.slice(0, 5);
   return (
     <footer
+      data-section="footer"
       className={`store-footer mt-8 pt-16 pb-8 text-sm text-zinc-600 sm:pt-20 ${
         dark ? 'theme-band' : 'border-t border-zinc-200 bg-surface'
       }`}

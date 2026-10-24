@@ -61,6 +61,10 @@ export default async function ThemePage({
               : 'Your own combination of colors, fonts and layout.'}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
+            <Link href={`${base}/editor`} className={buttonClass('primary', 'sm')}>
+              <Icon name="palette" className="-ml-0.5 h-4 w-4" />
+              {canEdit ? 'Customize in editor' : 'Open editor'}
+            </Link>
             <a
               href={storefrontUrl}
               target="_blank"

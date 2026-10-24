@@ -33,6 +33,14 @@ interface CardRow {
   image_widths: number[] | null;
   second_image_key: string | null;
   second_image_widths: number[] | null;
+  published_at: Date | null;
+}
+
+/** Whether the store's New arrival badges app marks a product published at `publishedAt`. */
+function isNewArrival(shop: ShopContext, publishedAt: Date | null): boolean {
+  const badges = shop.apps.productBadges;
+  if (!badges.enabled || !publishedAt) return false;
+  return Date.now() - publishedAt.getTime() <= badges.newDays * 24 * 60 * 60 * 1000;
 }
 
 /** "fabric_weight" -> "Fabric weight" (storefront label of a custom field). */
@@ -90,6 +98,7 @@ export class StorefrontCatalogService {
           contactEmail: shop.contactEmail,
           collections: [],
           theme: shop.theme,
+          apps: shop.apps,
           menus: { main: [], footer: [] },
           policies: [],
           locked: true,
@@ -112,6 +121,7 @@ export class StorefrontCatalogService {
         contactEmail: shop.contactEmail,
         collections,
         theme: shop.theme,
+        apps: shop.apps,
         ...navigation,
         locked: false,
         passwordMessage: '',
@@ -223,7 +233,7 @@ export class StorefrontCatalogService {
       const order = this.orderBy(query.sort, tsQuery, document);
 
       const rows = await tx.$queryRaw<CardRow[]>`
-        SELECT p.id, p.title, p.handle,
+        SELECT p.id, p.title, p.handle, p."publishedAt" AS published_at,
                MIN(v.price)::int AS min_price,
                MAX(v.price)::int AS max_price,
                MAX(v."compareAtPrice")::int AS compare_at,
@@ -368,6 +378,8 @@ export class StorefrontCatalogService {
       maxPrice: shopPrice(shop, r.max_price),
       compareAtPrice: r.compare_at === null ? null : shopPrice(shop, r.compare_at),
       available: r.available,
+      publishedAt: r.published_at ? r.published_at.toISOString() : null,
+      isNew: isNewArrival(shop, r.published_at),
       imageUrl: r.image_key ? this.media.url(r.image_key) : null,
       imageAlt: r.image_alt || r.title,
       secondImageUrl: r.second_image_key ? this.media.url(r.second_image_key) : null,

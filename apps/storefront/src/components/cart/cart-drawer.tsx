@@ -1,12 +1,13 @@
 'use client';
 
-import { type Cart, formatMoney } from '@repo/contracts';
+import { type Cart, formatMoney, type StoreApps } from '@repo/contracts';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { BagIcon, CloseIcon } from '@/components/header/icons';
 import { useDrawer } from '@/components/header/use-drawer';
 import { srcSetFor } from '@/lib/images';
+import { FreeShippingBar } from '@/components/apps/free-shipping-bar';
 import { CART_ADDED_EVENT, CART_OPEN_EVENT } from './cart-events';
 import { CartLineControls } from './line-controls';
 import { lineProblem } from './line-status';
@@ -16,7 +17,15 @@ import { lineProblem } from './line-status';
  * header cart link is clicked (`cart:open`); the cart itself comes from the layout, which the
  * cart server actions revalidate. Closed, nothing is rendered.
  */
-export function CartDrawer({ cart }: { cart: Cart | null }) {
+export function CartDrawer({
+  cart,
+  freeShipping,
+  baseCurrency,
+}: {
+  cart: Cart | null;
+  freeShipping: StoreApps['freeShippingBar'];
+  baseCurrency: string;
+}) {
   const panel = useRef<HTMLDivElement>(null);
   const { state, open, close } = useDrawer(panel);
   const router = useRouter();
@@ -178,6 +187,14 @@ export function CartDrawer({ cart }: { cart: Cart | null }) {
               </ul>
             </div>
             <div className="border-t border-zinc-200 bg-surface/40 px-5 pt-5 pb-6 sm:px-6">
+              <div className="mb-4 empty:hidden">
+                <FreeShippingBar
+                  app={freeShipping}
+                  subtotal={subtotal}
+                  currency={currency}
+                  baseCurrency={baseCurrency}
+                />
+              </div>
               <dl className="flex items-baseline justify-between text-base font-semibold">
                 <dt>Subtotal</dt>
                 <dd className="tabular-nums">{formatMoney(subtotal, currency)}</dd>

@@ -250,18 +250,23 @@ function CardImage({
 /** "Sold out" or "Sale −X%" in the image's top corner. */
 function CardBadges({ product: p }: { product: ProductCard }) {
   const off = percentOff(p.minPrice, p.compareAtPrice);
-  if (p.available && off === 0) return null;
+  if (p.available && off === 0 && !p.isNew) return null;
   return (
     <span className="pointer-events-none absolute left-2 top-2 flex flex-col items-start gap-1 sm:left-3 sm:top-3">
+      {p.isNew && p.available ? (
+        <span className="rounded-sm bg-brand px-2 py-1.5 text-[10px] font-semibold uppercase leading-none tracking-[0.12em] text-brand-contrast sm:text-[11px]">
+          New
+        </span>
+      ) : null}
       {!p.available ? (
         <span className="rounded-sm bg-page/95 px-2 py-1.5 text-[10px] font-semibold uppercase leading-none tracking-[0.12em] text-zinc-900 shadow-sm sm:text-[11px]">
           Sold out
         </span>
-      ) : (
+      ) : off > 0 ? (
         <span className="rounded-sm bg-accent px-2 py-1.5 text-[10px] font-semibold uppercase leading-none tracking-[0.12em] text-accent-contrast sm:text-[11px]">
           Sale −{off}%
         </span>
-      )}
+      ) : null}
     </span>
   );
 }

@@ -1,7 +1,13 @@
 import {
   type Analytics,
   type Domain,
+  findThemeTemplate,
   formatMoney,
+  parseStoreApps,
+  parseTheme,
+  STORE_APP_CATALOG,
+  type StoreApps,
+  type ThemeDraft,
   type InventoryItem,
   type OrderListItem,
   type Paginated,
@@ -16,6 +22,8 @@ import { SalesChart } from '@/components/sales-chart';
 import { Alert, buttonClass, Card, PageHeader, ViewTabs } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
+import { storefrontUrlFor } from '@/lib/storefront';
+import { TemplateThumbnail } from './settings/theme/template-thumbnail';
 
 /** Change vs the previous period of the same length; null when there is nothing to compare. */
 function delta(current: number, previous: number): number | null {
@@ -52,23 +60,48 @@ function Delta({ value, days }: { value: number | null; days: number }) {
   );
 }
 
+/** A tiny trend line for a stat card (decorative; the numbers carry the meaning). */
+function Sparkline({ values }: { values: number[] }) {
+  if (values.length < 2 || values.every((v) => v === 0)) return null;
+  const max = Math.max(...values);
+  const points = values
+    .map((v, i) => `${(i / (values.length - 1)) * 100},${28 - (v / (max || 1)) * 26}`)
+    .join(' ');
+  return (
+    <svg viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden className="h-8 w-24 shrink-0">
+      <polyline points={`0,30 ${points} 100,30`} className="fill-indigo-500/10 stroke-none" />
+      <polyline
+        points={points}
+        fill="none"
+        className="stroke-indigo-500"
+        strokeWidth={1.75}
+        vectorEffect="non-scaling-stroke"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function Stat({
   label,
   value,
   footer,
   href,
+  trend,
 }: {
   label: string;
   value: number | string;
   footer?: ReactNode;
   href?: string;
+  trend?: number[];
 }) {
   const body = (
     <div className="h-full rounded-xl border border-slate-200/90 bg-white p-4 shadow-card transition-shadow sm:p-5">
       <p className="text-[13px] font-medium text-slate-500">{label}</p>
-      <p className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">
-        {value}
-      </p>
+      <div className="mt-1.5 flex items-end justify-between gap-3">
+        <p className="text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">{value}</p>
+        {trend ? <Sparkline values={trend} /> : null}
+      </div>
       {footer ? <p className="mt-2 text-xs">{footer}</p> : null}
     </div>
   );
@@ -140,7 +173,7 @@ export default async function StoreOverview({
   const base = `/s/${storeId}`;
   const can = (p: (typeof store.permissions)[number]) => store.permissions.includes(p);
 
-  const [analytics, doubled, toFulfill, lowStock, payments, products, theme, domains] =
+  const [analytics, doubled, toFulfill, lowStock, payments, products, theme, domains, draft, apps] =
     await Promise.all([
       can('analytics:read')
         ? api<Analytics>(`/admin/stores/${storeId}/analytics`, { query: { days } })
@@ -167,7 +200,33 @@ export default async function StoreOverview({
         : null,
       can('settings:read') ? api<Theme>(`/admin/stores/${storeId}/theme`) : null,
       can('settings:read') ? api<Domain[]>(`/admin/stores/${storeId}/domains`) : null,
+      can('settings:read')
+        ? api<{ draft: ThemeDraft | null }>(`/admin/stores/${storeId}/theme/draft`)
+        : null,
+      can('settings:read') ? api<StoreApps>(`/admin/stores/${storeId}/apps`) : null,
     ]);
+  const live = theme ? parseTheme(theme.preset, theme.settings) : null;
+  const template = live ? findThemeTemplate(live.settings.template) : undefined;
+  const appsOn = apps ? STORE_APP_CATALOG.filter((a) => parseStoreApps(apps)[a.id].enabled) : [];
+  const hour = Number(
+    new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: store.timezone })
+      .formatToParts(new Date())
+      .find((p) => p.type === 'hour')?.value ?? 12,
+  );
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const quickActions: { label: string; icon: IconName; href: string }[] = [];
+  if (can('products:write'))
+    quickActions.push({ label: 'Add product', icon: 'plus', href: `${base}/products/new` });
+  if (can('discounts:write'))
+    quickActions.push({ label: 'Create discount', icon: 'discounts', href: `${base}/discounts` });
+  if (can('settings:read')) {
+    quickActions.push({
+      label: 'Customize theme',
+      icon: 'palette',
+      href: `${base}/settings/theme/editor`,
+    });
+    quickActions.push({ label: 'Browse apps', icon: 'apps', href: `${base}/apps` });
+  }
   const money = (n: number) => formatMoney(n, store.currency);
 
   const previous =
@@ -255,7 +314,7 @@ export default async function StoreOverview({
   return (
     <>
       <PageHeader
-        title={`Welcome to ${store.name}`}
+        title={`${greeting}, welcome to ${store.name}`}
         description="Here’s how your store is doing."
         actions={
           analytics ? (
@@ -272,6 +331,16 @@ export default async function StoreOverview({
       />
 
       <div className="space-y-6">
+        {quickActions.length > 0 ? (
+          <nav aria-label="Quick actions" className="-mt-2 flex flex-wrap gap-2">
+            {quickActions.map((a) => (
+              <Link key={a.label} href={a.href} className={buttonClass('secondary', 'sm')}>
+                <Icon name={a.icon} className="-ml-0.5 h-4 w-4 text-slate-500" />
+                {a.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
         {payments && payments.openDisputes > 0 ? (
           <Alert tone="error">
             {payments.openDisputes === 1
@@ -355,6 +424,7 @@ export default async function StoreOverview({
             <Stat
               label={`Net sales (${days}d)`}
               value={money(analytics.netSales)}
+              trend={analytics.daily.map((d) => d.sales)}
               footer={
                 previous ? (
                   <Delta value={delta(analytics.netSales, previous.net)} days={days} />
@@ -364,6 +434,7 @@ export default async function StoreOverview({
             <Stat
               label="Orders"
               value={analytics.orderCount}
+              trend={analytics.daily.map((d) => d.orders)}
               href={`${base}/orders`}
               footer={
                 previous ? (
@@ -411,6 +482,76 @@ export default async function StoreOverview({
           ) : null}
 
           <div className="space-y-6">
+            {live ? (
+              <section
+                aria-labelledby="store-heading"
+                className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-card"
+              >
+                <div className="border-b border-slate-100 bg-slate-50 p-3">
+                  <div className="overflow-hidden rounded-lg border border-slate-200 shadow-xs">
+                    <TemplateThumbnail
+                      photos={template?.industry}
+                      preset={live.preset}
+                      settings={live.settings}
+                      storeName={store.name}
+                      heroTitle={live.settings.heroTitle || store.name}
+                      announcement={live.settings.announcement}
+                      height={150}
+                    />
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 id="store-heading" className="text-[15px] font-semibold text-slate-900">
+                      Online store
+                    </h2>
+                    {draft?.draft ? (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                        Unpublished changes
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                        Live
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-[13px] text-slate-500">
+                    {template ? `${template.name} · ${template.styleLabel}` : 'Custom theme'}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Link
+                      href={`${base}/settings/theme/editor`}
+                      className={buttonClass('primary', 'sm')}
+                    >
+                      Customize
+                    </Link>
+                    <a
+                      href={storefrontUrlFor(store.subdomain)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={buttonClass('secondary', 'sm')}
+                    >
+                      View store
+                      <span className="sr-only"> (opens in a new tab)</span>
+                    </a>
+                  </div>
+                  {apps ? (
+                    <Link
+                      href={`${base}/apps`}
+                      className="mt-4 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5 text-sm hover:bg-slate-100"
+                    >
+                      <span className="flex items-center gap-2 text-slate-700">
+                        <Icon name="apps" className="h-4 w-4 text-slate-500" />
+                        {appsOn.length === 0
+                          ? 'No apps turned on yet'
+                          : `${appsOn.length} ${appsOn.length === 1 ? 'app' : 'apps'} on`}
+                      </span>
+                      <Icon name="chevronRight" className="h-4 w-4 text-slate-400" />
+                    </Link>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
             {toFulfill || lowStock || payments ? (
               <Card title="To do" description="Things that need your attention.">
                 {todos.length === 0 ? (

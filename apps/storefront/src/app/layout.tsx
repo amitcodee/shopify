@@ -7,10 +7,15 @@ import { StoreFooter } from '@/components/footer/store-footer';
 import { StoreHeader } from '@/components/header/store-header';
 import { PlatformSite } from '@/components/platform-landing';
 import { requestHost } from '@/lib/api';
-import { getCart, getShop, getThemePreview, isRootHost } from '@/lib/shop';
+import { StoreApps } from '@/components/apps/store-apps';
+import { EditorBridge } from '@/components/editor-bridge';
+import { getCart, getShop, getThemePreview, isEditorPreview, isRootHost } from '@/lib/shop';
 import { themeAttributes, themeStyle } from '@/lib/theme';
 import { PasswordForm } from './(store)/password/password-form';
 import './globals.css';
+
+/** The admin origin, allowed to talk to the theme editor's preview frame. */
+const adminOrigin = new URL(process.env.ADMIN_PUBLIC_URL ?? 'http://localhost:3100').origin;
 
 // Per-request rendering is required for the CSP nonce (see src/proxy.ts) to reach Next's scripts.
 export const dynamic = 'force-dynamic';
@@ -77,7 +82,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     );
   }
 
-  const [cart, preview] = await Promise.all([shop.locked ? null : getCart(), getThemePreview()]);
+  const [cart, preview, editing] = await Promise.all([
+    shop.locked ? null : getCart(),
+    getThemePreview(),
+    isEditorPreview(),
+  ]);
   return (
     <html lang="en">
       <body
@@ -103,7 +112,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           Skip to content
         </a>
         {shop.theme.settings.announcement ? (
-          <p className="store-announcement bg-accent px-4 py-2.5 text-center text-xs font-medium tracking-[0.06em] text-accent-contrast sm:text-[0.8125rem]">
+          <p
+            data-section="announcement"
+            className="store-announcement bg-accent px-4 py-2.5 text-center text-xs font-medium tracking-[0.06em] text-accent-contrast sm:text-[0.8125rem]"
+          >
             {shop.theme.settings.announcement}
           </p>
         ) : null}
@@ -112,7 +124,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           {children}
         </main>
         <StoreFooter shop={shop} />
-        {shop.theme.settings.cartStyle === 'drawer' ? <CartDrawer cart={cart} /> : null}
+        {shop.theme.settings.cartStyle === 'drawer' ? (
+          <CartDrawer
+            cart={cart}
+            freeShipping={shop.apps.freeShippingBar}
+            baseCurrency={shop.baseCurrency}
+          />
+        ) : null}
+        <StoreApps apps={shop.apps} />
+        {editing ? <EditorBridge adminOrigin={adminOrigin} /> : null}
       </body>
     </html>
   );

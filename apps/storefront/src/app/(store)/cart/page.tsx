@@ -4,6 +4,7 @@ import { CartLineControls } from '@/components/cart/line-controls';
 import { lineProblem } from '@/components/cart/line-status';
 import { ArrowRightIcon, BagIcon } from '@/components/header/icons';
 import { srcSetFor } from '@/lib/images';
+import { FreeShippingBar } from '@/components/apps/free-shipping-bar';
 import { getCart, getShop } from '@/lib/shop';
 
 export const metadata = { title: 'Cart' };
@@ -146,6 +147,16 @@ export default async function CartPage({
           <h2 id="summary-heading" className="text-lg font-semibold">
             Order summary
           </h2>
+          {shop ? (
+            <div className="mt-5">
+              <FreeShippingBar
+                app={shop.apps.freeShippingBar}
+                subtotal={cart.subtotal}
+                currency={cart.currency}
+                baseCurrency={shop.baseCurrency}
+              />
+            </div>
+          ) : null}
           <dl className="mt-5 space-y-3 text-sm">
             <div className="flex justify-between">
               <dt className="text-zinc-600">Subtotal</dt>

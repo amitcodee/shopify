@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { storeAppsSchema } from './apps.js';
 import { themeInputSchema } from './settings.js';
 import { policyKindSchema, resolvedLinkSchema } from './online-store.js';
 
@@ -27,6 +28,8 @@ export const shopSchema = z.object({
   contactEmail: z.string(),
   collections: z.array(z.object({ title: z.string(), handle: z.string() })),
   theme: themeInputSchema,
+  /** Installed storefront apps (see apps.ts). */
+  apps: storeAppsSchema,
   /** Header and footer navigation, already resolved to hrefs. */
   menus: z.object({ main: z.array(resolvedLinkSchema), footer: z.array(resolvedLinkSchema) }),
   /** Policies the store has published (linked from the footer and checkout). */
@@ -49,6 +52,10 @@ export const productCardSchema = z.object({
   maxPrice: z.number().int(),
   compareAtPrice: z.number().int().nullable(),
   available: z.boolean(),
+  /** When the product went live (for “New” badges). */
+  publishedAt: z.iso.datetime().nullable().optional(),
+  /** Shown with a “New” badge (the store's New arrival badges app). */
+  isNew: z.boolean().optional(),
   imageUrl: z.string().nullable(),
   imageAlt: z.string(),
   /** Second product image, shown on hover. */

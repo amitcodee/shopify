@@ -68,6 +68,13 @@ export default async function StoreLayout({
       group: 'Sales channels',
     },
     {
+      label: 'Apps',
+      icon: 'apps',
+      href: `${base}/apps`,
+      permission: 'settings:read',
+      group: 'Sales channels',
+    },
+    {
       label: 'Settings',
       icon: 'settings',
       href: `${base}/settings`,

@@ -45,6 +45,34 @@ export const THEME_CART_STYLES = ['drawer', 'page'] as const;
 
 const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use a hex color like #1f2937');
 
+/** Homepage sections the merchant can reorder and hide (the hero always comes first). */
+export const HOME_SECTIONS = [
+  'trustBar',
+  'collections',
+  'featuredProducts',
+  'carousels',
+  'brandStory',
+  'blogPosts',
+  'newsletter',
+] as const;
+export type HomeSection = (typeof HOME_SECTIONS)[number];
+
+/**
+ * Section order: each known section exactly once. Unknown ids are dropped and missing ones are
+ * appended in default order, so an order saved before a section existed still works.
+ */
+const sectionOrder = z
+  .array(z.string())
+  .max(20)
+  .transform((ids): HomeSection[] => {
+    const known = ids.filter(
+      (id, i): id is HomeSection =>
+        (HOME_SECTIONS as readonly string[]).includes(id) && ids.indexOf(id) === i,
+    );
+    return [...known, ...HOME_SECTIONS.filter((id) => !known.includes(id))];
+  })
+  .default([...HOME_SECTIONS]);
+
 /**
  * Merchant theme customization. Deliberately data-only (validated colors, enums, short plain
  * text): merchants cannot inject HTML, CSS or script into storefronts. Every field has a
@@ -81,7 +109,10 @@ export const themeSettingsSchema = z.strictObject({
   stickyHeader: z.boolean().default(true),
   /** Adding to cart opens a slide-out cart (drawer) or shows a link to the cart page. */
   cartStyle: z.enum(THEME_CART_STYLES).default('drawer'),
-  // Homepage sections, in page order after the hero.
+  // Homepage sections after the hero, in `sectionOrder`.
+  sectionOrder,
+  /** The latest-products grid. */
+  showFeatured: z.boolean().default(true),
   showTrustBar: z.boolean().default(true),
   trustItem1: z.string().trim().max(40).default('Secure checkout'),
   trustItem2: z.string().trim().max(40).default('Order tracking'),

@@ -3,8 +3,11 @@ import {
   applyThemeTemplate,
   type Cart,
   findThemeTemplate,
+  parseStoreApps,
   parseTheme,
   type Shop,
+  THEME_DRAFT_HEADER,
+  THEME_DRAFT_PARAM,
   THEME_PREVIEW_PARAM,
   type ThemeTemplate,
 } from '@repo/contracts';
@@ -30,6 +33,13 @@ export const getThemePreview = cache(async (): Promise<ThemeTemplate | null> => 
   return (id && findThemeTemplate(id)) || null;
 });
 
+/** True inside the theme editor's preview frame (a draft preview token is present). */
+export const isEditorPreview = cache(async (): Promise<boolean> => {
+  return Boolean(
+    (await headers()).get(THEME_DRAFT_HEADER) ?? (await cookies()).get(THEME_DRAFT_PARAM)?.value,
+  );
+});
+
 /**
  * The store for the current host, or null when the host is not a (live) store. While a
  * template is being previewed the theme is swapped for this visitor only; nothing is saved.
@@ -43,7 +53,11 @@ export const getShop = cache(async (): Promise<Shop | null> => {
     throw error;
   }
   // Fills defaults for any theme field the API did not send (e.g. one older than this app).
-  shop = { ...shop, theme: parseTheme(shop.theme.preset, shop.theme.settings) };
+  shop = {
+    ...shop,
+    theme: parseTheme(shop.theme.preset, shop.theme.settings),
+    apps: parseStoreApps(shop.apps),
+  };
   const preview = await getThemePreview();
   if (!preview) return shop;
   const theme = applyThemeTemplate(preview, shop.theme.settings);

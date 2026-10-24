@@ -17,6 +17,7 @@ import { Specifications } from '@/components/product/specs';
 import { initialVariant } from '@/components/product/variant-image';
 import { ProductGrid, RATIOS } from '@/components/product-grid';
 import { isNotFound, sf } from '@/lib/api';
+import { ShareButtons } from '@/components/apps/share-buttons';
 import { getShop, storeOrigin } from '@/lib/shop';
 import { VariantPicker } from './variant-picker';
 
@@ -221,6 +222,9 @@ export default async function ProductPage({
               <Accordion title="Shipping & returns">
                 <ShippingAndReturns shop={shop} />
               </Accordion>
+              {shop.apps.shareButtons.enabled ? (
+                <ShareButtons url={`${origin}/products/${product.handle}`} title={product.title} />
+              ) : null}
             </VariantPicker>
           </div>
         </div>

@@ -1,4 +1,5 @@
-import type { Paginated, ProductCardPage, StorefrontBlogPost } from '@repo/contracts';
+import type { HomeSection, Paginated, ProductCardPage, StorefrontBlogPost } from '@repo/contracts';
+import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';
 import { ProductGrid } from '@/components/product-grid';
 import { BlogPosts } from '@/components/sections/blog-posts';
@@ -123,36 +124,18 @@ export default async function HomePage() {
     heroExtras = ['p1', 'p2', 'p3'].map((name) => ({ src: `${base}/${name}.webp`, alt: '' }));
   }
 
-  return (
-    <>
-      <Hero
-        style={style}
-        shopName={shop.name}
-        title={settings.heroTitle || shop.name}
-        subtitle={settings.heroSubtitle || 'Discover our latest products.'}
-        cta={settings.heroCta || 'Shop now'}
-        image={heroImage}
-        extras={heroExtras}
-        tiles={features
-          .filter((f) => f.total !== 0)
-          .map((f) => ({
-            label: f.title,
-            href: `/collections/${f.handle}`,
-            image: f.imageUrl,
-            imageSrcSet: f.imageSrcSet,
-          }))}
-      />
-
-      {settings.showTrustBar ? <TrustBar theme={settings} /> : null}
-
-      {settings.showCollections && features.length > 0 ? (
+  // Sections after the hero, in the merchant's order; each is tagged for the theme editor.
+  const blocks: Record<HomeSection, ReactNode> = {
+    trustBar: settings.showTrustBar ? <TrustBar theme={settings} /> : null,
+    collections:
+      settings.showCollections && features.length > 0 ? (
         <FeaturedCollections
           collections={features}
           dense={preset === 'catalog'}
           captionBelow={style === 'editorial' || style === 'classic'}
         />
-      ) : null}
-
+      ) : null,
+    featuredProducts: settings.showFeatured ? (
       <section aria-labelledby="latest-heading" className="store-section">
         <SectionHeader
           id="latest-heading"
@@ -162,41 +145,71 @@ export default async function HomePage() {
         />
         <ProductGrid products={products} currency={shop.currency} theme={settings} />
       </section>
+    ) : null,
+    carousels:
+      carousels > 0
+        ? collections.slice(0, carousels).map((c, i) => {
+            const items = collectionPages[i]?.items ?? [];
+            return items.length >= 2 ? (
+              <CollectionCarousel
+                key={c.handle}
+                title={c.title}
+                handle={c.handle}
+                products={items}
+                currency={shop.currency}
+                theme={settings}
+              />
+            ) : null;
+          })
+        : null,
+    brandStory: story ? (
+      <BrandStory
+        title={story.title}
+        text={story.text}
+        imageUrl={storyPhoto?.src ?? null}
+        imageSrcSet={storyPhoto?.srcSet}
+        imageFirst={STORY_IMAGE_FIRST.has(preset)}
+        style={style}
+      />
+    ) : null,
+    blogPosts: posts.length > 0 ? <BlogPosts posts={posts} /> : null,
+    newsletter: settings.showNewsletter ? (
+      <NewsletterSection
+        title={settings.newsletterTitle}
+        text={settings.newsletterText}
+        style={style}
+      />
+    ) : null,
+  };
 
-      {collections.slice(0, carousels).map((c, i) => {
-        const items = collectionPages[i]?.items ?? [];
-        return items.length >= 2 ? (
-          <CollectionCarousel
-            key={c.handle}
-            title={c.title}
-            handle={c.handle}
-            products={items}
-            currency={shop.currency}
-            theme={settings}
-          />
-        ) : null;
-      })}
-
-      {story ? (
-        <BrandStory
-          title={story.title}
-          text={story.text}
-          imageUrl={storyPhoto?.src ?? null}
-          imageSrcSet={storyPhoto?.srcSet}
-          imageFirst={STORY_IMAGE_FIRST.has(preset)}
+  return (
+    <>
+      <div data-section="hero">
+        <Hero
           style={style}
+          shopName={shop.name}
+          title={settings.heroTitle || shop.name}
+          subtitle={settings.heroSubtitle || 'Discover our latest products.'}
+          cta={settings.heroCta || 'Shop now'}
+          image={heroImage}
+          extras={heroExtras}
+          tiles={features
+            .filter((f) => f.total !== 0)
+            .map((f) => ({
+              label: f.title,
+              href: `/collections/${f.handle}`,
+              image: f.imageUrl,
+              imageSrcSet: f.imageSrcSet,
+            }))}
         />
-      ) : null}
-
-      {posts.length > 0 ? <BlogPosts posts={posts} /> : null}
-
-      {settings.showNewsletter ? (
-        <NewsletterSection
-          title={settings.newsletterTitle}
-          text={settings.newsletterText}
-          style={style}
-        />
-      ) : null}
+      </div>
+      {settings.sectionOrder.map((id) =>
+        blocks[id] ? (
+          <div key={id} data-section={id}>
+            {blocks[id]}
+          </div>
+        ) : null,
+      )}
     </>
   );
 }

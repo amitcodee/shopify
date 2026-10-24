@@ -104,6 +104,11 @@ model Store {
   /// Storefront theme preset and validated settings (see @repo/contracts themeSettingsSchema).
   themePreset                 String      @default("minimal")
   themeSettings               Json        @default("{}")
+  /// Unpublished theme being edited in the theme editor ({preset, settings}); null when none.
+  themeDraft                  Json?
+  themeDraftUpdatedAt         DateTime?
+  /// Installed storefront apps and their settings (see @repo/contracts storeAppsSchema).
+  apps                        Json        @default("{}")
   /// Hours after an unpaid checkout before the shopper gets a recovery email; null turns it off.
   abandonedCheckoutDelayHours Int?        @default(10)
   /// Pre-launch password page: visitors need the password (encrypted, viewable by staff).

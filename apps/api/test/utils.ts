@@ -22,14 +22,22 @@ export interface TestContext {
   close: () => Promise<void>;
 }
 
-/** Pass `gateways` to replace the payment adapters (e.g. Razorpay over a fake HTTP layer). */
+/**
+ * Pass `gateways` to replace the payment adapters (e.g. Razorpay over a fake HTTP layer), or
+ * `overrides` to replace any other provider (e.g. a fake AI client).
+ */
 export async function createTestApp(
-  options: { gateways?: (env: Env) => Gateways } = {},
+  options: {
+    gateways?: (env: Env) => Gateways;
+    overrides?: { provide: symbol | string; useValue: unknown }[];
+  } = {},
 ): Promise<TestContext> {
   const env = loadEnv({ ...process.env, CORS_ORIGINS: 'http://localhost:3100' });
   let builder = Test.createTestingModule({ imports: [AppModule.register(env)] });
   if (options.gateways)
     builder = builder.overrideProvider(GATEWAYS).useValue(options.gateways(env));
+  for (const o of options.overrides ?? [])
+    builder = builder.overrideProvider(o.provide).useValue(o.useValue);
   const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication<INestApplication<Server>>({ rawBody: true });
   configureApp(app, env);

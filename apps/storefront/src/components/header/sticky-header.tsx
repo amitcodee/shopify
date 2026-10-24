@@ -30,6 +30,7 @@ export function StickyHeader({
 
   return (
     <header
+      data-section="header"
       ref={ref}
       className={className}
       data-sticky={sticky ? '' : undefined}
