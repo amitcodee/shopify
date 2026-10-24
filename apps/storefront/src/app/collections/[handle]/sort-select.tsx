@@ -19,7 +19,7 @@ export function SortSelect({ value }: { value: keyof typeof LABELS }) {
         id="sort"
         value={value}
         onChange={(e) => router.push(`${pathname}?sort=${e.target.value}`)}
-        className="rounded-md border border-zinc-300 px-3 py-1.5"
+        className="field w-auto! py-2! pr-8!"
       >
         {Object.entries(LABELS).map(([key, label]) => (
           <option key={key} value={key}>

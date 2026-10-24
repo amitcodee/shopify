@@ -160,7 +160,7 @@ export function CheckoutForm({
                   setCountry(e.target.value);
                   refresh({ country: e.target.value });
                 }}
-                className="block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+                className="field"
               >
                 {COUNTRIES.map(([code, name]) => (
                   <option key={code} value={code}>
@@ -182,7 +182,7 @@ export function CheckoutForm({
               preview.shippingOptions.map((option) => (
                 <label
                   key={option.id}
-                  className="flex items-center justify-between rounded-md border border-zinc-300 px-4 py-3 text-sm has-[:checked]:border-zinc-900"
+                  className="flex cursor-pointer items-center justify-between rounded-xl border border-zinc-300 px-4 py-3.5 text-sm transition hover:border-zinc-400 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50 has-[:checked]:ring-1 has-[:checked]:ring-zinc-900"
                 >
                   <span className="flex items-center gap-3">
                     <input
@@ -208,13 +208,7 @@ export function CheckoutForm({
           <label htmlFor="note" className="block text-sm font-medium text-zinc-800">
             Order note (optional)
           </label>
-          <textarea
-            id="note"
-            name="note"
-            rows={2}
-            maxLength={500}
-            className="block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-          />
+          <textarea id="note" name="note" rows={2} maxLength={500} className="field" />
         </div>
       </div>
 
@@ -246,7 +240,7 @@ export function CheckoutForm({
               id="discount"
               value={discountCode}
               onChange={(e) => setDiscountCode(e.target.value)}
-              className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm uppercase"
+              className="field min-w-0 flex-1 uppercase"
             />
             <button
               type="button"
@@ -279,7 +273,7 @@ export function CheckoutForm({
               value={giftCardCode}
               onChange={(e) => setGiftCardCode(e.target.value)}
               autoComplete="off"
-              className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm uppercase"
+              className="field min-w-0 flex-1 uppercase"
             />
             <button
               type="button"

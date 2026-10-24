@@ -53,7 +53,7 @@ export function Returns({ order }: { order: PublicOrder }) {
                   name={`qty-${l.id}`}
                   defaultValue="0"
                   aria-label={`Quantity of ${l.title} to return`}
-                  className="mt-1 block w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+                  className="field mt-1"
                 >
                   {Array.from({ length: l.returnableQuantity + 1 }, (_, n) => (
                     <option key={n} value={n}>
@@ -67,7 +67,7 @@ export function Returns({ order }: { order: PublicOrder }) {
                 <select
                   name={`reason-${l.id}`}
                   aria-label={`Reason for returning ${l.title}`}
-                  className="mt-1 block w-full rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+                  className="field mt-1"
                 >
                   {RETURN_REASONS.map((r) => (
                     <option key={r} value={r}>
@@ -80,12 +80,7 @@ export function Returns({ order }: { order: PublicOrder }) {
           ))}
           <label className="block text-sm">
             Anything else we should know? (optional)
-            <textarea
-              name="note"
-              rows={2}
-              maxLength={1000}
-              className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-            />
+            <textarea name="note" rows={2} maxLength={1000} className="field mt-1" />
           </label>
           <Submit pendingLabel="Sending…">Request a return</Submit>
         </form>

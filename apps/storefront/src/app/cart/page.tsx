@@ -87,7 +87,7 @@ export default async function CartPage({
                       min={0}
                       max={line.maxQuantity ?? 99}
                       defaultValue={line.quantity}
-                      className="w-16 rounded-md border border-zinc-300 px-2 py-1 text-sm"
+                      className="field w-16! px-2! py-1.5!"
                     />
                     <button type="submit" className="text-sm font-medium underline">
                       Update
@@ -120,7 +120,7 @@ export default async function CartPage({
           <Link
             href="/checkout"
             aria-disabled={cart.subtotal === 0}
-            className="mt-6 block rounded-md bg-brand px-4 py-3 text-center text-sm font-semibold text-brand-contrast hover:opacity-90"
+            className="mt-6 block rounded-full bg-brand shadow-sm px-4 py-3 text-center text-sm font-semibold text-brand-contrast hover:opacity-90"
           >
             Check out
           </Link>

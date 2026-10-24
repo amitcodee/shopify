@@ -26,16 +26,10 @@ export default async function SearchPage({
         <label htmlFor="q" className="sr-only">
           Search products
         </label>
-        <input
-          id="q"
-          name="q"
-          type="search"
-          defaultValue={query}
-          className="flex-1 rounded-md border border-zinc-300 px-3 py-2"
-        />
+        <input id="q" name="q" type="search" defaultValue={query} className="field flex-1" />
         <button
           type="submit"
-          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-contrast"
+          className="rounded-full bg-brand shadow-sm px-4 py-2 text-sm font-semibold text-brand-contrast"
         >
           Search
         </button>

@@ -37,7 +37,7 @@ export function TextField({
         name={name}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-err` : undefined}
-        className="block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 aria-[invalid=true]:border-red-600"
+        className="field"
         {...rest}
       />
       {hint && !error ? <p className="text-xs text-zinc-500">{hint}</p> : null}
@@ -62,7 +62,7 @@ export function Submit({
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-md bg-brand px-4 py-3 text-sm font-semibold text-brand-contrast hover:opacity-90 disabled:opacity-50"
+      className="w-full rounded-full bg-brand shadow-sm px-4 py-3 text-sm font-semibold text-brand-contrast hover:opacity-90 disabled:opacity-50"
     >
       {pending ? pendingLabel : children}
     </button>
@@ -74,7 +74,7 @@ export function Notice({ result }: { result: FormResult }) {
     return (
       <p
         role="alert"
-        className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+        className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
       >
         {result.error}
       </p>
@@ -84,7 +84,7 @@ export function Notice({ result }: { result: FormResult }) {
     return (
       <p
         role="status"
-        className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+        className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
       >
         {result.success}
       </p>

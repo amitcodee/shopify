@@ -1,5 +1,6 @@
 import { minorToDecimalString, type StorefrontProduct } from '@repo/contracts';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { isNotFound, sf } from '@/lib/api';
@@ -62,11 +63,11 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
   };
 
   return (
-    <div className="grid gap-10 md:grid-cols-2">
+    <div className="grid gap-10 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-16">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structured) }} />
-      <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 self-start sm:gap-4">
         {product.images.length === 0 ? (
-          <div className="aspect-square rounded-xl bg-zinc-100" />
+          <div className="col-span-2 aspect-[4/5] rounded-3xl bg-zinc-100" />
         ) : (
           product.images.map((image, index) => (
             // eslint-disable-next-line @next/next/no-img-element
@@ -77,31 +78,51 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
               width={image.width}
               height={image.height}
               loading={index === 0 ? 'eager' : 'lazy'}
-              className="w-full rounded-xl bg-zinc-100 object-cover"
+              className={`w-full rounded-3xl bg-zinc-100 object-cover ring-1 ring-zinc-900/5 ${
+                index === 0 ? 'col-span-2' : 'aspect-square'
+              }`}
             />
           ))
         )}
       </div>
-      <div>
+      <div className="md:sticky md:top-24 md:self-start">
+        <nav aria-label="Breadcrumb" className="mb-6 text-sm text-zinc-500">
+          <Link href="/" className="hover:text-zinc-900">
+            Home
+          </Link>
+          <span aria-hidden className="mx-2 text-zinc-300">
+            /
+          </span>
+          <Link href="/collections/all" className="hover:text-zinc-900">
+            Shop
+          </Link>
+        </nav>
         {product.vendor ? (
-          <p className="text-sm uppercase tracking-wide text-zinc-500">{product.vendor}</p>
+          <p className="text-xs font-semibold tracking-[0.18em] text-zinc-500 uppercase">
+            {product.vendor}
+          </p>
         ) : null}
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">{product.title}</h1>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{product.title}</h1>
         {product.isGiftCard ? (
-          <p className="mt-2 text-sm text-zinc-600">
+          <p className="mt-3 rounded-xl bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
             Delivered by email: you receive a gift card code as soon as your order is paid.
           </p>
         ) : null}
-        <div className="mt-6">
+        <div className="mt-8 border-t border-zinc-200 pt-8">
           <VariantPicker product={product} currency={shop.currency} />
         </div>
-        <div className="mt-8 space-y-4 text-zinc-700">
-          {paragraphs.map((p, i) => (
-            <p key={i} className="whitespace-pre-line">
-              {p}
-            </p>
-          ))}
-        </div>
+        {paragraphs.length > 0 ? (
+          <div className="mt-10 border-t border-zinc-200 pt-8">
+            <h2 className="text-sm font-semibold text-zinc-900">Description</h2>
+            <div className="mt-3 space-y-4 leading-relaxed text-zinc-600">
+              {paragraphs.map((p, i) => (
+                <p key={i} className="whitespace-pre-line">
+                  {p}
+                </p>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

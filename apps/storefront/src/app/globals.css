@@ -4,8 +4,54 @@
   --color-brand: var(--store-brand, #111827);
   --color-brand-contrast: var(--store-brand-contrast, #ffffff);
   --color-accent: var(--store-accent, #4f46e5);
+  --color-accent-contrast: var(--store-accent-contrast, #ffffff);
+
+  --shadow-card: 0 1px 2px 0 rgb(24 24 27 / 0.04), 0 1px 3px 0 rgb(24 24 27 / 0.06);
+  --shadow-lift: 0 18px 40px -20px rgb(24 24 27 / 0.35);
 }
 
 body {
   font-family: var(--store-font, ui-sans-serif, system-ui, sans-serif);
+  font-feature-settings: 'ss01';
+}
+
+@layer base {
+  ::selection {
+    background: color-mix(in oklab, var(--color-accent) 25%, white);
+  }
+  :focus-visible {
+    outline-color: var(--color-accent);
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+}
+
+/* Text inputs share one look across account, cart and checkout forms. */
+@utility field {
+  display: block;
+  width: 100%;
+  border-radius: 0.625rem;
+  border: 1px solid var(--color-zinc-300);
+  background: white;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  box-shadow: 0 1px 2px 0 rgb(24 24 27 / 0.04);
+  transition:
+    border-color 150ms,
+    box-shadow 150ms;
+  &:hover {
+    border-color: var(--color-zinc-400);
+  }
+  &:focus {
+    outline: none;
+    border-color: var(--color-zinc-900);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 22%, transparent);
+  }
+  &[aria-invalid='true'] {
+    border-color: var(--color-red-600);
+  }
 }

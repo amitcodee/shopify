@@ -12,7 +12,7 @@ function AddButton({ disabled }: { disabled: boolean }) {
     <button
       type="submit"
       disabled={disabled || pending}
-      className="w-full rounded-md bg-brand px-6 py-3 text-sm font-semibold text-brand-contrast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+      className="w-full rounded-full bg-brand shadow-sm px-6 py-3 text-sm font-semibold text-brand-contrast hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
     >
       {pending ? 'Adding…' : disabled ? 'Sold out' : 'Add to cart'}
     </button>
@@ -48,10 +48,10 @@ export function VariantPicker({
                 <label
                   key={value}
                   htmlFor={id}
-                  className={`cursor-pointer rounded-md border px-4 py-2 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent ${
+                  className={`min-w-12 cursor-pointer rounded-full border px-4 py-2 text-center text-sm font-medium transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent ${
                     checked
                       ? 'border-zinc-900 bg-zinc-900 text-white'
-                      : 'border-zinc-300 hover:border-zinc-900'
+                      : 'border-zinc-300 bg-white hover:border-zinc-900'
                   }`}
                 >
                   <input
@@ -73,7 +73,7 @@ export function VariantPicker({
         </fieldset>
       ))}
 
-      <p className="text-2xl font-semibold" aria-live="polite">
+      <p className="text-3xl font-semibold tracking-tight" aria-live="polite">
         {variant ? formatMoney(variant.price, currency) : 'Unavailable'}
         {variant?.compareAtPrice && variant.compareAtPrice > variant.price ? (
           <s className="ml-3 text-base font-normal text-zinc-500">
@@ -95,7 +95,7 @@ export function VariantPicker({
             min={1}
             max={99}
             defaultValue={1}
-            className="w-20 rounded-md border border-zinc-300 px-3 py-2.5 text-sm"
+            className="field w-20!"
           />
         </div>
         <div className="flex-1">
