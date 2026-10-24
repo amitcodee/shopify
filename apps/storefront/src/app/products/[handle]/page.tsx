@@ -13,6 +13,8 @@ import { Accordion } from '@/components/product/accordion';
 import { Breadcrumbs, type Crumb } from '@/components/product/breadcrumbs';
 import { ProductIcon } from '@/components/product/icons';
 import { ProductGallery } from '@/components/product/product-gallery';
+import { Specifications } from '@/components/product/specs';
+import { initialVariant } from '@/components/product/variant-image';
 import { ProductGrid, RATIOS } from '@/components/product-grid';
 import { isNotFound, sf } from '@/lib/api';
 import { getShop, storeOrigin } from '@/lib/shop';
@@ -173,18 +175,20 @@ export default async function ProductPage({
         dangerouslySetInnerHTML={{ __html: jsonLd([structured, breadcrumbList]) }}
       />
       <Breadcrumbs items={crumbs} />
-      <div className="grid gap-8 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-14">
+      <div className="grid gap-8 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16 xl:gap-20">
         {/* The gallery stays in view beside long descriptions, unless a sticky header is there. */}
         <div className={settings.stickyHeader ? '' : 'md:sticky md:top-6 md:self-start'}>
           <ProductGallery
             images={product.images}
             title={product.title}
             ratio={RATIOS[settings.imageRatio]}
+            productId={product.id}
+            initialImageId={initialVariant(product)?.imageId}
           />
         </div>
         <div className="min-w-0">
           {product.vendor ? <p className="eyebrow mb-2 text-zinc-500">{product.vendor}</p> : null}
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 lg:text-4xl">
+          <h1 className="t-title text-3xl break-words text-zinc-900 sm:text-4xl lg:text-[2.75rem]">
             {product.title}
           </h1>
           {product.isGiftCard ? (
@@ -213,6 +217,7 @@ export default async function ProductPage({
                   </div>
                 </Accordion>
               ) : null}
+              <Specifications specs={product.specs} />
               <Accordion title="Shipping & returns">
                 <ShippingAndReturns shop={shop} />
               </Accordion>
@@ -221,13 +226,18 @@ export default async function ProductPage({
         </div>
       </div>
       {related.length > 0 ? (
-        <section aria-labelledby="related-heading" className="mt-20 border-t border-zinc-200 pt-12">
-          <h2
-            id="related-heading"
-            className="mb-8 text-2xl font-semibold tracking-tight text-zinc-900"
-          >
-            You may also like
-          </h2>
+        <section
+          aria-labelledby="related-heading"
+          className="mt-20 border-t border-zinc-200 pt-14 sm:mt-28"
+        >
+          <div className="section-header">
+            <div>
+              <h2 id="related-heading" className="section-title t-title text-zinc-900">
+                You may also like
+              </h2>
+              <span aria-hidden="true" className="section-rule" />
+            </div>
+          </div>
           <ProductGrid
             products={related}
             currency={shop.currency}

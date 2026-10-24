@@ -8,8 +8,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   experimental: {
-    // Product image uploads pass through server actions (API limit is 5 MB).
-    serverActions: { bodySizeLimit: '6mb' },
+    // Product image uploads pass through server actions (API limit is 20 MB per file; the
+    // media manager batches files so each request stays under this).
+    serverActions: { bodySizeLimit: '25mb' },
   },
   images: {
     // Product media is served by the API (a CDN in production).

@@ -9,7 +9,7 @@ import { completeLinkAction, forgotPasswordAction, loginAction, registerAction }
 export function LoginForm() {
   const [state, action] = useActionState(loginAction, undefined);
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} className="space-y-5">
       <FollowRedirect to={state?.redirectTo} />
       <Notice result={state} />
       <TextField label="Email" name="email" type="email" autoComplete="email" required />
@@ -21,11 +21,17 @@ export function LoginForm() {
         required
       />
       <Submit>Sign in</Submit>
-      <p className="flex justify-between text-sm">
-        <Link href="/account/register" className="underline">
+      <p className="flex justify-between gap-4 pt-2 text-sm text-zinc-600">
+        <Link
+          href="/account/register"
+          className="font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-4 hover:decoration-current"
+        >
           Create account
         </Link>
-        <Link href="/account/forgot" className="underline">
+        <Link
+          href="/account/forgot"
+          className="underline decoration-zinc-300 underline-offset-4 hover:text-zinc-900 hover:decoration-current"
+        >
           Forgot password?
         </Link>
       </p>
@@ -37,7 +43,7 @@ export function RegisterForm() {
   const [state, action] = useActionState(registerAction, undefined);
   const err = state?.fieldErrors ?? {};
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} className="space-y-5">
       <FollowRedirect to={state?.redirectTo} />
       <Notice result={state} />
       <TextField label="Name" name="name" autoComplete="name" required error={err.name} />
@@ -59,8 +65,13 @@ export function RegisterForm() {
         hint="At least 12 characters."
         error={err.password}
       />
-      <label className="flex items-center gap-2 text-sm text-zinc-700">
-        <input type="checkbox" name="acceptsMarketing" /> Email me about news and offers
+      <label className="flex items-center gap-2.5 text-sm text-zinc-700">
+        <input
+          type="checkbox"
+          name="acceptsMarketing"
+          className="size-4 accent-[var(--store-brand)]"
+        />{' '}
+        Email me about news and offers
       </label>
       <Submit>Create account</Submit>
     </form>
@@ -70,7 +81,7 @@ export function RegisterForm() {
 export function ForgotForm() {
   const [state, action] = useActionState(forgotPasswordAction, undefined);
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} className="space-y-5">
       <FollowRedirect to={state?.redirectTo} />
       <Notice result={state} />
       <TextField label="Email" name="email" type="email" autoComplete="email" required />
@@ -94,7 +105,7 @@ export function SetPasswordForm({
     undefined,
   );
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} className="space-y-5">
       <FollowRedirect to={state?.redirectTo} />
       <Notice result={state} />
       <TextField
@@ -114,7 +125,7 @@ export function SetPasswordForm({
 export function LogoutButton() {
   return (
     <form action="/account/logout" method="post">
-      <button type="submit" className="text-sm underline">
+      <button type="submit" className="btn btn-ghost min-h-10 px-4 py-2 text-sm">
         Sign out
       </button>
     </form>

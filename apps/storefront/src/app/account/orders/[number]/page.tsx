@@ -28,7 +28,7 @@ export default async function AccountOrderPage({
       <Link href="/account" className="text-sm text-zinc-500 hover:underline">
         ← Your account
       </Link>
-      <h1 className="mb-8 mt-2 text-3xl font-bold tracking-tight">Order #{order.number}</h1>
+      <h1 className="page-title t-title mt-2 mb-8">Order #{order.number}</h1>
       <OrderView order={order} />
       <Returns order={order} />
     </>

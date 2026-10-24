@@ -13,11 +13,11 @@ export function BlogPosts({ posts }: { posts: StorefrontBlogPost[] }) {
       <ul className="grid gap-4 md:grid-cols-3 lg:gap-6">
         {posts.map((post) => (
           <li key={post.handle}>
-            <article className="group relative flex h-full flex-col rounded-xl border border-zinc-200 bg-surface p-6 transition hover:border-zinc-400">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">
+            <article className="group relative flex h-full flex-col rounded-xl border border-zinc-200 bg-page p-6 transition duration-300 hover:border-zinc-400 sm:p-7">
+              <p className="eyebrow text-zinc-500">
                 <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
               </p>
-              <h3 className="mt-3 font-heading text-lg font-semibold leading-snug break-words sm:text-xl">
+              <h3 className="t-title mt-4 text-xl break-words sm:text-2xl">
                 <Link
                   href={`/blog/${post.handle}`}
                   className="after:absolute after:inset-0 after:rounded-xl group-hover:underline"

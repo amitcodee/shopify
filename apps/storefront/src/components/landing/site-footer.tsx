@@ -44,18 +44,26 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
 
 export function SiteFooter() {
   return (
-    <footer className="bg-slate-950 text-slate-400">
-      <div className="mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.2fr_3fr]">
+    <footer className="bg-[#0b0c14] text-slate-400">
+      <div className="mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.2fr_3fr] lg:px-8">
         <div>
           <Logo tone="dark" />
-          <p className="mt-4 max-w-xs text-sm leading-6">
+          <p className="mt-5 max-w-xs text-sm leading-6">
             Everything you need to start, run and grow an online store.
           </p>
+          <a
+            href={signupUrl}
+            className="mt-6 inline-flex rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-indigo-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
+            Start for free
+          </a>
         </div>
         <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-4">
           {COLUMNS.map((col) => (
             <div key={col.title}>
-              <h2 className="text-sm font-semibold text-white">{col.title}</h2>
+              <h2 className="text-xs font-semibold tracking-[0.14em] text-slate-200 uppercase">
+                {col.title}
+              </h2>
               <ul className="mt-4 space-y-3 text-sm">
                 {col.links.map((l) => (
                   <li key={l.label}>
@@ -75,7 +83,7 @@ export function SiteFooter() {
         </nav>
       </div>
       <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs sm:flex-row sm:justify-between sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs sm:flex-row sm:justify-between sm:px-6 lg:px-8">
           <p>© {new Date().getFullYear()} Commerce Platform</p>
           <p>Plan prices are in US dollars. Your store can sell in many currencies.</p>
         </div>

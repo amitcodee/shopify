@@ -21,7 +21,7 @@ export function RotatingWord({ words, label }: { words: string[]; label: string 
       <span
         key={index}
         aria-hidden="true"
-        className="-mb-[0.15em] inline-block bg-gradient-to-r pb-[0.15em] from-indigo-300 via-violet-300 to-fuchsia-300 bg-clip-text text-transparent motion-safe:animate-[cp-word_0.5s_ease-out]"
+        className="-mb-[0.15em] inline-block bg-gradient-to-r pb-[0.15em] from-indigo-600 via-violet-600 to-fuchsia-500 bg-clip-text text-transparent motion-safe:animate-[cp-word_0.5s_ease-out]"
       >
         {words[index]}
       </span>

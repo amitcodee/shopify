@@ -114,12 +114,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           Skip to content
         </a>
         {shop.theme.settings.announcement ? (
-          <p className="bg-accent px-4 py-2.5 text-center text-[0.8125rem] font-medium tracking-wide text-accent-contrast">
+          <p className="store-announcement bg-accent px-4 py-2.5 text-center text-xs font-medium tracking-[0.06em] text-accent-contrast sm:text-[0.8125rem]">
             {shop.theme.settings.announcement}
           </p>
         ) : null}
         <StoreHeader shop={shop} path={path} itemCount={cart?.itemCount ?? 0} />
-        <main id="main" className="store-main mx-auto w-full max-w-6xl flex-1 px-4">
+        <main id="main" className="store-main store-container flex-1">
           {children}
         </main>
         <StoreFooter shop={shop} />

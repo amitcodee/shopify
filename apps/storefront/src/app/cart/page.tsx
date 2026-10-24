@@ -1,6 +1,7 @@
 import { formatMoney } from '@repo/contracts';
 import Link from 'next/link';
 import { CartLineControls } from '@/components/cart/line-controls';
+import { lineProblem } from '@/components/cart/line-status';
 import { ArrowRightIcon, BagIcon } from '@/components/header/icons';
 import { getCart, getShop } from '@/lib/shop';
 
@@ -20,7 +21,7 @@ export default async function CartPage({
         <span className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-100 text-zinc-500">
           <BagIcon width="34" height="34" />
         </span>
-        <h1 className="mt-6 text-3xl font-bold tracking-tight">Your cart is empty</h1>
+        <h1 className="page-title t-title mt-6">Your cart is empty</h1>
         {recovery === 'expired' ? (
           <p role="status" className="mt-3 text-zinc-600">
             That link has expired, but the store is still open.
@@ -41,7 +42,7 @@ export default async function CartPage({
     <>
       <div className="mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-2 sm:mb-10">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Your cart</h1>
+          <h1 className="page-title t-title">Your cart</h1>
           <p className="mt-1 text-sm text-zinc-500">
             {cart.itemCount} {cart.itemCount === 1 ? 'item' : 'items'}
           </p>
@@ -73,54 +74,72 @@ export default async function CartPage({
             <span>Total</span>
           </div>
           <ul className="divide-y divide-zinc-200 border-b border-zinc-200 max-sm:border-t">
-            {cart.lines.map((line) => (
-              <li key={line.id} className="flex gap-4 py-6 sm:gap-6">
-                <Link
-                  href={`/products/${line.productHandle}`}
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  className="h-28 w-24 shrink-0 overflow-hidden rounded-md bg-zinc-100 sm:h-36 sm:w-28"
-                >
-                  {line.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={line.imageUrl} alt="" className="h-full w-full object-cover" />
-                  ) : null}
-                </Link>
-                <div className="flex min-w-0 flex-1 flex-col gap-4">
-                  <div className="flex justify-between gap-4">
-                    <div className="min-w-0">
-                      <Link
-                        href={`/products/${line.productHandle}`}
-                        className="font-medium hover:underline"
+            {cart.lines.map((line, index) => {
+              const problem = lineProblem(line);
+              const href = problem?.linkable === false ? null : `/products/${line.productHandle}`;
+              const thumbClass = `h-28 w-24 shrink-0 overflow-hidden rounded-md bg-zinc-100 sm:h-36 sm:w-28 ${
+                problem ? 'opacity-50 grayscale' : ''
+              }`;
+              const thumb = line.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={line.imageUrl}
+                  alt=""
+                  loading={index < 4 ? undefined : 'lazy'}
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                />
+              ) : null;
+              return (
+                <li key={line.id} className="flex gap-4 py-6 sm:gap-6">
+                  {href ? (
+                    <Link href={href} tabIndex={-1} aria-hidden="true" className={thumbClass}>
+                      {thumb}
+                    </Link>
+                  ) : (
+                    <span aria-hidden="true" className={thumbClass}>
+                      {thumb}
+                    </span>
+                  )}
+                  <div className="flex min-w-0 flex-1 flex-col gap-4">
+                    <div className="flex justify-between gap-4">
+                      <div className="min-w-0">
+                        {href ? (
+                          <Link href={href} className="card-title hover:underline">
+                            {line.productTitle}
+                          </Link>
+                        ) : (
+                          <span className="card-title text-zinc-500">{line.productTitle}</span>
+                        )}
+                        {line.variantTitle !== 'Default' ? (
+                          <p className="mt-1 text-sm text-zinc-500">{line.variantTitle}</p>
+                        ) : null}
+                        <p className="mt-1 text-sm text-zinc-500">
+                          {formatMoney(line.unitPrice, cart.currency)} each
+                        </p>
+                        {problem ? (
+                          <p className="mt-1 text-sm font-medium text-red-700">{problem.label}</p>
+                        ) : null}
+                      </div>
+                      <p
+                        className={`font-medium whitespace-nowrap tabular-nums ${
+                          problem ? 'text-zinc-400 line-through' : ''
+                        }`}
                       >
-                        {line.productTitle}
-                      </Link>
-                      {line.variantTitle !== 'Default' ? (
-                        <p className="mt-1 text-sm text-zinc-500">{line.variantTitle}</p>
-                      ) : null}
-                      <p className="mt-1 text-sm text-zinc-500">
-                        {formatMoney(line.unitPrice, cart.currency)} each
+                        {problem ? <span className="sr-only">Not included: </span> : null}
+                        {formatMoney(line.lineTotal, cart.currency)}
                       </p>
-                      {!line.available ? (
-                        <p className="mt-1 text-sm font-medium text-red-700">Sold out</p>
-                      ) : null}
                     </div>
-                    <p className="font-medium whitespace-nowrap tabular-nums">
-                      {formatMoney(line.lineTotal, cart.currency)}
-                    </p>
+                    <div className="mt-auto">
+                      <CartLineControls key={`${line.id}-${line.quantity}`} line={line} />
+                    </div>
                   </div>
-                  <div className="mt-auto">
-                    <CartLineControls key={`${line.id}-${line.quantity}`} line={line} />
-                  </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         </section>
-        <aside
-          aria-labelledby="summary-heading"
-          className="rounded-xl border border-zinc-200 bg-surface p-6 lg:sticky lg:top-24"
-        >
+        <aside aria-labelledby="summary-heading" className="panel p-6 sm:p-7 lg:sticky lg:top-28">
           <h2 id="summary-heading" className="text-lg font-semibold">
             Order summary
           </h2>
@@ -146,7 +165,7 @@ export default async function CartPage({
           <Link
             href="/checkout"
             aria-disabled={cart.subtotal === 0}
-            className="btn mt-6 flex w-full px-4 py-3.5 text-sm"
+            className="btn btn-strong mt-6 flex min-h-[3.25rem] w-full px-4 py-3.5 text-sm"
           >
             Check out
           </Link>

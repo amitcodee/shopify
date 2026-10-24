@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { PrismaClient } from '@repo/db';
 import sharp from 'sharp';
-import { LocalDiskStorage } from './storage/storage.js';
+import { ImageProcessor } from './storage/image-processor.js';
+import { imageKeys, LocalDiskStorage, renditionKey } from './storage/storage.js';
 
 interface SeedProduct {
   title: string;
@@ -113,6 +118,29 @@ const PRODUCTS: SeedProduct[] = [
   },
 ];
 
+/**
+ * Stock product photos (Unsplash License; see packages/assets/CREDITS.md) named
+ * `<handle>-<n>.webp`. `src/` and `dist/` both sit one level below the package root.
+ */
+const SEED_PHOTO_DIR = fileURLToPath(new URL('../seed-assets/products/', import.meta.url));
+
+function handleFor(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/** The product's bundled photos in order, or an empty list when none are shipped. */
+async function productPhotos(handle: string): Promise<Buffer[]> {
+  const photos: Buffer[] = [];
+  for (let n = 1; ; n++) {
+    const file = path.join(SEED_PHOTO_DIR, `${handle}-${n}.webp`);
+    if (!existsSync(file)) return photos;
+    photos.push(await readFile(file));
+  }
+}
+
 function combinations(options: { values: string[] }[]): string[][] {
   return options.reduce<string[][]>(
     (acc, o) => acc.flatMap((p) => o.values.map((v) => [...p, v])),
@@ -167,7 +195,10 @@ async function placeholderImages(color: string): Promise<Buffer[]> {
   );
 }
 
-/** Replaces a product's images with fresh placeholders (seed and dev refresh). */
+/**
+ * Replaces a product's images (seed and dev refresh) with its bundled stock photos, falling
+ * back to generated placeholders when the product has none.
+ */
 export async function seedProductImages(
   db: PrismaClient,
   storage: LocalDiskStorage,
@@ -176,12 +207,35 @@ export async function seedProductImages(
   title: string,
   color: string,
 ): Promise<void> {
+  const previous = await db.productImage.findMany({
+    where: { storeId, productId },
+    select: { storageKey: true, renditionWidths: true },
+  });
   await db.productImage.deleteMany({ where: { storeId, productId } });
-  for (const [position, image] of (await placeholderImages(color)).entries()) {
+  for (const key of previous.flatMap(imageKeys)) await storage.delete(key);
+
+  const photos = await productPhotos(handleFor(title));
+  const images = photos.length ? photos : await placeholderImages(color);
+  // The same pipeline as merchant uploads: WebP plus 200/600/1200/2048 px renditions.
+  const processor = new ImageProcessor();
+  for (const [position, image] of images.entries()) {
+    const processed = await processor.process(image);
     const key = `stores/${storeId}/products/${randomUUID()}.webp`;
-    await storage.put(key, image);
+    await storage.put(key, processed.data);
+    for (const rendition of processed.renditions) {
+      await storage.put(renditionKey(key, rendition.width), rendition.data);
+    }
     await db.productImage.create({
-      data: { storeId, productId, storageKey: key, alt: title, width: 800, height: 800, position },
+      data: {
+        storeId,
+        productId,
+        storageKey: key,
+        alt: title,
+        width: processed.width,
+        height: processed.height,
+        position,
+        renditionWidths: processed.renditions.map((r) => r.width),
+      },
     });
   }
 }
@@ -196,10 +250,7 @@ export async function seedCatalog(db: PrismaClient, storeId: string): Promise<vo
   const productIds: Record<string, string> = {};
 
   for (const p of PRODUCTS) {
-    const handle = p.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
+    const handle = handleFor(p.title);
     const product = await db.product.create({
       data: {
         storeId,
@@ -293,7 +344,7 @@ export async function seedCatalog(db: PrismaClient, storeId: string): Promise<vo
   });
 }
 
-/** Dev helper: regenerates the demo products' placeholder images in an existing store. */
+/** Dev helper: re-creates the demo products' images (photos or placeholders) in an existing store. */
 export async function refreshDemoImages(db: PrismaClient, storeId: string): Promise<number> {
   const storage = new LocalDiskStorage(process.env.STORAGE_DIR ?? 'storage');
   let count = 0;

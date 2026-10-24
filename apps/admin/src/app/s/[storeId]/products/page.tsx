@@ -1,18 +1,21 @@
-import { formatMoney, type Paginated, type ProductListItem } from '@repo/contracts';
+import type { Collection, Paginated, ProductListItem } from '@repo/contracts';
 import Link from 'next/link';
+import { Icon } from '@/components/icons';
 import {
-  Badge,
   ButtonLink,
   buttonClass,
   EmptyState,
+  formatDateTime,
+  inputClass,
   PageHeader,
   Pagination,
-  Table,
-  Td,
+  SearchInput,
+  ViewTabs,
 } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
-import { statusTone } from './status';
+import { bulkProductsAction } from './actions';
+import { ProductsTable } from './products-table';
 
 const FILTERS = [
   { label: 'All', value: undefined },
@@ -21,130 +24,306 @@ const FILTERS = [
   { label: 'Archived', value: 'ARCHIVED' },
 ] as const;
 
+const SORTS = [
+  { value: 'updated-desc', label: 'Recently updated' },
+  { value: 'created-desc', label: 'Newest' },
+  { value: 'created-asc', label: 'Oldest' },
+  { value: 'title-asc', label: 'Title A–Z' },
+  { value: 'title-desc', label: 'Title Z–A' },
+  { value: 'price-asc', label: 'Lowest price' },
+  { value: 'price-desc', label: 'Highest price' },
+  { value: 'inventory-asc', label: 'Lowest inventory' },
+  { value: 'inventory-desc', label: 'Highest inventory' },
+] as const;
+
+type Params = {
+  q?: string;
+  status?: string;
+  vendor?: string;
+  productType?: string;
+  tag?: string;
+  collectionId?: string;
+  sort?: string;
+  page?: string;
+};
+
+const selectClass = `${inputClass} h-8 py-0 pr-8 text-[13px]`;
+
 export default async function ProductsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ storeId: string }>;
-  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
+  searchParams: Promise<Params>;
 }) {
   const { storeId } = await params;
-  const { q, status, page } = await searchParams;
+  const sp = await searchParams;
+  const { q, status, vendor, productType, tag, collectionId, page } = sp;
+  const sort = SORTS.some((s) => s.value === sp.sort) ? sp.sort! : 'updated-desc';
+  const [sortKey, direction] = sort.split('-');
   const store = await getStore(storeId);
-  const products = await api<Paginated<ProductListItem>>(`/admin/stores/${storeId}/products`, {
-    query: { q, status, page: Number(page) || 1 },
-  });
+  const [products, facets, collections] = await Promise.all([
+    api<Paginated<ProductListItem>>(`/admin/stores/${storeId}/products`, {
+      query: {
+        q,
+        status,
+        vendor,
+        productType,
+        tag,
+        collectionId,
+        sort: sortKey,
+        direction,
+        page: Number(page) || 1,
+      },
+    }),
+    api<{ vendors: string[]; productTypes: string[]; tags: string[] }>(
+      `/admin/stores/${storeId}/products/facets`,
+    ).catch(() => ({ vendors: [], productTypes: [], tags: [] })),
+    api<Collection[]>(`/admin/stores/${storeId}/collections`).catch(() => [] as Collection[]),
+  ]);
   const base = `/s/${storeId}/products`;
   const canWrite = store.permissions.includes('products:write');
 
-  const hrefFor = (overrides: Record<string, string | undefined>) => {
-    const sp = new URLSearchParams();
-    const merged = { q, status, ...overrides };
-    for (const [key, value] of Object.entries(merged)) if (value) sp.set(key, value);
-    const qs = sp.toString();
+  const current: Params = {
+    q,
+    status,
+    vendor,
+    productType,
+    tag,
+    collectionId,
+    sort: sort === 'updated-desc' ? undefined : sort,
+  };
+  const hrefFor = (overrides: Partial<Params>) => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries({ ...current, ...overrides })) {
+      if (value) query.set(key, value);
+    }
+    const qs = query.toString();
     return qs ? `${base}?${qs}` : base;
   };
+
+  const collectionTitle = collections.find((c) => c.id === collectionId)?.title;
+  const chips = [
+    vendor
+      ? { label: `Vendor: ${vendor}`, href: hrefFor({ vendor: undefined, page: undefined }) }
+      : null,
+    productType
+      ? {
+          label: `Type: ${productType}`,
+          href: hrefFor({ productType: undefined, page: undefined }),
+        }
+      : null,
+    tag ? { label: `Tag: ${tag}`, href: hrefFor({ tag: undefined, page: undefined }) } : null,
+    collectionId
+      ? {
+          label: `Collection: ${collectionTitle ?? 'Unknown'}`,
+          href: hrefFor({ collectionId: undefined, page: undefined }),
+        }
+      : null,
+  ].filter((c) => c !== null);
+  const filtered = Boolean(q || status || chips.length);
 
   return (
     <>
       <PageHeader
         title="Products"
         actions={
-          <div className="flex items-center gap-2">
+          <>
             {/* A route handler download, not a page: plain <a>, no client-side navigation. */}
-            <a href={`${base}/export`} className={buttonClass('ghost')} download>
+            <a href={`${base}/export`} className={buttonClass('secondary', 'sm')} download>
+              <Icon name="download" className="-ml-0.5 h-4 w-4 text-slate-500" />
               Export
             </a>
             {canWrite ? (
               <>
-                <ButtonLink href={`${base}/import`} variant="secondary">
+                <Link href={`${base}/import`} className={buttonClass('secondary', 'sm')}>
+                  <Icon name="upload" className="-ml-0.5 h-4 w-4 text-slate-500" />
                   Import
+                </Link>
+                <ButtonLink href={`${base}/new`} size="sm" icon="plus">
+                  Add product
                 </ButtonLink>
-                <ButtonLink href={`${base}/new`}>Add product</ButtonLink>
               </>
             ) : null}
-          </div>
+          </>
         }
       />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <nav aria-label="Filter by status" className="flex gap-1">
-          {FILTERS.map((f) => (
-            <Link
-              key={f.label}
-              href={hrefFor({ status: f.value, page: undefined })}
-              aria-current={status === f.value ? 'page' : undefined}
-              className={`rounded-md px-3 py-1.5 text-sm ${
-                status === f.value ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {f.label}
-            </Link>
-          ))}
-        </nav>
-        <form className="flex gap-2" action={base}>
-          {status ? <input type="hidden" name="status" value={status} /> : null}
-          <label htmlFor="product-search" className="sr-only">
-            Search products
-          </label>
-          <input
-            id="product-search"
-            name="q"
-            defaultValue={q}
-            placeholder="Search title, SKU or tag"
-            className="w-64 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-          />
-        </form>
+
+      <div className="mb-3">
+        <ViewTabs
+          label="Filter by status"
+          items={FILTERS.map((f) => ({
+            label: f.label,
+            href: hrefFor({ status: f.value, page: undefined }),
+            active: status === f.value,
+          }))}
+        />
       </div>
 
-      {products.items.length === 0 ? (
-        <EmptyState
-          title={q || status ? 'No matching products' : 'Add your first product'}
-          description="Products you add appear here and, once active, on your storefront."
-          action={canWrite && !q ? <ButtonLink href={`${base}/new`}>Add product</ButtonLink> : null}
+      <form
+        action={base}
+        className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/90 bg-white p-2.5 shadow-card"
+      >
+        {status ? <input type="hidden" name="status" value={status} /> : null}
+        <SearchInput
+          id="product-search"
+          label="Search products"
+          defaultValue={q}
+          placeholder="Search title, vendor, SKU or tag"
+          className="w-full min-w-0 sm:w-auto sm:flex-1 sm:basis-56"
         />
-      ) : (
-        <>
-          <Table head={['', 'Product', 'Status', 'Inventory', 'Price', 'Variants']}>
-            {products.items.map((p) => (
-              <tr key={p.id} className="hover:bg-slate-50">
-                <Td className="w-14">
-                  {p.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.imageUrl} alt="" className="h-10 w-10 rounded object-cover" />
-                  ) : (
-                    <div className="h-10 w-10 rounded bg-slate-100" />
-                  )}
-                </Td>
-                <Td>
-                  <Link
-                    href={`${base}/${p.id}`}
-                    className="font-medium text-slate-900 hover:underline"
-                  >
-                    {p.title}
-                  </Link>
-                  {p.vendor ? <p className="text-xs text-slate-500">{p.vendor}</p> : null}
-                </Td>
-                <Td>
-                  <Badge tone={statusTone(p.status)}>{p.status.toLowerCase()}</Badge>
-                </Td>
-                <Td>{p.totalInventory} in stock</Td>
-                <Td>
-                  {p.minPrice === p.maxPrice
-                    ? formatMoney(p.minPrice, store.currency)
-                    : `${formatMoney(p.minPrice, store.currency)} – ${formatMoney(p.maxPrice, store.currency)}`}
-                </Td>
-                <Td>{p.variantCount}</Td>
-              </tr>
+        <FilterSelect
+          name="vendor"
+          label="Vendor"
+          any="All vendors"
+          value={vendor}
+          options={facets.vendors.map((v) => ({ value: v, label: v }))}
+        />
+        <FilterSelect
+          name="productType"
+          label="Product type"
+          any="All types"
+          value={productType}
+          options={facets.productTypes.map((v) => ({ value: v, label: v }))}
+        />
+        <FilterSelect
+          name="tag"
+          label="Tag"
+          any="All tags"
+          value={tag}
+          options={facets.tags.map((v) => ({ value: v, label: v }))}
+        />
+        <FilterSelect
+          name="collectionId"
+          label="Collection"
+          any="All collections"
+          value={collectionId}
+          options={collections.map((c) => ({ value: c.id, label: c.title }))}
+        />
+        <div className="flex flex-1 items-center gap-2 sm:flex-none">
+          <label htmlFor="product-sort" className="sr-only">
+            Sort by
+          </label>
+          <select
+            id="product-sort"
+            name="sort"
+            defaultValue={sort}
+            className={`${selectClass} min-w-0 flex-1 sm:flex-none`}
+          >
+            {SORTS.map((s) => (
+              <option key={s.value} value={s.value}>
+                Sort: {s.label}
+              </option>
             ))}
-          </Table>
-          <Pagination
-            page={products.page}
-            pageSize={products.pageSize}
-            total={products.total}
-            hrefFor={(n) => hrefFor({ page: String(n) })}
+          </select>
+          <button type="submit" className={buttonClass('secondary', 'sm')}>
+            Apply
+          </button>
+        </div>
+      </form>
+
+      {chips.length > 0 ? (
+        <div className="-mt-1 mb-4 flex flex-wrap items-center gap-1.5">
+          {chips.map((chip) => (
+            <Link
+              key={chip.label}
+              href={chip.href}
+              className="group inline-flex items-center gap-1 rounded-full bg-indigo-50 py-0.5 pr-1.5 pl-2.5 text-xs font-medium text-indigo-800 ring-1 ring-indigo-600/15 ring-inset hover:bg-indigo-100"
+            >
+              {chip.label}
+              <Icon name="close" className="h-3 w-3 text-indigo-500" strokeWidth={2.5} />
+              <span className="sr-only">(remove filter)</span>
+            </Link>
+          ))}
+          <Link
+            href={hrefFor({
+              vendor: undefined,
+              productType: undefined,
+              tag: undefined,
+              collectionId: undefined,
+              page: undefined,
+            })}
+            className="ml-1 text-xs font-medium text-slate-500 hover:text-slate-800"
+          >
+            Clear all
+          </Link>
+        </div>
+      ) : null}
+
+      <ProductsTable
+        items={products.items.map((p) => ({
+          ...p,
+          scheduledFor: p.scheduled && p.publishedAt ? formatDateTime(p.publishedAt) : null,
+        }))}
+        currency={store.currency}
+        base={base}
+        canWrite={canWrite}
+        bulk={bulkProductsAction.bind(null, storeId)}
+        empty={
+          <EmptyState
+            icon="products"
+            title={filtered ? 'No matching products' : 'Add your first product'}
+            description={
+              filtered
+                ? 'Try a different search or remove a filter.'
+                : 'Products you add appear here and, once active, on your storefront.'
+            }
+            action={
+              filtered ? (
+                <ButtonLink href={base} variant="secondary">
+                  Clear filters
+                </ButtonLink>
+              ) : canWrite ? (
+                <ButtonLink href={`${base}/new`}>Add product</ButtonLink>
+              ) : null
+            }
           />
-        </>
-      )}
+        }
+      />
+      <Pagination
+        page={products.page}
+        pageSize={products.pageSize}
+        total={products.total}
+        hrefFor={(n) => hrefFor({ page: String(n) })}
+      />
     </>
+  );
+}
+
+function FilterSelect({
+  name,
+  label,
+  any,
+  value,
+  options,
+}: {
+  name: string;
+  label: string;
+  any: string;
+  value?: string;
+  options: { value: string; label: string }[];
+}) {
+  const id = `filter-${name}`;
+  const known = !value || options.some((o) => o.value === value);
+  return (
+    <div className="min-w-0 flex-1 basis-[calc(50%-0.25rem)] sm:flex-none sm:basis-auto">
+      <label htmlFor={id} className="sr-only">
+        {label}
+      </label>
+      <select
+        id={id}
+        name={name}
+        defaultValue={value ?? ''}
+        className={`${selectClass} w-full sm:w-auto sm:max-w-44 ${value ? 'border-indigo-300 bg-indigo-50/40' : ''}`}
+      >
+        <option value="">{any}</option>
+        {!known && value ? <option value={value}>{value}</option> : null}
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }

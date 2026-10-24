@@ -7,6 +7,7 @@ import {
   GetStarted,
   HomeHero,
   IndustriesRow,
+  RunYourBusiness,
   Security,
   SellGlobally,
   TemplateMarquee,
@@ -48,6 +49,7 @@ export function PlatformLanding() {
       <SellGlobally />
       <CheckoutCarousel />
       <IndustriesRow />
+      <RunYourBusiness />
       <Developers />
       <Security />
       <GetStarted />
@@ -57,13 +59,15 @@ export function PlatformLanding() {
 
 export function PlatformNotFound() {
   return (
-    <div className="mx-auto max-w-xl px-6 py-32 text-center">
-      <p className="text-sm font-semibold text-indigo-600">404</p>
-      <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">Page not found</h1>
-      <p className="mt-3 text-slate-600">The page you are looking for does not exist.</p>
+    <div className="bg-[#f6f4ef] px-4 py-32 text-center sm:px-6">
+      <p className="text-xs font-semibold tracking-[0.14em] text-indigo-700 uppercase">404</p>
+      <h1 className="mt-4 text-4xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-5xl">
+        Page not found
+      </h1>
+      <p className="mt-4 text-lg text-slate-600">The page you are looking for does not exist.</p>
       <a
         href="/"
-        className="mt-8 inline-block rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+        className="mt-9 inline-block rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
       >
         Back to home
       </a>

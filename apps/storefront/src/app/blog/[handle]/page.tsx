@@ -27,12 +27,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ handl
   const post = await getPost((await params).handle);
   if (!post) notFound();
   return (
-    <article>
-      <Link href="/blog" className="text-sm text-zinc-600 hover:underline">
+    <article className="mx-auto max-w-2xl">
+      <Link href="/blog" className="text-sm text-zinc-600 hover:text-zinc-900 hover:underline">
         ← Blog
       </Link>
-      <h1 className="mt-4 text-3xl font-bold tracking-tight">{post.title}</h1>
-      <p className="mb-6 mt-2 text-sm text-zinc-500">
+      <h1 className="page-title t-title mt-6">{post.title}</h1>
+      <p className="eyebrow mt-4 mb-10 border-b border-zinc-200 pb-8 text-zinc-500">
         <time dateTime={post.publishedAt}>
           {new Date(post.publishedAt).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -42,9 +42,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ handl
         </time>
         {post.author ? ` · ${post.author}` : ''}
       </p>
-      <PlainText body={post.body} />
+      <div className="text-[1.0625rem] leading-[1.8]">
+        <PlainText body={post.body} />
+      </div>
       {post.tags.length > 0 ? (
-        <p className="mt-8 flex flex-wrap gap-2 text-sm">
+        <p className="mt-12 flex flex-wrap gap-2 border-t border-zinc-200 pt-8 text-sm">
           {post.tags.map((t) => (
             <Link
               key={t}

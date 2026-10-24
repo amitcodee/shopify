@@ -21,7 +21,9 @@ export function EmailCapture({
       action={signupUrl}
       method="get"
       className={`flex w-full max-w-md flex-col gap-2 rounded-2xl p-1.5 sm:flex-row sm:rounded-full ${
-        dark ? 'bg-white/10 ring-1 ring-white/20' : 'bg-white ring-1 ring-slate-300'
+        dark
+          ? 'bg-white/10 ring-1 ring-white/25 backdrop-blur'
+          : 'bg-white shadow-[0_10px_30px_-12px_rgb(15_23_42/0.25)] ring-1 ring-slate-900/10'
       }`}
     >
       {template ? <input type="hidden" name="template" value={template} /> : null}
@@ -34,18 +36,18 @@ export function EmailCapture({
         type="email"
         autoComplete="email"
         placeholder="Enter your email"
-        className={`min-w-0 flex-1 rounded-full bg-transparent px-4 py-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
+        className={`min-w-0 flex-1 rounded-full bg-transparent px-4 py-3 text-[0.9375rem] outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${
           dark
-            ? 'text-white placeholder:text-slate-400'
+            ? 'text-white placeholder:text-slate-300'
             : 'text-slate-900 placeholder:text-slate-500'
         }`}
       />
       <button
         type="submit"
-        className={`rounded-full px-5 py-2.5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 ${
+        className={`rounded-full px-6 py-3 text-sm font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
           dark
-            ? 'bg-white text-slate-950 hover:bg-indigo-100 focus-visible:outline-white'
-            : 'bg-slate-950 text-white hover:bg-slate-800 focus-visible:outline-indigo-600'
+            ? 'bg-white text-slate-950 hover:bg-indigo-50 focus-visible:outline-white'
+            : 'bg-slate-950 text-white hover:bg-indigo-700 focus-visible:outline-indigo-600'
         }`}
       >
         Start for free

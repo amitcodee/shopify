@@ -44,6 +44,133 @@ export const productOptionInputSchema = z.strictObject({
     }),
 });
 
+/** ISO 3166-1 alpha-2 ("us" and "" are accepted and normalized to "US" / null). */
+const countryCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .transform((v) => (v === '' ? null : v))
+  .pipe(
+    z
+      .string()
+      .regex(/^[A-Z]{2}$/, 'Use a two-letter country code')
+      .nullable(),
+  );
+
+/** Harmonized System code: 6-10 digits; dots and spaces ("6109.10") are dropped. */
+const hsCodeSchema = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/[.\s]/g, ''))
+  .transform((v) => (v === '' ? null : v))
+  .pipe(
+    z
+      .string()
+      .regex(/^\d{6,10}$/, 'HS codes have 6 to 10 digits')
+      .nullable(),
+  );
+
+export const MAX_VARIANTS_PER_PRODUCT = 250;
+export const MAX_IMAGES_PER_PRODUCT = 50;
+export const MAX_METAFIELDS_PER_PRODUCT = 30;
+
+export const metafieldTypeSchema = z.enum([
+  'single_line_text',
+  'multi_line_text',
+  'number_integer',
+  'number_decimal',
+  'boolean',
+  'url',
+  'date',
+]);
+export type MetafieldType = z.infer<typeof metafieldTypeSchema>;
+
+/**
+ * Validates a metafield value for its type and returns the canonical string that is stored
+ * ("007" -> "7" for integers, "TRUE" -> "true", URLs normalized), or an error message.
+ */
+export function normalizeMetafieldValue(
+  type: MetafieldType,
+  raw: string | number | boolean,
+): { value: string } | { error: string } {
+  const text = String(raw).trim();
+  switch (type) {
+    case 'single_line_text':
+      if (text === '') return { error: 'Enter a value' };
+      if (/[\r\n]/.test(text)) return { error: 'Single-line text cannot contain line breaks' };
+      if (text.length > 255) return { error: 'Use at most 255 characters' };
+      return { value: text };
+    case 'multi_line_text':
+      if (text === '') return { error: 'Enter a value' };
+      if (text.length > 5000) return { error: 'Use at most 5000 characters' };
+      return { value: text.replace(/\r\n/g, '\n') };
+    case 'number_integer': {
+      if (!/^[-+]?\d{1,16}$/.test(text)) return { error: 'Enter a whole number' };
+      const n = Number(text);
+      if (!Number.isSafeInteger(n)) return { error: 'The number is too large' };
+      return { value: String(n) };
+    }
+    case 'number_decimal': {
+      const match = /^([-+]?)(\d{1,15})(?:\.(\d{1,9}))?$/.exec(text);
+      if (!match) return { error: 'Enter a number such as 12.5' };
+      const [, sign, whole = '0', fraction = ''] = match;
+      const decimals = fraction.replace(/0+$/, '');
+      const integer = whole.replace(/^0+(?=\d)/, '');
+      const value = `${sign === '-' ? '-' : ''}${integer}${decimals ? `.${decimals}` : ''}`;
+      return { value: value === '-0' ? '0' : value };
+    }
+    case 'boolean': {
+      const lower = text.toLowerCase();
+      if (lower === 'true' || lower === 'false') return { value: lower };
+      return { error: 'Use true or false' };
+    }
+    case 'url': {
+      let url: URL;
+      try {
+        url = new URL(text);
+      } catch {
+        return { error: 'Enter a full URL starting with https://' };
+      }
+      if (url.protocol !== 'https:') return { error: 'Only https:// links are allowed' };
+      if (url.username || url.password) return { error: 'Links cannot contain credentials' };
+      const value = url.toString();
+      if (value.length > 2048) return { error: 'The link is too long' };
+      return { value };
+    }
+    case 'date': {
+      const valid =
+        /^\d{4}-\d{2}-\d{2}$/.test(text) &&
+        new Date(`${text}T00:00:00Z`).toISOString().slice(0, 10) === text;
+      return valid ? { value: text } : { error: 'Use a date like 2026-12-31' };
+    }
+  }
+}
+
+export const metafieldInputSchema = z
+  .strictObject({
+    namespace: z
+      .string()
+      .trim()
+      .regex(/^[a-z0-9_]{1,20}$/, 'Use 1-20 lowercase letters, numbers and underscores')
+      .default('custom'),
+    key: z
+      .string()
+      .trim()
+      .regex(/^[a-z0-9_]{1,40}$/, 'Use 1-40 lowercase letters, numbers and underscores'),
+    type: metafieldTypeSchema,
+    value: z.union([z.string().max(5000), z.number(), z.boolean()]),
+    showOnStorefront: z.boolean().default(false),
+  })
+  .transform((field, ctx) => {
+    const result = normalizeMetafieldValue(field.type, field.value);
+    if ('error' in result) {
+      ctx.addIssue({ code: 'custom', path: ['value'], message: result.error });
+      return z.NEVER;
+    }
+    return { ...field, value: result.value };
+  });
+export type MetafieldInput = z.input<typeof metafieldInputSchema>;
+
 export const variantInputSchema = z.strictObject({
   /** Present when updating an existing variant. */
   id: z.uuid().optional(),
@@ -52,8 +179,17 @@ export const variantInputSchema = z.strictObject({
   barcode: optionalText(64),
   price: moneyMinor,
   compareAtPrice: moneyMinor.nullable().optional(),
+  /**
+   * Unit cost (admin only). On update, omitting it keeps the stored value and null clears it;
+   * countryOfOrigin, hsCode and imageId behave the same way.
+   */
+  costPerItem: moneyMinor.nullable().optional(),
   weightGrams: z.number().int().min(0).max(1_000_000).default(0),
   requiresShipping: z.boolean().default(true),
+  countryOfOrigin: countryCodeSchema.nullable().optional(),
+  hsCode: hsCodeSchema.nullable().optional(),
+  /** One of this product's images, shown when the variant is selected. */
+  imageId: z.uuid().nullable().optional(),
   taxable: z.boolean().default(true),
   trackInventory: z.boolean().default(true),
   allowBackorder: z.boolean().default(false),
@@ -85,7 +221,24 @@ export const productInputSchema = z
       .refine((opts) => new Set(opts.map((o) => o.name.toLowerCase())).size === opts.length, {
         message: 'Option names must be unique',
       }),
-    variants: z.array(variantInputSchema).min(1, 'Add at least one variant').max(100),
+    variants: z
+      .array(variantInputSchema)
+      .min(1, 'Add at least one variant')
+      .max(MAX_VARIANTS_PER_PRODUCT),
+    /**
+     * When the product goes live on the storefront (with status ACTIVE). A future time schedules
+     * it; null publishes now (clearing a schedule); omitted keeps the current publish time.
+     */
+    publishAt: z.iso.datetime({ offset: true }).nullable().optional(),
+    /** Custom fields. Replaces all of the product's metafields when present; omitted keeps them. */
+    metafields: z
+      .array(metafieldInputSchema)
+      .max(MAX_METAFIELDS_PER_PRODUCT, `Use at most ${MAX_METAFIELDS_PER_PRODUCT} custom fields`)
+      .refine(
+        (fields) => new Set(fields.map((f) => `${f.namespace}.${f.key}`)).size === fields.length,
+        { message: 'Custom field keys must be unique' },
+      )
+      .optional(),
   })
   .superRefine((product, ctx) => {
     const seen = new Set<string>();
@@ -149,15 +302,32 @@ export const productInputSchema = z
 export type ProductInput = z.input<typeof productInputSchema>;
 export type ProductInputParsed = z.output<typeof productInputSchema>;
 
+/** A resized WebP copy of an image, for `srcset`. */
+export const imageRenditionSchema = z.object({ width: z.number().int(), url: z.string() });
+export type ImageRendition = z.infer<typeof imageRenditionSchema>;
+
 export const productImageSchema = z.object({
   id: z.uuid(),
+  /** Full-size WebP (at most 5000 px per side). */
   url: z.string(),
   alt: z.string(),
   width: z.number().int(),
   height: z.number().int(),
   position: z.number().int(),
+  /** Smaller copies, narrowest first (only widths below the original; empty for old images). */
+  renditions: z.array(imageRenditionSchema),
 });
 export type ProductImage = z.infer<typeof productImageSchema>;
+
+export const productMetafieldSchema = z.object({
+  id: z.uuid(),
+  namespace: z.string(),
+  key: z.string(),
+  type: metafieldTypeSchema,
+  value: z.string(),
+  showOnStorefront: z.boolean(),
+});
+export type ProductMetafield = z.infer<typeof productMetafieldSchema>;
 
 export const variantSchema = z.object({
   id: z.uuid(),
@@ -167,13 +337,21 @@ export const variantSchema = z.object({
   barcode: z.string().nullable(),
   price: z.number().int(),
   compareAtPrice: z.number().int().nullable(),
+  costPerItem: z.number().int().nullable(),
+  /** price - costPerItem (null without a cost). */
+  profit: z.number().int().nullable(),
+  /** Profit as a percentage of price, one decimal (null without a cost or with a zero price). */
+  margin: z.number().nullable(),
   weightGrams: z.number().int(),
   requiresShipping: z.boolean(),
+  countryOfOrigin: z.string().nullable(),
+  hsCode: z.string().nullable(),
   taxable: z.boolean(),
   trackInventory: z.boolean(),
   allowBackorder: z.boolean(),
   inventoryQuantity: z.number().int(),
   position: z.number().int(),
+  imageId: z.uuid().nullable(),
 });
 export type Variant = z.infer<typeof variantSchema>;
 
@@ -193,6 +371,11 @@ export const productSchema = z.object({
   variants: z.array(variantSchema),
   images: z.array(productImageSchema),
   collectionIds: z.array(z.uuid()),
+  metafields: z.array(productMetafieldSchema),
+  /** When the product went (or goes) live; null for products never activated. */
+  publishedAt: z.iso.datetime().nullable(),
+  /** ACTIVE with a future publishedAt: hidden from the storefront until then. */
+  scheduled: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
@@ -204,25 +387,122 @@ export const productListItemSchema = z.object({
   handle: z.string(),
   status: productStatusSchema,
   vendor: z.string().nullable(),
+  productType: z.string().nullable(),
+  tags: z.array(z.string()),
   variantCount: z.number().int(),
   totalInventory: z.number().int(),
   minPrice: z.number().int(),
   maxPrice: z.number().int(),
   imageUrl: z.string().nullable(),
+  /** 200 px wide thumbnail when one exists (otherwise the same as imageUrl). */
+  thumbnailUrl: z.string().nullable(),
+  publishedAt: z.iso.datetime().nullable(),
+  scheduled: z.boolean(),
+  createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
 export type ProductListItem = z.infer<typeof productListItemSchema>;
 export const productListSchema = paginated(productListItemSchema);
 
+export const productListSortSchema = z.enum(['updated', 'created', 'title', 'price', 'inventory']);
+export type ProductListSort = z.infer<typeof productListSortSchema>;
+
+const blankToUndefined = (v: unknown) => (v === '' ? undefined : v);
+
 export const productListQuerySchema = z.strictObject({
-  q: z.string().trim().max(100).optional(),
-  status: productStatusSchema.optional(),
+  /** Matches title or vendor (contains), SKU (prefix) or tag (exact), ignoring case. */
+  q: z.preprocess(blankToUndefined, z.string().trim().max(100).optional()),
+  status: z.preprocess(blankToUndefined, productStatusSchema.optional()),
+  vendor: z.preprocess(blankToUndefined, z.string().trim().max(100).optional()),
+  productType: z.preprocess(blankToUndefined, z.string().trim().max(100).optional()),
+  tag: z.preprocess(blankToUndefined, z.string().trim().toLowerCase().max(40).optional()),
+  collectionId: z.preprocess(blankToUndefined, z.uuid().optional()),
+  sort: productListSortSchema.default('updated'),
+  /** Defaults: newest first for updated/created; A-Z or lowest first for the others. */
+  direction: z.preprocess(blankToUndefined, z.enum(['asc', 'desc']).optional()),
   page: z.coerce.number().int().min(1).max(10_000).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
 export type ProductListQuery = z.infer<typeof productListQuerySchema>;
 
-export const updateImageInputSchema = z.strictObject({
-  alt: z.string().trim().max(200).optional(),
-  position: z.number().int().min(0).max(100).optional(),
+/** Distinct values for the admin product list filters (sorted, capped at 500 each). */
+export const productFacetsSchema = z.object({
+  vendors: z.array(z.string()),
+  productTypes: z.array(z.string()),
+  tags: z.array(z.string()),
 });
+export type ProductFacets = z.infer<typeof productFacetsSchema>;
+
+export const updateImageInputSchema = z.strictObject({
+  alt: z.string().trim().max(512).optional(),
+  /** Moves the image to this 0-based index (the other images shift). */
+  position: z
+    .number()
+    .int()
+    .min(0)
+    .max(MAX_IMAGES_PER_PRODUCT - 1)
+    .optional(),
+});
+
+export const reorderImagesInputSchema = z.strictObject({
+  /** Every image id of the product, exactly once, in the new order. */
+  imageIds: z
+    .array(z.uuid())
+    .max(MAX_IMAGES_PER_PRODUCT)
+    .refine((ids) => new Set(ids).size === ids.length, { message: 'Image ids must be unique' }),
+});
+export type ReorderImagesInput = z.infer<typeof reorderImagesInputSchema>;
+
+export const importImageInputSchema = z.strictObject({
+  url: z
+    .string()
+    .trim()
+    .max(2048)
+    .refine((value) => URL.canParse(value) && new URL(value).protocol === 'https:', {
+      message: 'Enter an https:// image URL',
+    }),
+  alt: z.string().trim().max(512).default(''),
+});
+export type ImportImageInput = z.input<typeof importImageInputSchema>;
+
+export const updateVariantImageInputSchema = z.strictObject({
+  /** One of the product's images, or null to clear. */
+  imageId: z.uuid().nullable(),
+});
+
+export const productBulkActionSchema = z.enum([
+  'activate',
+  'draft',
+  'archive',
+  'delete',
+  'add_tags',
+  'remove_tags',
+]);
+export type ProductBulkAction = z.infer<typeof productBulkActionSchema>;
+
+export const productBulkInputSchema = z
+  .strictObject({
+    productIds: z
+      .array(z.uuid())
+      .min(1)
+      .max(100)
+      .transform((ids) => [...new Set(ids)]),
+    action: productBulkActionSchema,
+    tags: z
+      .array(z.string().trim().toLowerCase().min(1).max(40))
+      .max(50)
+      .transform((tags) => [...new Set(tags)])
+      .optional(),
+  })
+  .refine(
+    (input) => !['add_tags', 'remove_tags'].includes(input.action) || (input.tags?.length ?? 0) > 0,
+    { path: ['tags'], message: 'Choose at least one tag' },
+  );
+export type ProductBulkInput = z.input<typeof productBulkInputSchema>;
+
+export const productBulkResultSchema = z.object({
+  action: productBulkActionSchema,
+  /** Number of products changed (or deleted). */
+  count: z.number().int(),
+});
+export type ProductBulkResult = z.infer<typeof productBulkResultSchema>;

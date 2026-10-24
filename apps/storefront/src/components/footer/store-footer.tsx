@@ -46,8 +46,8 @@ export function StoreFooter({ shop }: { shop: Shop }) {
 
   if (style === 'simple') {
     return (
-      <footer className="store-footer border-t border-zinc-200 py-10 text-sm text-zinc-500">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 text-center">
+      <footer className="store-footer mt-8 border-t border-zinc-200 py-12 text-sm text-zinc-500">
+        <div className="store-container flex flex-col items-center gap-5 text-center">
           <SocialLinks settings={s} className="justify-center" />
           {hasLinks ? (
             <nav aria-label="Footer" className="flex flex-wrap justify-center gap-x-6 gap-y-2">
@@ -55,6 +55,7 @@ export function StoreFooter({ shop }: { shop: Shop }) {
               {policyLinks}
             </nav>
           ) : null}
+          <p className="t-title text-xl text-zinc-900">{shop.name}</p>
           <p>
             © {year} {shop.name} · {email}
           </p>
@@ -67,46 +68,84 @@ export function StoreFooter({ shop }: { shop: Shop }) {
 
   // "columns" and "dark" share a layout; "dark" sits on a band in the theme's inverse colors.
   const dark = style === 'dark';
-  const columnHeading = 'eyebrow mb-4 text-zinc-900';
+  const columnHeading = 'eyebrow mb-5 text-zinc-900';
+  const column = 'flex flex-col items-start gap-3';
+  const shopLinks = shop.collections.slice(0, 5);
   return (
     <footer
-      className={`store-footer pt-14 pb-8 text-sm text-zinc-600 ${
+      className={`store-footer mt-8 pt-16 pb-8 text-sm text-zinc-600 sm:pt-20 ${
         dark ? 'theme-band' : 'border-t border-zinc-200 bg-surface'
       }`}
     >
-      <div className="mx-auto max-w-6xl px-4">
-        <div className="grid gap-10 md:grid-cols-12">
-          <div className="md:col-span-5">
-            <p
-              className={`font-heading font-bold tracking-tight text-zinc-900 ${dark ? 'text-2xl' : 'text-xl'}`}
-            >
+      <div className="store-container">
+        <div className="grid gap-12 lg:grid-cols-12">
+          <div className="lg:col-span-4">
+            <p className={`t-title text-zinc-900 ${dark ? 'text-3xl sm:text-4xl' : 'text-2xl'}`}>
               {shop.name}
             </p>
-            <p className="mt-3 leading-relaxed">Questions about an order? Write to us at</p>
-            <p className="break-words">{email}</p>
-            <SocialLinks settings={s} className="mt-6" />
+            <p className="mt-4 max-w-xs leading-relaxed">
+              Questions about an order? Write to us at
+            </p>
+            <p className="mt-1 font-medium break-words text-zinc-900">{email}</p>
+            <SocialLinks settings={s} className="mt-7" />
           </div>
-          {hasLinks ? (
-            <nav
-              aria-label="Footer"
-              className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:col-span-7 md:col-start-6"
-            >
-              {menuLinks.length > 0 ? (
-                <div>
-                  <p className={columnHeading}>Explore</p>
-                  <div className="flex flex-col items-start gap-2.5">{menuLinks}</div>
+          <nav
+            aria-label="Footer"
+            className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4 lg:col-span-8"
+          >
+            {shopLinks.length > 0 ? (
+              <div>
+                <p className={columnHeading}>Shop</p>
+                <div className={column}>
+                  <Link href="/collections/all" className={linkClass}>
+                    All products
+                  </Link>
+                  {shopLinks.map((c) => (
+                    <Link key={c.handle} href={`/collections/${c.handle}`} className={linkClass}>
+                      {c.title}
+                    </Link>
+                  ))}
                 </div>
-              ) : null}
-              {policyLinks.length > 0 ? (
-                <div>
-                  <p className={columnHeading}>Policies</p>
-                  <div className="flex flex-col items-start gap-2.5">{policyLinks}</div>
-                </div>
-              ) : null}
-            </nav>
-          ) : null}
+              </div>
+            ) : null}
+            {menuLinks.length > 0 ? (
+              <div>
+                <p className={columnHeading}>Explore</p>
+                <div className={column}>{menuLinks}</div>
+              </div>
+            ) : null}
+            <div>
+              <p className={columnHeading}>Help</p>
+              <div className={column}>
+                <Link href="/account" className={linkClass}>
+                  My account
+                </Link>
+                {shop.contactEmail ? (
+                  <a href={`mailto:${shop.contactEmail}`} className={linkClass}>
+                    Email us
+                  </a>
+                ) : null}
+              </div>
+            </div>
+            {policyLinks.length > 0 ? (
+              <div>
+                <p className={columnHeading}>Policies</p>
+                <div className={column}>{policyLinks}</div>
+              </div>
+            ) : null}
+          </nav>
         </div>
-        <div className="mt-12 flex flex-col gap-3 border-t border-zinc-200 pt-6 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+        {dark ? (
+          <p
+            aria-hidden="true"
+            className="t-display mt-16 hidden overflow-hidden whitespace-nowrap sm:block text-[clamp(3rem,11vw,9rem)] leading-none text-[color-mix(in_oklab,var(--store-text)_9%,var(--store-bg))] select-none"
+          >
+            {shop.name}
+          </p>
+        ) : null}
+        <div
+          className={`flex flex-col gap-3 border-t border-zinc-200 pt-6 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between ${dark ? 'mt-6' : 'mt-16'}`}
+        >
           <p className="flex flex-wrap gap-x-3 gap-y-1">
             <span>
               © {year} {shop.name}

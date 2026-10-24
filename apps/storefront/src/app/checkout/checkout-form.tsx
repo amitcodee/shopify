@@ -19,10 +19,43 @@ const COUNTRIES: [string, string][] = [
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className={`flex justify-between ${strong ? 'text-base font-semibold' : 'text-sm'}`}>
+    <div
+      className={`flex items-baseline justify-between gap-4 ${
+        strong ? 'pt-1 text-lg font-semibold text-zinc-900' : 'text-sm text-zinc-600'
+      }`}
+    >
       <dt>{label}</dt>
-      <dd>{value}</dd>
+      <dd className={`tabular-nums ${strong ? '' : 'text-zinc-900'}`}>{value}</dd>
     </div>
+  );
+}
+
+/** Step number before each checkout heading. */
+function Step({ n }: { n: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="grid size-7 shrink-0 place-items-center rounded-full bg-zinc-900 text-xs font-semibold text-white tabular-nums"
+    >
+      {n}
+    </span>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="size-4 shrink-0"
+    >
+      <path d="M6 11h12v10H6zM8 11V7a4 4 0 1 1 8 0v4" />
+    </svg>
   );
 }
 
@@ -78,7 +111,10 @@ export function CheckoutForm({
   }
 
   return (
-    <form action={formAction} className="grid gap-10 lg:grid-cols-[1fr_360px]">
+    <form
+      action={formAction}
+      className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-14 xl:gap-20"
+    >
       <FollowRedirect to={state?.redirectTo} />
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
       <input type="hidden" name="shippingRateId" value={shippingRateId} />
@@ -89,10 +125,11 @@ export function CheckoutForm({
       />
       <input type="hidden" name="giftCardCode" value={appliedGiftCard} />
 
-      <div className="space-y-8">
+      <div className="space-y-10">
         <Notice result={state} />
-        <section className="space-y-4" aria-labelledby="contact-heading">
-          <h2 id="contact-heading" className="text-lg font-semibold">
+        <section className="space-y-5" aria-labelledby="contact-heading">
+          <h2 id="contact-heading" className="flex items-center gap-3 text-lg font-semibold">
+            <Step n={1} />
             Contact
           </h2>
           <TextField
@@ -107,8 +144,12 @@ export function CheckoutForm({
           />
         </section>
 
-        <section className="space-y-4" aria-labelledby="shipping-heading">
-          <h2 id="shipping-heading" className="text-lg font-semibold">
+        <section
+          className="space-y-5 border-t border-zinc-200 pt-10"
+          aria-labelledby="shipping-heading"
+        >
+          <h2 id="shipping-heading" className="flex items-center gap-3 text-lg font-semibold">
+            <Step n={2} />
             Shipping address
           </h2>
           <TextField label="Full name" name="name" autoComplete="name" required error={err.name} />
@@ -147,8 +188,8 @@ export function CheckoutForm({
               required
               error={err.postalCode}
             />
-            <div className="space-y-1">
-              <label htmlFor="country" className="block text-sm font-medium text-zinc-800">
+            <div>
+              <label htmlFor="country" className="field-label">
                 Country
               </label>
               <select
@@ -160,7 +201,7 @@ export function CheckoutForm({
                   setCountry(e.target.value);
                   refresh({ country: e.target.value });
                 }}
-                className="block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+                className="field"
               >
                 {COUNTRIES.map(([code, name]) => (
                   <option key={code} value={code}>
@@ -174,71 +215,94 @@ export function CheckoutForm({
         </section>
 
         {preview.requiresShipping ? (
-          <fieldset className="space-y-2">
-            <legend className="mb-2 text-lg font-semibold">Shipping method</legend>
-            {preview.shippingOptions.length === 0 ? (
-              <p className="text-sm text-red-700">We don’t ship to this country yet.</p>
-            ) : (
-              preview.shippingOptions.map((option) => (
-                <label
-                  key={option.id}
-                  className="flex items-center justify-between rounded-md border border-zinc-300 px-4 py-3 text-sm has-[:checked]:border-zinc-900"
-                >
-                  <span className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="shippingOption"
-                      value={option.id}
-                      checked={shippingRateId === option.id}
-                      onChange={() => {
-                        setShippingRateId(option.id);
-                        refresh({ shippingRateId: option.id });
-                      }}
-                    />
-                    {option.name}
-                  </span>
-                  <span>{option.price === 0 ? 'Free' : money(option.price)}</span>
-                </label>
-              ))
-            )}
-          </fieldset>
+          <div className="border-t border-zinc-200 pt-10">
+            <fieldset className="space-y-2.5">
+              <legend className="mb-5 flex items-center gap-3 text-lg font-semibold">
+                <Step n={3} />
+                Shipping method
+              </legend>
+              {preview.shippingOptions.length === 0 ? (
+                <p className="text-sm text-red-700">We don’t ship to this country yet.</p>
+              ) : (
+                preview.shippingOptions.map((option) => (
+                  <label
+                    key={option.id}
+                    className="flex cursor-pointer items-center justify-between gap-4 rounded-[var(--field-radius)] border border-zinc-300 px-4 py-4 text-sm transition hover:border-zinc-500 has-[:checked]:border-zinc-900 has-[:checked]:bg-zinc-50 has-[:checked]:ring-1 has-[:checked]:ring-zinc-900"
+                  >
+                    <span className="flex items-center gap-3">
+                      <input
+                        type="radio"
+                        className="size-4 accent-[var(--store-text)]"
+                        name="shippingOption"
+                        value={option.id}
+                        checked={shippingRateId === option.id}
+                        onChange={() => {
+                          setShippingRateId(option.id);
+                          refresh({ shippingRateId: option.id });
+                        }}
+                      />
+                      {option.name}
+                    </span>
+                    <span className="font-medium tabular-nums">
+                      {option.price === 0 ? 'Free' : money(option.price)}
+                    </span>
+                  </label>
+                ))
+              )}
+            </fieldset>
+          </div>
         ) : null}
 
-        <div className="space-y-1">
-          <label htmlFor="note" className="block text-sm font-medium text-zinc-800">
+        <div>
+          <label htmlFor="note" className="field-label">
             Order note (optional)
           </label>
-          <textarea
-            id="note"
-            name="note"
-            rows={2}
-            maxLength={500}
-            className="block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-          />
+          <textarea id="note" name="note" rows={2} maxLength={500} className="field" />
         </div>
       </div>
 
       <aside
         aria-labelledby="summary-heading"
-        className="h-fit space-y-5 rounded-xl bg-zinc-50 p-6"
+        className="panel h-fit space-y-6 p-5 sm:p-7 lg:sticky lg:top-28"
       >
         <h2 id="summary-heading" className="text-lg font-semibold">
           Order summary
         </h2>
-        <ul className="space-y-3 text-sm">
+        <ul className="space-y-4 text-sm">
           {preview.lines.map((line) => (
-            <li key={line.id} className="flex justify-between gap-4">
-              <span>
-                {line.productTitle}
-                {line.variantTitle !== 'Default' ? ` · ${line.variantTitle}` : ''} × {line.quantity}
+            <li key={line.id} className="flex items-center gap-4">
+              <span className="relative size-16 shrink-0 rounded-[var(--radius-md)] border border-zinc-200 bg-zinc-100">
+                {line.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={line.imageUrl}
+                    alt=""
+                    className="h-full w-full rounded-[var(--radius-md)] object-cover"
+                  />
+                ) : null}
+                <span
+                  aria-hidden="true"
+                  className="absolute -top-2 -right-2 grid h-5 min-w-5 place-items-center rounded-full bg-zinc-700 px-1 text-[0.6875rem] font-semibold text-white tabular-nums"
+                >
+                  {line.quantity}
+                </span>
               </span>
-              <span>{money(line.lineTotal)}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium break-words text-zinc-900">
+                  {line.productTitle}
+                </span>
+                <span className="block text-xs text-zinc-500">
+                  {line.variantTitle !== 'Default' ? `${line.variantTitle} · ` : ''}Qty{' '}
+                  {line.quantity}
+                </span>
+              </span>
+              <span className="tabular-nums">{money(line.lineTotal)}</span>
             </li>
           ))}
         </ul>
 
-        <div className="space-y-2">
-          <label htmlFor="discount" className="block text-sm font-medium text-zinc-800">
+        <div>
+          <label htmlFor="discount" className="field-label">
             Discount code
           </label>
           <div className="flex gap-2">
@@ -246,12 +310,12 @@ export function CheckoutForm({
               id="discount"
               value={discountCode}
               onChange={(e) => setDiscountCode(e.target.value)}
-              className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm uppercase"
+              className="field min-w-0 flex-1 uppercase"
             />
             <button
               type="button"
               onClick={() => refresh({ discountCode })}
-              className="rounded-md border border-zinc-900 px-3 py-2 text-sm font-medium"
+              className="btn btn-ghost px-4 text-sm"
               aria-label="Apply discount code"
             >
               Apply
@@ -259,7 +323,7 @@ export function CheckoutForm({
           </div>
           {preview.discount ? (
             <p
-              className={`text-xs ${preview.discount.applied ? 'text-emerald-700' : 'text-red-700'}`}
+              className={`mt-2 text-xs ${preview.discount.applied ? 'text-emerald-700' : 'text-red-700'}`}
               role="status"
             >
               {preview.discount.applied
@@ -269,8 +333,8 @@ export function CheckoutForm({
           ) : null}
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="gift-card" className="block text-sm font-medium text-zinc-800">
+        <div>
+          <label htmlFor="gift-card" className="field-label">
             Gift card
           </label>
           <div className="flex gap-2">
@@ -279,33 +343,33 @@ export function CheckoutForm({
               value={giftCardCode}
               onChange={(e) => setGiftCardCode(e.target.value)}
               autoComplete="off"
-              className="min-w-0 flex-1 rounded-md border border-zinc-300 px-3 py-2 text-sm uppercase"
+              className="field min-w-0 flex-1 uppercase"
             />
             <button
               type="button"
               onClick={() => refresh({ giftCardCode })}
-              className="rounded-md border border-zinc-900 px-3 py-2 text-sm font-medium"
+              className="btn btn-ghost px-4 text-sm"
               aria-label="Apply gift card"
             >
               Apply
             </button>
           </div>
           {preview.giftCard ? (
-            <p className="text-xs text-emerald-700" role="status">
+            <p className="mt-2 text-xs text-emerald-700" role="status">
               Gift card •••• {preview.giftCard.lastCharacters} applied
               {preview.giftCard.remaining > 0
                 ? ` (${money(preview.giftCard.remaining)} left on the card after this order).`
                 : '.'}
             </p>
           ) : preview.giftCardError ? (
-            <p className="text-xs text-red-700" role="status">
+            <p className="mt-2 text-xs text-red-700" role="status">
               {preview.giftCardError}
             </p>
           ) : null}
         </div>
 
         <dl
-          className="space-y-2 border-t border-zinc-200 pt-4"
+          className="space-y-2.5 border-t border-zinc-200 pt-5"
           aria-live="polite"
           aria-busy={isPending}
         >
@@ -341,7 +405,8 @@ export function CheckoutForm({
         ) : preview.acceptingPayments ? (
           <>
             <Submit pendingLabel="Placing order…">Continue to payment</Submit>
-            <p className="text-center text-xs text-zinc-500">
+            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-zinc-500">
+              <LockIcon />
               You’ll complete payment on a secure payment page.
             </p>
           </>

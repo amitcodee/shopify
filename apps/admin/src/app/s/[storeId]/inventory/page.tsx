@@ -7,7 +7,17 @@ import {
 } from '@repo/contracts';
 import Link from 'next/link';
 import { ActionForm, SubmitButton } from '@/components/form';
-import { Badge, EmptyState, PageHeader, Pagination, Table, Td } from '@/components/ui';
+import {
+  Badge,
+  EmptyState,
+  inputClass,
+  PageHeader,
+  Pagination,
+  SearchInput,
+  Table,
+  Td,
+  ViewTabs,
+} from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
 import { adjustInventoryAction, transferInventoryAction } from './actions';
@@ -37,36 +47,33 @@ export default async function InventoryPage({
     <>
       <PageHeader title="Inventory" description="Stock levels for every variant." />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 text-sm">
-          <Link
-            href={base}
-            className={`rounded-md px-3 py-1.5 ${!lowStock ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
-          >
-            All
-          </Link>
-          <Link
-            href={`${base}?lowStock=true`}
-            className={`rounded-md px-3 py-1.5 ${lowStock ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
-          >
-            Low stock (≤ {LOW_STOCK_THRESHOLD})
-          </Link>
-        </div>
-        <form action={base} className="flex gap-2">
-          <label htmlFor="inv-search" className="sr-only">
-            Search inventory
-          </label>
-          <input
+        <ViewTabs
+          label="Stock filter"
+          items={[
+            { label: 'All', href: base, active: !lowStock },
+            {
+              label: `Low stock (≤ ${LOW_STOCK_THRESHOLD})`,
+              href: `${base}?lowStock=true`,
+              active: Boolean(lowStock),
+            },
+          ]}
+        />
+        <form action={base} className="w-full sm:w-auto">
+          <SearchInput
             id="inv-search"
-            name="q"
+            label="Search inventory"
             defaultValue={q}
             placeholder="Search product or SKU"
-            className="w-64 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
           />
         </form>
       </div>
 
       {inventory.items.length === 0 ? (
-        <EmptyState title="No variants found" />
+        <EmptyState
+          icon="inventory"
+          title="No variants found"
+          description={lowStock ? 'Nothing is running low right now.' : 'Try a different search.'}
+        />
       ) : (
         <>
           <Table head={['Product', 'SKU', 'Available', canWrite ? 'Adjust' : '']}>
@@ -75,20 +82,22 @@ export default async function InventoryPage({
                 <Td>
                   <Link
                     href={`/s/${storeId}/products/${item.productId}`}
-                    className="font-medium text-slate-900 hover:underline"
+                    className="font-medium text-slate-900 hover:text-indigo-600"
                   >
                     {item.productTitle}
                   </Link>
                   <p className="text-xs text-slate-500">{item.variantTitle}</p>
                 </Td>
-                <Td>{item.sku ?? '—'}</Td>
+                <Td className="font-mono text-xs whitespace-nowrap text-slate-500">
+                  {item.sku ?? '—'}
+                </Td>
                 <Td>
                   {item.trackInventory ? (
-                    <span className="inline-flex items-center gap-2">
+                    <span className="inline-flex items-center gap-2 font-medium text-slate-900 tabular-nums">
                       {item.inventoryQuantity}
                       {item.inventoryQuantity <= LOW_STOCK_THRESHOLD ? (
                         <Badge tone={item.inventoryQuantity <= 0 ? 'red' : 'yellow'}>
-                          {item.inventoryQuantity <= 0 ? 'out' : 'low'}
+                          {item.inventoryQuantity <= 0 ? 'Out' : 'Low'}
                         </Badge>
                       ) : null}
                     </span>
@@ -119,7 +128,7 @@ export default async function InventoryPage({
                         placeholder="+10 / -2"
                         required
                         pattern="-?[0-9]+"
-                        className="w-24 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        className={`${inputClass} h-8 w-24 px-2.5`}
                       />
                       <label className="sr-only" htmlFor={`r-${item.variantId}`}>
                         Reason
@@ -127,7 +136,7 @@ export default async function InventoryPage({
                       <select
                         id={`r-${item.variantId}`}
                         name="reason"
-                        className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        className={`${inputClass} h-8 w-auto px-2.5`}
                       >
                         {manualInventoryReasons.map((reason) => (
                           <option key={reason} value={reason}>
@@ -144,7 +153,7 @@ export default async function InventoryPage({
                             id={`l-${item.variantId}`}
                             name="locationId"
                             defaultValue={locations.find((l) => l.isDefault)?.id}
-                            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                            className={`${inputClass} h-8 w-auto px-2.5`}
                           >
                             {locations.map((l) => (
                               <option key={l.id} value={l.id}>
@@ -159,7 +168,9 @@ export default async function InventoryPage({
                   ) : null}
                   {canWrite && item.trackInventory && multiLocation ? (
                     <details className="mt-2 text-xs">
-                      <summary className="cursor-pointer text-indigo-600">Move stock</summary>
+                      <summary className="cursor-pointer font-medium text-indigo-600">
+                        Move stock
+                      </summary>
                       <ActionForm
                         action={transferInventoryAction.bind(null, storeId, item.variantId)}
                         className="mt-2 flex flex-wrap items-center gap-2"
@@ -170,7 +181,7 @@ export default async function InventoryPage({
                             name={side}
                             aria-label={`Move ${side} location for ${item.productTitle} ${item.variantTitle}`}
                             defaultValue={locations[i]?.id}
-                            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                            className={`${inputClass} h-8 w-auto px-2.5`}
                           >
                             {locations.map((l) => (
                               <option key={l.id} value={l.id}>
@@ -186,7 +197,7 @@ export default async function InventoryPage({
                           pattern="[0-9]+"
                           aria-label={`Units to move for ${item.productTitle} ${item.variantTitle}`}
                           placeholder="Qty"
-                          className="w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                          className={`${inputClass} h-8 w-20 px-2.5`}
                         />
                         <SubmitButton variant="secondary">Move</SubmitButton>
                       </ActionForm>

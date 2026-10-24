@@ -79,7 +79,7 @@ export function CartLineControls({
           <button
             type="button"
             onClick={() => setQuantity(line.quantity + 1)}
-            disabled={pending || line.quantity >= max}
+            disabled={pending || line.quantity >= max || !line.available}
             aria-label={`One more ${line.productTitle}`}
             className={`inline-flex items-center justify-center rounded-md text-zinc-600 hover:text-zinc-950 disabled:opacity-40 ${step}`}
           >

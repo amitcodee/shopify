@@ -2,6 +2,7 @@ import type { ProductCardPage, StorefrontCollection } from '@repo/contracts';
 import Link from 'next/link';
 import { Breadcrumbs } from '@/components/product/breadcrumbs';
 import { sf } from '@/lib/api';
+import { srcSetFor } from '@/lib/images';
 
 export const metadata = { title: 'Collections' };
 
@@ -16,7 +17,14 @@ async function withCovers(collections: StorefrontCollection[]) {
         },
       });
       const product = first.items[0];
-      return { ...collection, total: first.total, image: product?.imageUrl ?? null };
+      return {
+        ...collection,
+        total: first.total,
+        image: product?.imageUrl ?? null,
+        imageSrcSet: product?.imageUrl
+          ? srcSetFor(product.imageUrl, product.imageRenditions)
+          : undefined,
+      };
     }),
   );
 }
@@ -29,9 +37,7 @@ export default async function CollectionsPage() {
   return (
     <>
       <Breadcrumbs items={[{ label: 'Home', href: '/' }, { label: 'Collections' }]} />
-      <h1 className="mb-8 text-3xl font-semibold tracking-tight text-zinc-900 md:text-4xl">
-        Collections
-      </h1>
+      <h1 className="mb-8 page-title t-title text-zinc-900">Collections</h1>
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
         {collections.map((c) => (
           <li key={c.handle}>
@@ -45,8 +51,15 @@ export default async function CollectionsPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={c.image}
+                  srcSet={c.imageSrcSet}
+                  sizes={
+                    c.imageSrcSet
+                      ? '(min-width: 1312px) 422px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw'
+                      : undefined
+                  }
                   alt=""
                   loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-105"
                 />
               ) : null}

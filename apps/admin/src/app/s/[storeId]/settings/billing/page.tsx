@@ -93,7 +93,7 @@ export default async function BillingPage({
           return (
             <section
               key={p.id}
-              className={`rounded-lg border bg-white p-5 shadow-sm ${current ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-200'}`}
+              className={`rounded-xl border bg-white p-5 shadow-card ${current ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-200'}`}
             >
               <h3 className="text-lg font-semibold">{p.name}</h3>
               <p className="mt-1 text-2xl font-bold">

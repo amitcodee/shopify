@@ -7,12 +7,14 @@ import { useFormStatus } from 'react-dom';
 import { addToCartAction } from '@/app/cart/actions';
 import { Accordion } from '@/components/product/accordion';
 import { ProductIcon } from '@/components/product/icons';
+import { announceVariantImage, initialVariant } from '@/components/product/variant-image';
 import { percentOff } from '@/components/product-grid';
+import { srcSetFor } from '@/lib/images';
 
 function AddButton({ disabled, className }: { disabled: boolean; className: string }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={disabled || pending} className={`btn ${className}`}>
+    <button type="submit" disabled={disabled || pending} className={`btn btn-strong ${className}`}>
       {disabled ? null : <ProductIcon name="bag" className="size-4" />}
       {pending ? 'Adding…' : disabled ? 'Sold out' : 'Add to cart'}
     </button>
@@ -26,6 +28,7 @@ const BADGE =
  * Options, price, quantity and the add-to-cart form, plus the parts of the page that follow the
  * selected variant: a sticky add-to-cart bar on phones and the "Details" accordion (its SKU).
  * `children` (trust row, description, shipping) render between the form and "Details".
+ * Choosing a variant that has its own image tells the gallery to show it.
  */
 export function VariantPicker({
   product,
@@ -36,8 +39,7 @@ export function VariantPicker({
   currency: string;
   children?: ReactNode;
 }) {
-  const firstAvailable = product.variants.find((v) => v.available) ?? product.variants[0];
-  const [selected, setSelected] = useState<string[]>(firstAvailable?.options ?? []);
+  const [selected, setSelected] = useState<string[]>(() => initialVariant(product)?.options ?? []);
   const [state, formAction] = useActionState(addToCartAction, undefined);
   const quantity = useRef<HTMLInputElement>(null);
   const buttonRow = useRef<HTMLDivElement>(null);
@@ -47,6 +49,13 @@ export function VariantPicker({
     () => product.variants.find((v) => v.options.every((value, i) => value === selected[i])),
     [product.variants, selected],
   );
+
+  const choose = (index: number, value: string) => {
+    const next = selected.map((v, i) => (i === index ? value : v));
+    setSelected(next);
+    const match = product.variants.find((v) => v.options.every((o, i) => o === next[i]));
+    if (match?.imageId) announceVariantImage({ productId: product.id, imageId: match.imageId });
+  };
 
   /** Whether choosing `value` for option `index` (keeping the other choices) can be bought. */
   const purchasable = (index: number, value: string) => {
@@ -86,6 +95,9 @@ export function VariantPicker({
   };
 
   const off = variant ? percentOff(variant.price, variant.compareAtPrice) : 0;
+  const thumb =
+    (variant?.imageId && product.images.find((image) => image.id === variant.imageId)) ||
+    product.images[0];
   const details = [
     product.vendor ? ['Brand', product.vendor] : null,
     product.productType ? ['Type', product.productType] : null,
@@ -96,7 +108,9 @@ export function VariantPicker({
     <>
       <form action={formAction} className="space-y-6">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2" aria-live="polite">
-          <span className={`text-2xl font-semibold ${off > 0 ? 'text-red-700' : ''}`}>
+          <span
+            className={`price-now text-2xl tabular-nums sm:text-[1.75rem] ${off > 0 ? 'text-red-700' : ''}`}
+          >
             {variant ? formatMoney(variant.price, currency) : 'Unavailable'}
           </span>
           {variant && off > 0 ? (
@@ -114,10 +128,10 @@ export function VariantPicker({
 
         {product.options.map((option, index) => (
           <fieldset key={option.name}>
-            <legend className="mb-3 text-sm font-medium text-zinc-900">
+            <legend className="mb-3 text-[0.8125rem] font-semibold tracking-wide text-zinc-900 uppercase">
               {option.name}
               {selected[index] ? (
-                <span className="font-normal text-zinc-500">{` · ${selected[index]}`}</span>
+                <span className="font-normal tracking-normal text-zinc-500 normal-case">{` · ${selected[index]}`}</span>
               ) : null}
             </legend>
             <div className="flex flex-wrap gap-2">
@@ -145,9 +159,7 @@ export function VariantPicker({
                       name={`option-${index}`}
                       value={value}
                       checked={checked}
-                      onChange={() =>
-                        setSelected((prev) => prev.map((v, i) => (i === index ? value : v)))
-                      }
+                      onChange={() => choose(index, value)}
                       className="sr-only"
                     />
                     <span className={available ? '' : 'line-through decoration-1'}>{value}</span>
@@ -165,7 +177,7 @@ export function VariantPicker({
             <label htmlFor="quantity" className="mb-2 block text-sm font-medium text-zinc-900">
               Quantity
             </label>
-            <div className="flex h-12 items-center rounded-md border border-zinc-300 focus-within:border-zinc-900">
+            <div className="flex h-[3.25rem] items-center rounded-[var(--store-button-radius)] border border-zinc-300 focus-within:border-zinc-900">
               <button
                 type="button"
                 onClick={() => bump(-1)}
@@ -198,7 +210,7 @@ export function VariantPicker({
             </div>
           </div>
           <div className="flex-1">
-            <AddButton disabled={!variant?.available} className="h-12 w-full px-6 text-sm" />
+            <AddButton disabled={!variant?.available} className="h-[3.25rem] w-full px-6 text-sm" />
           </div>
         </div>
 
@@ -219,10 +231,12 @@ export function VariantPicker({
         {sticky ? (
           <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-page px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_-14px_rgb(0_0_0/0.3)] transition-transform duration-300 starting:translate-y-full md:hidden">
             <div className="flex items-center gap-3">
-              {product.images[0] ? (
+              {thumb ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={product.images[0].url}
+                  src={thumb.url}
+                  srcSet={srcSetFor(thumb.url, thumb.renditions, thumb.width)}
+                  sizes="44px"
                   alt=""
                   className="size-11 shrink-0 rounded-md bg-zinc-100 object-cover"
                 />

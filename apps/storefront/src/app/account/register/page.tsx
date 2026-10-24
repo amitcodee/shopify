@@ -1,12 +1,12 @@
 import { RegisterForm } from '../forms';
+import { AuthCard } from '../auth-card';
 
 export const metadata = { title: 'Create account' };
 
 export default function RegisterPage() {
   return (
-    <div className="mx-auto max-w-sm">
-      <h1 className="mb-6 text-2xl font-bold">Create account</h1>
+    <AuthCard title="Create account" intro="Track orders and check out faster next time.">
       <RegisterForm />
-    </div>
+    </AuthCard>
   );
 }

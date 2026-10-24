@@ -28,7 +28,7 @@ export default async function PolicyPage({ params }: { params: Promise<{ kind: s
   if (!policy) notFound();
   return (
     <article>
-      <h1 className="mb-6 text-3xl font-bold tracking-tight">{policy.title}</h1>
+      <h1 className="page-title t-title mb-8">{policy.title}</h1>
       <PlainText body={policy.body} />
     </article>
   );

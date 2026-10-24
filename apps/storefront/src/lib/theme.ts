@@ -1,4 +1,10 @@
-import { contrastingText, type Theme, THEME_FONT_STACKS as FONT_STACKS } from '@repo/contracts';
+import {
+  contrastingText,
+  type Theme,
+  THEME_FONT_STACKS as FONT_STACKS,
+  THEME_STYLES,
+  type ThemeStyleId,
+} from '@repo/contracts';
 import type { CSSProperties } from 'react';
 
 /** Button corners; other corners come from the data-radius rules in globals.css. */
@@ -58,11 +64,25 @@ export function themeStyle(theme: Theme): CSSProperties {
   } as CSSProperties;
 }
 
+const STYLE_IDS = new Set<string>(THEME_STYLES.map((style) => style.id));
+
+/**
+ * The design style the theme came from (`<industry>-<style>` in settings.template), which tunes
+ * typography and details beyond the individual tokens. Themes without a known template fall
+ * back to the homepage preset, which shares its name with a style.
+ */
+export function themeStyleId(theme: Theme): ThemeStyleId {
+  const fromTemplate = theme.settings.template.split('-').pop() ?? '';
+  return (STYLE_IDS.has(fromTemplate) ? fromTemplate : theme.preset) as ThemeStyleId;
+}
+
 /** Layout tokens as `data-*` attributes on <body>; globals.css styles every page from them. */
 export function themeAttributes(theme: Theme): Record<`data-${string}`, string | undefined> {
   const s = theme.settings;
   return {
     'data-theme': '',
+    'data-style': themeStyleId(theme),
+    'data-header': s.headerStyle,
     'data-card': s.cardStyle,
     'data-radius': s.radius,
     'data-buttons': s.buttonStyle,

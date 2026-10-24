@@ -1,10 +1,20 @@
 'use client';
 
 import type { StorefrontProduct } from '@repo/contracts';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { srcSetFor } from '@/lib/images';
 import { ProductIcon } from './icons';
+import { VARIANT_IMAGE_EVENT, type VariantImageDetail } from './variant-image';
 
 type Image = StorefrontProduct['images'][number];
+
+/**
+ * Width of the main image box: the 7fr column of the product page (82rem wide at most) less
+ * the thumbnail column; the full width on phones.
+ */
+const MAIN_SIZES = '(min-width: 1312px) 600px, (min-width: 768px) 50vw, 100vw';
+
+const srcSetOf = (image: Image) => srcSetFor(image.url, image.renditions, image.width);
 
 function scrollBehavior(): ScrollBehavior {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
@@ -14,20 +24,31 @@ function scrollBehavior(): ScrollBehavior {
  * Product images: one swipeable scroll-snap track (phones swipe it, with dots underneath) and,
  * from md up, thumbnails on the left plus previous/next arrows. Clicking an image opens a
  * full-screen viewer (a modal <dialog>, so Escape closes it and the page behind is inert).
+ * Choosing a variant with its own image (see `variant-image.ts`) scrolls to that image.
  */
 export function ProductGallery({
   images,
   title,
   ratio,
+  productId,
+  initialImageId,
 }: {
   images: Image[];
   title: string;
   /** Aspect-ratio class for the main image box (the theme's image ratio). */
   ratio: string;
+  /** Only variant-image announcements for this product move the gallery. */
+  productId?: string;
+  /** Image of the variant selected when the page opens (the gallery starts on it). */
+  initialImageId?: string | null;
 }) {
   const track = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const [active, setActive] = useState(0);
+  const initialIndex = Math.max(
+    0,
+    initialImageId ? images.findIndex((image) => image.id === initialImageId) : 0,
+  );
+  const [active, setActive] = useState(initialIndex);
   const [zoomed, setZoomed] = useState(0);
   // Read by the dialog's close handler without re-subscribing on every change.
   const zoomedRef = useRef(0);
@@ -53,6 +74,28 @@ export function ProductGallery({
     document.documentElement.style.setProperty('overflow', 'hidden');
   };
 
+  // Start on the selected variant's image, before the first paint (no visible jump). Only on
+  // mount: later variant changes arrive as events.
+  const startIndex = useRef(initialIndex);
+  useLayoutEffect(() => {
+    const el = track.current;
+    if (el && startIndex.current > 0) {
+      el.scrollLeft = startIndex.current * el.getBoundingClientRect().width;
+    }
+  }, []);
+
+  // A variant with its own image was chosen: show that image.
+  useEffect(() => {
+    const onVariantImage = (event: Event) => {
+      const { productId: id, imageId } = (event as CustomEvent<VariantImageDetail>).detail;
+      if (productId && id !== productId) return;
+      const index = images.findIndex((image) => image.id === imageId);
+      if (index >= 0) show(index);
+    };
+    window.addEventListener(VARIANT_IMAGE_EVENT, onVariantImage);
+    return () => window.removeEventListener(VARIANT_IMAGE_EVENT, onVariantImage);
+  }, [images, productId, show]);
+
   // The dialog closes itself on Escape; this releases the scroll lock and shows the image
   // last viewed in the dialog.
   useEffect(() => {
@@ -73,6 +116,7 @@ export function ProductGallery({
     return <div className={`${ratio} rounded-xl bg-zinc-100`} />;
   }
 
+  const zoomedImage = images[zoomed];
   const step = (delta: number) => (index: number) => (index + delta + count) % count;
 
   return (
@@ -80,7 +124,7 @@ export function ProductGallery({
       {count > 1 ? (
         <ul className="hidden w-20 shrink-0 flex-col gap-3 md:flex lg:w-24" aria-label="Images">
           {images.map((image, i) => (
-            <li key={image.url}>
+            <li key={image.id ?? image.url}>
               <button
                 type="button"
                 onClick={() => show(i)}
@@ -93,10 +137,13 @@ export function ProductGallery({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={image.url}
+                  srcSet={srcSetOf(image)}
+                  sizes="96px"
                   alt=""
                   width={image.width}
                   height={image.height}
                   loading="lazy"
+                  decoding="async"
                   className="aspect-square w-full object-cover"
                 />
               </button>
@@ -112,7 +159,10 @@ export function ProductGallery({
           className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-xl bg-zinc-100 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {images.map((image, i) => (
-            <div key={image.url} className={`relative w-full shrink-0 snap-center ${ratio}`}>
+            <div
+              key={image.id ?? image.url}
+              className={`relative w-full shrink-0 snap-center ${ratio}`}
+            >
               <button
                 type="button"
                 onClick={() => openViewer(i)}
@@ -122,11 +172,14 @@ export function ProductGallery({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={image.url}
+                  srcSet={srcSetOf(image)}
+                  sizes={MAIN_SIZES}
                   alt={image.alt || (i === 0 ? title : '')}
                   width={image.width}
                   height={image.height}
-                  loading={i === 0 ? 'eager' : 'lazy'}
-                  fetchPriority={i === 0 ? 'high' : undefined}
+                  loading={i === initialIndex ? 'eager' : 'lazy'}
+                  fetchPriority={i === initialIndex ? 'high' : undefined}
+                  decoding={i === initialIndex ? undefined : 'async'}
                   className="h-full w-full object-cover"
                 />
               </button>
@@ -162,7 +215,7 @@ export function ProductGallery({
             <div className="mt-3 flex justify-center gap-1 md:hidden">
               {images.map((image, i) => (
                 <button
-                  key={image.url}
+                  key={image.id ?? image.url}
                   type="button"
                   onClick={() => show(i)}
                   aria-label={`Show image ${i + 1} of ${count}`}
@@ -209,12 +262,19 @@ export function ProductGallery({
             </button>
           </div>
           <div className="relative flex min-h-0 flex-1 items-center justify-center px-4 pb-6 md:px-16">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={images[zoomed]?.url}
-              alt={images[zoomed]?.alt || title}
-              className="pointer-events-auto max-h-full max-w-full object-contain"
-            />
+            {zoomedImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={zoomedImage.id ?? zoomedImage.url}
+                src={zoomedImage.url}
+                srcSet={srcSetOf(zoomedImage)}
+                sizes="100vw"
+                alt={zoomedImage.alt || title}
+                width={zoomedImage.width}
+                height={zoomedImage.height}
+                className="pointer-events-auto max-h-full w-auto max-w-full object-contain"
+              />
+            ) : null}
             {count > 1 ? (
               <>
                 <button

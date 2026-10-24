@@ -8,16 +8,16 @@ import { TemplateThumb } from './template-thumb';
 
 function Frame({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl ring-1 shadow-indigo-950/10 ring-slate-900/10">
-      <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2.5">
-        <span className="flex gap-1">
-          <span className="size-2 rounded-full bg-rose-300" />
-          <span className="size-2 rounded-full bg-amber-300" />
-          <span className="size-2 rounded-full bg-emerald-300" />
+    <div className="overflow-hidden rounded-2xl bg-white text-slate-900 shadow-[0_40px_80px_-40px_rgb(15_23_42/0.5)] ring-1 ring-slate-900/10">
+      <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+        <span className="flex gap-1.5">
+          <span className="size-2.5 rounded-full bg-slate-200" />
+          <span className="size-2.5 rounded-full bg-slate-200" />
+          <span className="size-2.5 rounded-full bg-slate-200" />
         </span>
         <span className="ml-2 truncate text-xs font-medium text-slate-500">{title}</span>
       </div>
-      <div className="p-5">{children}</div>
+      <div className="p-5 sm:p-6">{children}</div>
     </div>
   );
 }
@@ -85,10 +85,10 @@ const MOCKS: Record<MockKind, () => ReactNode> = {
     const t = findThemeTemplate('beauty-split');
     return (
       <div className="relative pb-10">
-        <div className="overflow-hidden rounded-2xl shadow-2xl ring-1 ring-slate-900/10">
-          {t ? <TemplateThumb template={t} tiles={4} className="sm:[zoom:1.3]" /> : null}
+        <div className="overflow-hidden rounded-2xl shadow-[0_40px_80px_-40px_rgb(15_23_42/0.5)] ring-1 ring-slate-900/10">
+          {t ? <TemplateThumb template={t} tiles={4} scale={12} /> : null}
         </div>
-        <div className="absolute right-4 bottom-0 w-44 rounded-xl bg-white p-3 shadow-xl ring-1 ring-slate-900/10">
+        <div className="absolute right-4 bottom-0 w-48 rounded-2xl bg-white p-4 shadow-[0_24px_48px_-16px_rgb(15_23_42/0.4)] ring-1 ring-slate-900/10">
           <p className="text-[11px] font-medium text-slate-500">Theme</p>
           <div className="mt-2 flex gap-1.5">
             {['#831843', '#db2777', '#fffafb', '#fdf2f8'].map((c) => (
@@ -368,7 +368,7 @@ const MOCKS: Record<MockKind, () => ReactNode> = {
     </Frame>
   ),
   code: () => (
-    <div className="overflow-hidden rounded-2xl bg-slate-900 shadow-2xl ring-1 ring-white/10">
+    <div className="overflow-hidden rounded-2xl bg-[#11131f] shadow-[0_40px_80px_-40px_rgb(15_23_42/0.7)] ring-1 ring-white/10">
       <div className="flex items-center gap-2 border-b border-white/10 px-4 py-2.5 text-xs text-slate-400">
         <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-semibold text-emerald-300">
           POST

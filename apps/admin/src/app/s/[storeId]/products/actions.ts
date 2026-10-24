@@ -3,10 +3,10 @@
 import type { Product } from '@repo/contracts';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { type FormState, toFormState } from '@/lib/form';
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
 export async function saveProductAction(
   storeId: string,
@@ -35,7 +35,8 @@ export async function saveProductAction(
 
   revalidatePath(`/s/${storeId}/products`);
   if (!productId) redirect(`/s/${storeId}/products/${saved.id}?created=1`);
-  return { success: 'Product saved.' };
+  // The editor remounts with the saved product, so confirm through the URL.
+  redirect(`/s/${storeId}/products/${productId}?saved=1`);
 }
 
 export async function deleteProductAction(storeId: string, productId: string): Promise<void> {
@@ -44,43 +45,204 @@ export async function deleteProductAction(storeId: string, productId: string): P
   redirect(`/s/${storeId}/products`);
 }
 
-export async function uploadImageAction(
+/** Result of a media or bulk action called directly from a client component. */
+export type ActionResult = { ok: true; message?: string } | { ok: false; error: string };
+
+/** Turns an API failure into a sentence a merchant can act on. */
+function failure(error: unknown, fallback = 'Something went wrong. Try again.'): ActionResult {
+  if (!(error instanceof ApiError)) throw error;
+  const detail = error.problem.errors?.[0]?.message ?? error.problem.detail;
+  switch (error.status) {
+    case 409:
+      return { ok: false, error: detail ?? 'A product can have at most 50 images.' };
+    case 413:
+      return {
+        ok: false,
+        error: 'That image is too large. Use files up to 20 MB and 50 megapixels.',
+      };
+    case 415:
+      return {
+        ok: false,
+        error: 'That file type is not supported. Use JPEG, PNG, WebP, GIF or AVIF.',
+      };
+    case 422:
+      return {
+        ok: false,
+        error: 'An image could not be read. It may be damaged; try exporting it again.',
+      };
+    default:
+      return { ok: false, error: detail ?? fallback };
+  }
+}
+
+const productPath = (storeId: string, productId: string) =>
+  `/admin/stores/${storeId}/products/${productId}`;
+
+/**
+ * Uploads up to 10 images in one request (all-or-nothing). Accepts `files` (multiple) and the
+ * older single `file` field, plus optional `alt` applied to every image.
+ */
+export async function uploadImagesAction(
   storeId: string,
   productId: string,
-  _: FormState,
   formData: FormData,
-): Promise<FormState> {
-  const file = formData.get('file');
-  if (!(file instanceof File) || file.size === 0) return { error: 'Choose an image to upload.' };
-  if (file.size > MAX_IMAGE_BYTES) return { error: 'Images must be 5 MB or smaller.' };
+): Promise<ActionResult> {
+  const files = [...formData.getAll('files'), ...formData.getAll('file')].filter(
+    (f): f is File => f instanceof File && f.size > 0,
+  );
+  if (files.length === 0) return { ok: false, error: 'Choose at least one image.' };
+  if (files.length > 10) return { ok: false, error: 'Upload at most 10 images at a time.' };
+  const tooBig = files.find((f) => f.size > MAX_IMAGE_BYTES);
+  if (tooBig) return { ok: false, error: `${tooBig.name} is larger than 20 MB.` };
 
   const body = new FormData();
-  body.set('file', file, file.name);
-  body.set('alt', String(formData.get('alt') ?? ''));
+  for (const file of files) body.append('files', file, file.name);
+  const alt = String(formData.get('alt') ?? '').trim();
+  if (alt) body.set('alt', alt);
   try {
-    await api(`/admin/stores/${storeId}/products/${productId}/images`, { method: 'POST', body });
+    await api(`${productPath(storeId, productId)}/images`, { method: 'POST', body });
   } catch (error) {
-    return toFormState(error);
+    return failure(error, 'The images could not be uploaded.');
   }
   revalidatePath(`/s/${storeId}/products/${productId}`);
-  return { success: 'Image uploaded.' };
+  return {
+    ok: true,
+    message: files.length === 1 ? 'Image uploaded.' : `${files.length} images uploaded.`,
+  };
+}
+
+export async function importImageAction(
+  storeId: string,
+  productId: string,
+  url: string,
+  alt: string,
+): Promise<ActionResult> {
+  const trimmed = url.trim();
+  if (!/^https:\/\//i.test(trimmed)) {
+    return { ok: false, error: 'Enter a full https:// link to an image.' };
+  }
+  try {
+    await api(`${productPath(storeId, productId)}/images/import`, {
+      method: 'POST',
+      body: { url: trimmed, alt: alt.trim() || undefined },
+    });
+  } catch (error) {
+    return failure(error, 'The image could not be imported.');
+  }
+  revalidatePath(`/s/${storeId}/products/${productId}`);
+  return { ok: true, message: 'Image added.' };
+}
+
+export async function reorderImagesAction(
+  storeId: string,
+  productId: string,
+  imageIds: string[],
+): Promise<ActionResult> {
+  try {
+    await api(`${productPath(storeId, productId)}/images/order`, {
+      method: 'PUT',
+      body: { imageIds },
+    });
+  } catch (error) {
+    return failure(error, 'The new order could not be saved.');
+  }
+  revalidatePath(`/s/${storeId}/products/${productId}`);
+  return { ok: true, message: 'Order saved.' };
+}
+
+export async function updateImageAltAction(
+  storeId: string,
+  productId: string,
+  imageId: string,
+  alt: string,
+): Promise<ActionResult> {
+  try {
+    await api(`${productPath(storeId, productId)}/images/${imageId}`, {
+      method: 'PATCH',
+      body: { alt: alt.trim() },
+    });
+  } catch (error) {
+    return failure(error, 'The alt text could not be saved.');
+  }
+  revalidatePath(`/s/${storeId}/products/${productId}`);
+  return { ok: true, message: 'Alt text saved.' };
 }
 
 export async function deleteImageAction(
   storeId: string,
   productId: string,
-  formData: FormData,
-): Promise<void> {
-  const imageId = String(formData.get('imageId') ?? '');
-  await api(`/admin/stores/${storeId}/products/${productId}/images/${imageId}`, {
-    method: 'DELETE',
-  });
+  imageId: string,
+): Promise<ActionResult> {
+  try {
+    await api(`${productPath(storeId, productId)}/images/${imageId}`, { method: 'DELETE' });
+  } catch (error) {
+    return failure(error, 'The image could not be deleted.');
+  }
   revalidatePath(`/s/${storeId}/products/${productId}`);
+  return { ok: true, message: 'Image deleted.' };
+}
+
+export async function setVariantImageAction(
+  storeId: string,
+  productId: string,
+  variantId: string,
+  imageId: string | null,
+): Promise<ActionResult> {
+  try {
+    await api(`${productPath(storeId, productId)}/variants/${variantId}`, {
+      method: 'PATCH',
+      body: { imageId },
+    });
+  } catch (error) {
+    return failure(error, 'The variant image could not be changed.');
+  }
+  revalidatePath(`/s/${storeId}/products/${productId}`);
+  return { ok: true };
+}
+
+export type BulkProductAction =
+  'activate' | 'draft' | 'archive' | 'delete' | 'add_tags' | 'remove_tags';
+
+const BULK_DONE: Record<BulkProductAction, string> = {
+  activate: 'set as active',
+  draft: 'set as draft',
+  archive: 'archived',
+  delete: 'deleted',
+  add_tags: 'tagged',
+  remove_tags: 'untagged',
+};
+
+export async function bulkProductsAction(
+  storeId: string,
+  productIds: string[],
+  action: BulkProductAction,
+  tags?: string[],
+): Promise<ActionResult> {
+  if (productIds.length === 0) return { ok: false, error: 'Select at least one product.' };
+  if (productIds.length > 100) return { ok: false, error: 'Select at most 100 products.' };
+  if ((action === 'add_tags' || action === 'remove_tags') && !tags?.length) {
+    return { ok: false, error: 'Enter at least one tag.' };
+  }
+  let count: number;
+  try {
+    ({ count } = await api<{ count: number }>(`/admin/stores/${storeId}/products/bulk`, {
+      method: 'POST',
+      body: { productIds, action, tags },
+    }));
+  } catch (error) {
+    return failure(error, 'The bulk action failed. Nothing was changed.');
+  }
+  revalidatePath(`/s/${storeId}/products`);
+  return {
+    ok: true,
+    message: `${count} product${count === 1 ? '' : 's'} ${BULK_DONE[action]}.`,
+  };
 }
 
 /**
  * Copies a product as a new draft: same details, options, variants and prices. SKUs must stay
  * unique and stock belongs to the original, so the copy starts with no SKUs and no stock.
+ * Costs, customs details and custom fields carry over; images do not.
  */
 export async function duplicateProductAction(
   storeId: string,
@@ -108,11 +270,21 @@ export async function duplicateProductAction(
           barcode: v.barcode,
           price: v.price,
           compareAtPrice: v.compareAtPrice,
+          costPerItem: v.costPerItem,
+          countryOfOrigin: v.countryOfOrigin,
+          hsCode: v.hsCode,
           weightGrams: v.weightGrams,
           requiresShipping: v.requiresShipping,
           taxable: v.taxable,
           trackInventory: v.trackInventory,
           allowBackorder: v.allowBackorder,
+        })),
+        metafields: p.metafields.map((m) => ({
+          namespace: m.namespace,
+          key: m.key,
+          type: m.type,
+          value: m.value,
+          showOnStorefront: m.showOnStorefront,
         })),
       },
     });

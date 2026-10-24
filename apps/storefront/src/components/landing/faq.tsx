@@ -35,18 +35,18 @@ const FAQS: { q: string; a: string }[] = [
 
 export function Faq() {
   return (
-    <section id="faq" className="scroll-mt-24 bg-slate-50 py-20 sm:py-28">
+    <section id="faq" className="scroll-mt-24 bg-[#f6f4ef] py-20 sm:py-28">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <div className="text-center">
-          <p className="text-sm font-semibold text-indigo-600">FAQ</p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+          <p className="text-xs font-semibold tracking-[0.14em] text-indigo-700 uppercase">FAQ</p>
+          <h2 className="mt-4 text-[2rem] leading-tight font-semibold tracking-[-0.03em] text-slate-950 sm:text-5xl">
             Questions, answered
           </h2>
         </div>
-        <div className="mt-12 divide-y divide-slate-200 rounded-2xl bg-white ring-1 ring-slate-200">
+        <div className="mt-12 divide-y divide-slate-900/[0.07] rounded-[1.5rem] bg-white shadow-[0_20px_40px_-30px_rgb(15_23_42/0.35)] ring-1 ring-slate-900/[0.08]">
           {FAQS.map(({ q, a }) => (
-            <details key={q} className="group px-5 sm:px-6">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded py-5 font-medium text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 [&::-webkit-details-marker]:hidden">
+            <details key={q} className="group px-5 sm:px-7">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded py-5 font-semibold text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 [&::-webkit-details-marker]:hidden">
                 {q}
                 <svg
                   viewBox="0 0 20 20"

@@ -1,12 +1,15 @@
 import { LoginForm } from '../forms';
+import { AuthCard } from '../auth-card';
 
 export const metadata = { title: 'Sign in' };
 
 export default function LoginPage() {
   return (
-    <div className="mx-auto max-w-sm">
-      <h1 className="mb-6 text-2xl font-bold">Sign in</h1>
+    <AuthCard
+      title="Sign in"
+      intro="Welcome back. Sign in to see your orders and check out faster."
+    >
       <LoginForm />
-    </div>
+    </AuthCard>
   );
 }

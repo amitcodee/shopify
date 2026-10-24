@@ -20,31 +20,47 @@ export default async function CollectionsPage({
       <PageHeader
         title="Collections"
         description="Group products for your storefront navigation."
-        actions={canWrite ? <ButtonLink href={`${base}/new`}>Create collection</ButtonLink> : null}
+        actions={
+          canWrite ? (
+            <ButtonLink href={`${base}/new`} size="sm" icon="plus">
+              Create collection
+            </ButtonLink>
+          ) : null
+        }
       />
       {collections.length === 0 ? (
         <EmptyState
+          icon="collections"
           title="No collections yet"
           description="Create manual collections or automated ones based on a product tag."
         />
       ) : (
-        <Table head={['Title', 'Type', 'Products', 'Visibility']}>
+        <Table head={['Title', 'Type', 'Products', 'Visibility']} numeric={[2]}>
           {collections.map((c) => (
             <tr key={c.id}>
               <Td>
                 <Link
                   href={`${base}/${c.id}`}
-                  className="font-medium text-slate-900 hover:underline"
+                  className="font-medium text-slate-900 hover:text-indigo-600"
                 >
                   {c.title}
                 </Link>
                 <p className="text-xs text-slate-500">/{c.handle}</p>
               </Td>
-              <Td>{c.ruleTag ? `Tag: ${c.ruleTag}` : 'Manual'}</Td>
-              <Td>{c.productCount}</Td>
+              <Td>
+                {c.ruleTag ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Badge tone="indigo">Automated</Badge>
+                    <span className="text-xs text-slate-500">Tag: {c.ruleTag}</span>
+                  </span>
+                ) : (
+                  <span className="text-slate-500">Manual</span>
+                )}
+              </Td>
+              <Td numeric>{c.productCount}</Td>
               <Td>
                 <Badge tone={c.published ? 'green' : 'gray'}>
-                  {c.published ? 'visible' : 'hidden'}
+                  {c.published ? 'Visible' : 'Hidden'}
                 </Badge>
               </Td>
             </tr>

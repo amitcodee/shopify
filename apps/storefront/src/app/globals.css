@@ -45,8 +45,30 @@
 }
 
 [data-theme] {
-  --store-section: 3.5rem;
+  --store-section: 4.5rem;
   --store-main-y: 2.5rem;
+  /* Content width; full-bleed bands ignore it. */
+  --store-page-width: 82rem;
+  /*
+   * Typographic roles, tuned per design style below: hero headlines (display), section and page
+   * titles (title), product card titles and prices.
+   */
+  --display-weight: 600;
+  --display-tracking: -0.03em;
+  --display-leading: 1.02;
+  --title-weight: 600;
+  --title-tracking: -0.02em;
+  --card-font: var(--store-font);
+  --card-size: 0.9375rem;
+  --card-weight: 500;
+  --card-tracking: 0;
+  --card-case: none;
+  --price-weight: 600;
+  --eyebrow-tracking: 0.18em;
+  --btn-case: none;
+  --btn-tracking: 0.01em;
+  --btn-weight: 600;
+  --field-radius: var(--radius-md, 0.375rem);
 }
 
 /* A band in the theme's inverse colors (the "dark" footer); greys above are re-derived inside. */
@@ -87,6 +109,10 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+[data-theme][data-heading-case='uppercase'] {
+  --display-tracking: -0.005em;
+  --title-tracking: 0.02em;
+}
 
 /* Corner radius: Tailwind's rounded-* utilities read these. */
 [data-radius='none'] {
@@ -118,8 +144,121 @@ body {
   --store-main-y: 1.5rem;
 }
 [data-density='spacious'] {
-  --store-section: 5.5rem;
+  --store-section: 6.5rem;
   --store-main-y: 3.5rem;
+}
+@media (max-width: 639px) {
+  [data-theme] {
+    --store-section: 3.25rem;
+  }
+  [data-density='compact'] {
+    --store-section: 2rem;
+  }
+  [data-density='spacious'] {
+    --store-section: 4rem;
+  }
+}
+
+/*
+ * Design styles (data-style, from the template the theme came from). Tokens set colors, shapes
+ * and layout; the style sets the typographic voice so the nine looks differ in more than color.
+ */
+[data-style='minimal'] {
+  --display-tracking: -0.035em;
+}
+[data-style='bold'] {
+  --display-weight: 800;
+  --display-leading: 0.92;
+  --title-weight: 800;
+  --card-weight: 700;
+  --price-weight: 700;
+  --btn-case: uppercase;
+  --btn-tracking: 0.06em;
+  --btn-weight: 800;
+}
+[data-style='bold'][data-heading-case='uppercase'] {
+  --display-tracking: -0.02em;
+  --title-tracking: -0.005em;
+}
+[data-style='classic'] {
+  --display-weight: 500;
+  --display-tracking: -0.015em;
+  --display-leading: 1.08;
+  --title-weight: 500;
+  --title-tracking: -0.01em;
+  --card-font: var(--store-heading-font);
+  --card-size: 1rem;
+  --card-weight: 400;
+  --price-weight: 500;
+  --btn-case: uppercase;
+  --btn-tracking: 0.14em;
+}
+[data-style='split'] {
+  --display-weight: 650;
+  --display-tracking: -0.035em;
+}
+[data-style='fullbleed'] {
+  --display-weight: 700;
+  --display-leading: 0.92;
+  --title-weight: 700;
+  --card-size: 0.8125rem;
+  --card-weight: 600;
+  --card-case: uppercase;
+  --card-tracking: 0.08em;
+  --price-weight: 500;
+  --btn-case: uppercase;
+  --btn-tracking: 0.16em;
+  --btn-weight: 700;
+}
+[data-style='editorial'] {
+  --store-page-width: 78rem;
+  --display-weight: 400;
+  --display-tracking: -0.04em;
+  --display-leading: 0.98;
+  --title-weight: 400;
+  --title-tracking: -0.025em;
+  --card-font: var(--store-heading-font);
+  --card-size: 1.0625rem;
+  --card-weight: 400;
+  --price-weight: 400;
+  --eyebrow-tracking: 0.26em;
+  --btn-case: uppercase;
+  --btn-tracking: 0.18em;
+  --btn-weight: 500;
+}
+[data-style='catalog'] {
+  --store-page-width: 90rem;
+  --display-weight: 700;
+  --display-tracking: -0.025em;
+  --display-leading: 1.05;
+  --title-weight: 700;
+  --card-size: 0.8125rem;
+  --card-weight: 500;
+  --price-weight: 700;
+  --eyebrow-tracking: 0.12em;
+}
+[data-style='banner'] {
+  --display-weight: 750;
+  --display-tracking: -0.035em;
+  --title-weight: 700;
+  --card-weight: 600;
+}
+[data-style='noir'] {
+  --display-weight: 500;
+  --title-weight: 500;
+  --card-size: 0.75rem;
+  --card-weight: 500;
+  --card-case: uppercase;
+  --card-tracking: 0.14em;
+  --price-weight: 400;
+  --eyebrow-tracking: 0.3em;
+  --btn-case: uppercase;
+  --btn-tracking: 0.2em;
+  --btn-weight: 500;
+}
+[data-style='noir'][data-heading-case='uppercase'] {
+  --display-tracking: 0.06em;
+  --title-tracking: 0.12em;
 }
 
 @layer components {
@@ -147,15 +286,24 @@ body {
     border-radius: var(--store-button-radius, 0.375rem);
     background-color: var(--btn-bg);
     color: var(--btn-fg);
-    font-weight: 600;
+    font-weight: var(--btn-weight, 600);
+    letter-spacing: var(--btn-tracking, 0.01em);
+    text-transform: var(--btn-case, none);
     text-align: center;
     transition:
       opacity 150ms,
-      background-color 150ms,
-      color 150ms;
+      background-color 200ms,
+      border-color 200ms,
+      color 200ms,
+      box-shadow 200ms,
+      translate 200ms;
   }
   .btn:hover {
-    opacity: 0.9;
+    opacity: 0.88;
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--store-text);
+    outline-offset: 3px;
   }
   .btn:disabled {
     cursor: not-allowed;
@@ -195,23 +343,264 @@ body {
     border-color: var(--btn-bg);
     color: var(--btn-fg);
   }
+  /* Soft: a filled, borderless button that floats on a diffuse shadow of its own color. */
   [data-buttons='soft'] .btn {
-    background-color: color-mix(in oklab, var(--btn-bg) 16%, var(--btn-base));
     border-color: transparent;
-    color: var(--btn-ink);
+    box-shadow: 0 10px 24px -12px color-mix(in oklab, var(--btn-bg) 70%, transparent);
   }
   [data-buttons='soft'] .btn:not(:disabled):hover {
     opacity: 1;
-    background-color: color-mix(in oklab, var(--btn-bg) 26%, var(--btn-base));
+    translate: 0 -1px;
+    box-shadow: 0 14px 28px -12px color-mix(in oklab, var(--btn-bg) 80%, transparent);
+  }
+  /* Checkout-critical actions stay filled whatever the button style. */
+  [data-buttons='outline'] .btn.btn-strong {
+    background-color: var(--btn-bg);
+    border-color: var(--btn-bg);
+    color: var(--btn-fg);
+  }
+  [data-buttons='outline'] .btn.btn-strong:not(:disabled):hover {
+    opacity: 0.88;
+  }
+  /* A quiet secondary button: outlined in the text color in every style. */
+  .btn.btn-ghost,
+  [data-buttons] .btn.btn-ghost {
+    background-color: transparent;
+    border-color: var(--color-zinc-300);
+    color: var(--store-text);
+    box-shadow: none;
+  }
+  .btn.btn-ghost:not(:disabled):hover,
+  [data-buttons] .btn.btn-ghost:not(:disabled):hover {
+    opacity: 1;
+    translate: none;
+    border-color: var(--store-text);
+    background-color: transparent;
+    color: var(--store-text);
   }
 
   /* Small-caps label above editorial headlines. */
   .eyebrow {
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     font-weight: 600;
-    letter-spacing: 0.18em;
+    letter-spacing: var(--eyebrow-tracking, 0.18em);
     text-transform: uppercase;
   }
+
+  /* Typographic roles (see the tokens on [data-theme]). */
+  .t-display {
+    font-family: var(--store-heading-font, inherit);
+    font-weight: var(--display-weight, 600);
+    letter-spacing: var(--display-tracking, -0.03em);
+    line-height: var(--display-leading, 1.02);
+    text-wrap: balance;
+  }
+  .t-title {
+    font-family: var(--store-heading-font, inherit);
+    font-weight: var(--title-weight, 600);
+    letter-spacing: var(--title-tracking, -0.02em);
+    line-height: 1.12;
+    text-wrap: balance;
+  }
+  .card-title {
+    font-family: var(--card-font, inherit);
+    font-size: var(--card-size, 0.9375rem);
+    font-weight: var(--card-weight, 500);
+    letter-spacing: var(--card-tracking, 0);
+    text-transform: var(--card-case, none);
+    line-height: 1.35;
+  }
+  .card-price {
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .price-now {
+    font-weight: var(--price-weight, 600);
+  }
+
+  /* Form fields shared by account, checkout, contact and password pages. */
+  .field {
+    display: block;
+    width: 100%;
+    min-height: 2.875rem;
+    border: 1px solid var(--color-zinc-300);
+    border-radius: var(--field-radius, 0.375rem);
+    background-color: var(--store-bg, #ffffff);
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+    color: var(--store-text, #18181b);
+    transition:
+      border-color 150ms,
+      box-shadow 150ms;
+  }
+  .field::placeholder {
+    color: var(--color-zinc-400);
+  }
+  .field:hover {
+    border-color: var(--color-zinc-400);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--store-text, #18181b);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--store-text, #18181b) 14%, transparent);
+  }
+  .field[aria-invalid='true'] {
+    border-color: var(--color-red-600);
+  }
+  .field[readonly] {
+    background-color: var(--color-zinc-50);
+    color: var(--color-zinc-600);
+  }
+  select.field {
+    appearance: none;
+    padding-right: 2.5rem;
+    background-image:
+      linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position:
+      calc(100% - 1.15rem) 50%,
+      calc(100% - 0.8rem) 50%;
+    background-size: 0.35rem 0.35rem;
+    background-repeat: no-repeat;
+  }
+  .field-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-zinc-700);
+  }
+
+  /* A raised panel (order summary, sign-in card) that reads on light and dark themes. */
+  .panel {
+    border: 1px solid var(--color-zinc-200);
+    border-radius: var(--radius-xl, 0.75rem);
+    background-color: color-mix(in oklab, var(--store-surface, #f4f4f5) 55%, var(--store-bg, #fff));
+  }
+}
+
+/* Content column shared by header, main and footer. */
+.store-container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--store-page-width, 82rem);
+  padding-inline: 1rem;
+}
+@media (min-width: 640px) {
+  .store-container {
+    padding-inline: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .store-container {
+    padding-inline: 2.5rem;
+  }
+}
+
+/* Section headings: a rule above in editorial, a ruled bar in catalog, centered in classic/noir. */
+.section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+.section-title {
+  font-size: 1.625rem;
+}
+.section-rule {
+  display: none;
+  margin: 0.875rem auto 0;
+  height: 1px;
+  width: 3rem;
+  background-color: var(--store-accent);
+}
+[data-style='catalog'] .section-header {
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-zinc-200);
+  padding-bottom: 0.75rem;
+}
+[data-style='catalog'] .section-title {
+  font-size: 1.25rem;
+}
+[data-style='editorial'] .section-header {
+  border-top: 1px solid var(--store-text);
+  padding-top: 1rem;
+}
+[data-style='bold'] .section-title {
+  font-size: 2rem;
+}
+[data-style='classic'] .section-header,
+[data-style='noir'] .section-header {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+[data-style='classic'] .section-rule,
+[data-style='noir'] .section-rule {
+  display: block;
+}
+[data-style='noir'] .section-title {
+  font-size: 1.375rem;
+}
+@media (min-width: 640px) {
+  .section-header {
+    margin-bottom: 2.25rem;
+  }
+  .section-title {
+    font-size: 2.125rem;
+  }
+  [data-style='catalog'] .section-title {
+    font-size: 1.5rem;
+  }
+  [data-style='bold'] .section-title {
+    font-size: 3rem;
+  }
+  [data-style='editorial'] .section-title {
+    font-size: 2.75rem;
+  }
+  [data-style='noir'] .section-title {
+    font-size: 1.75rem;
+  }
+}
+
+/* Page titles (collection, cart, account, blog and so on). */
+.page-title {
+  font-size: 2rem;
+}
+@media (min-width: 640px) {
+  .page-title {
+    font-size: 2.75rem;
+  }
+  [data-style='editorial'] .page-title {
+    font-size: 3.5rem;
+  }
+  [data-style='catalog'] .page-title,
+  [data-style='noir'] .page-title {
+    font-size: 2.25rem;
+  }
+}
+
+/* Product and collection images: a slow, subtle zoom on hover. */
+.media-zoom {
+  transition:
+    scale 900ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 500ms ease-out;
+}
+@media (hover: hover) {
+  .group:hover .media-zoom {
+    scale: 1.045;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .media-zoom {
+    transition: none;
+  }
+}
+
+/* Copy set over photos gets a soft shadow for legibility. */
+.on-photo {
+  text-shadow: 0 1px 28px rgb(0 0 0 / 0.28);
 }
 
 /* Header, footer and side drawers (src/components/header, footer, cart). */
@@ -244,10 +633,65 @@ html:has(body[data-theme]) {
     border-color 150ms,
     background-color 150ms;
 }
+/* Centered headers use a quieter, underlined search field. */
+[data-header='centered'] .store-header .header-search {
+  border-color: transparent;
+  border-bottom-color: var(--color-zinc-300);
+  border-radius: 0;
+  background-color: transparent;
+}
 .store-header .header-search:focus {
   outline: none;
   border-color: var(--color-zinc-500);
   background-color: var(--store-bg);
+}
+
+/* The store name in the header, in the style's voice. */
+.store-logo {
+  font-family: var(--store-heading-font, inherit);
+  font-weight: var(--logo-weight, 700);
+  letter-spacing: var(--logo-tracking, -0.02em);
+  text-transform: var(--logo-case, none);
+}
+[data-style='editorial'],
+[data-style='classic'] {
+  --logo-weight: 500;
+  --logo-tracking: -0.01em;
+}
+[data-style='bold'] {
+  --logo-weight: 800;
+  --logo-case: uppercase;
+  --logo-tracking: -0.01em;
+}
+[data-style='fullbleed'] {
+  --logo-case: uppercase;
+  --logo-tracking: 0.08em;
+}
+[data-style='noir'] {
+  --logo-weight: 500;
+  --logo-case: uppercase;
+  --logo-tracking: 0.22em;
+}
+[data-style='catalog'] {
+  --logo-weight: 800;
+}
+@media (max-width: 767px) {
+  [data-style='noir'] {
+    --logo-tracking: 0.1em;
+  }
+  [data-style='fullbleed'] {
+    --logo-tracking: 0.03em;
+  }
+}
+[data-style='bold'] .store-header .nav-link,
+[data-style='fullbleed'] .store-header .nav-link {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+[data-style='noir'] .store-header .nav-link {
+  letter-spacing: 0.2em;
 }
 
 /* Menu links grow an underline from the left on hover. */

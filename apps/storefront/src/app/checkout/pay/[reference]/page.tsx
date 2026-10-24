@@ -28,7 +28,7 @@ export default async function SandboxPaymentPage({
         <p className="text-xs font-semibold uppercase tracking-widest text-amber-800">
           Sandbox payment · no real money
         </p>
-        <h1 className="mt-2 text-2xl font-bold">Pay {payment.storeName}</h1>
+        <h1 className="t-title mt-2 text-3xl">Pay {payment.storeName}</h1>
         <p className="mt-1 text-sm text-zinc-600">Order #{payment.orderNumber}</p>
         <p className="mt-6 text-4xl font-bold">{formatMoney(payment.amount, payment.currency)}</p>
         {payment.status === 'PENDING' ? (

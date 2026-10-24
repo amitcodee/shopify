@@ -3,6 +3,8 @@
 import type { Permission } from '@repo/contracts';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { Icon, type IconName } from '@/components/icons';
 
 export interface NavItem {
   label: string;
@@ -10,141 +12,163 @@ export interface NavItem {
   icon?: NavIconName;
   permission?: Permission;
   exact?: boolean;
+  /** Items sharing a group render under that heading (in first-seen order). */
+  group?: string;
 }
 
-// Simple 24×24 outline glyphs; decorative only (the label carries the link's name).
-const ICONS = {
-  home: <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
-  orders: <path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM9 8h6M9 12h6" />,
-  products: (
-    <>
-      <path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z" />
-      <circle cx="7.5" cy="7.5" r="1.5" />
-    </>
-  ),
-  inventory: <path d="m3 7 9-4 9 4v10l-9 4-9-4zm0 0 9 4 9-4m-9 4v10" />,
-  collections: (
-    <>
-      <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" />
-      <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" />
-      <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" />
-      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" />
-    </>
-  ),
-  customers: (
-    <>
-      <circle cx="9" cy="8" r="3.5" />
-      <path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14c1.8.8 3 2.9 3 5.5" />
-    </>
-  ),
-  discounts: (
-    <>
-      <path d="M19 5 5 19" />
-      <circle cx="7" cy="7" r="2.5" />
-      <circle cx="17" cy="17" r="2.5" />
-    </>
-  ),
-  giftCards: (
-    <>
-      <rect x="3" y="8" width="18" height="13" rx="1.5" />
-      <path d="M3 12.5h18M12 8v13M12 8c-1.5-3-5.5-3.5-5.5-1S9.5 8 12 8c2.5 0 5.5 1.5 5.5-1S13.5 5 12 8" />
-    </>
-  ),
-  onlineStore: <path d="M4 9h16l-1.5-5h-13zm1 0v11h14V9m-9 11v-5h4v5" />,
-  settings: (
-    <>
-      <path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" />
-      <circle cx="15" cy="6" r="2" />
-      <circle cx="9" cy="12" r="2" />
-      <circle cx="17" cy="18" r="2" />
-    </>
-  ),
-};
+export type NavIconName = IconName;
 
-export type NavIconName = keyof typeof ICONS;
-
-function NavIcon({ name, active }: { name: NavIconName; active: boolean }) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.7}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`h-4 w-4 shrink-0 ${active ? 'text-indigo-600' : 'text-slate-400 group-hover/nav:text-slate-600'}`}
-    >
-      {ICONS[name]}
-    </svg>
-  );
+function isActive(item: NavItem, pathname: string) {
+  return item.exact ? pathname === item.href : pathname.startsWith(item.href);
 }
 
 export function SideNav({ items, permissions }: { items: NavItem[]; permissions: Permission[] }) {
   const pathname = usePathname();
+  const visible = items.filter((item) => !item.permission || permissions.includes(item.permission));
+  const groups: { name?: string; items: NavItem[] }[] = [];
+  for (const item of visible) {
+    const last = groups.at(-1);
+    if (last && last.name === item.group) last.items.push(item);
+    else groups.push({ name: item.group, items: [item] });
+  }
   return (
-    <nav aria-label="Store" className="space-y-1">
-      {items
-        .filter((item) => !item.permission || permissions.includes(item.permission))
-        .map((item) => {
-          const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? 'page' : undefined}
-              className={`group/nav flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium ${
-                active
-                  ? 'bg-indigo-50 text-indigo-700'
-                  : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-              }`}
-            >
-              {item.icon ? <NavIcon name={item.icon} active={active} /> : null}
-              {item.label}
-            </Link>
-          );
-        })}
+    <nav aria-label="Store" className="space-y-5">
+      {groups.map((group, index) => (
+        <div key={group.name ?? `group-${index}`}>
+          {group.name?.trim() ? (
+            <p className="mb-1 px-2.5 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+              {group.name}
+            </p>
+          ) : null}
+          <div className="space-y-px">
+            {group.items.map((item) => {
+              const active = isActive(item, pathname);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={`group/nav relative flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-900/[0.07]'
+                      : 'text-slate-600 hover:bg-slate-900/[0.04] hover:text-slate-900'
+                  }`}
+                >
+                  {item.icon ? (
+                    <Icon
+                      name={item.icon}
+                      className={`h-4 w-4 ${active ? 'text-indigo-600' : 'text-slate-400 group-hover/nav:text-slate-600'}`}
+                      strokeWidth={active ? 2 : 1.75}
+                    />
+                  ) : null}
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </nav>
   );
 }
 
-/** Phones: the nav collapses behind a "Menu" toggle so every page doesn't open with ten links. */
+/** Phones: the nav collapses behind a "Menu" toggle that opens a full-height drawer. */
 export function MobileNav({
   items,
   permissions,
   storefrontUrl,
+  header,
 }: {
   items: NavItem[];
   permissions: Permission[];
   storefrontUrl: string;
+  /** Shown at the top of the drawer (the store switcher). */
+  header?: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const current = items.find((item) =>
-    item.exact ? pathname === item.href : pathname.startsWith(item.href),
-  );
+  const current = items.find((item) => isActive(item, pathname));
   return (
     // Keyed by path so the menu closes after navigating.
-    <details key={pathname} className="group rounded-md border border-slate-200 bg-white">
-      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-medium text-slate-900">
+    <details key={pathname} className="group/menu">
+      <summary className="flex h-9 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-sm font-medium text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+        <Icon
+          name="menu"
+          className="h-4 w-4 text-slate-500 group-open/menu:hidden"
+          strokeWidth={2}
+        />
+        <Icon
+          name="close"
+          className="hidden h-4 w-4 text-slate-500 group-open/menu:block"
+          strokeWidth={2}
+        />
         <span>
           <span className="text-slate-500">Menu · </span>
           {current?.label ?? 'Overview'}
         </span>
-        <span aria-hidden className="text-slate-400 group-open:rotate-180">
-          ▾
-        </span>
       </summary>
-      <div className="border-t border-slate-200 p-2">
+      <div className="fixed inset-x-0 top-14 bottom-0 z-40 overflow-y-auto border-t border-slate-200 bg-[#fafafb] px-3 pt-3 pb-8">
+        {header ? <div className="mb-4">{header}</div> : null}
         <SideNav items={items} permissions={permissions} />
         <a
           href={storefrontUrl}
           target="_blank"
           rel="noreferrer"
-          className="mt-2 block px-3 py-2 text-sm text-indigo-600 hover:text-indigo-500"
+          className="mt-5 flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium text-slate-600 hover:bg-slate-900/[0.04] hover:text-slate-900"
         >
-          View storefront ↗
+          <Icon name="external" className="h-4 w-4 text-slate-400" />
+          View storefront
         </a>
       </div>
     </details>
+  );
+}
+
+/**
+ * A "Search" affordance in the top bar. It is not a global search: it focuses the current
+ * page's own search box (marked `data-page-search`) and only appears when the page has one.
+ * Pressing "/" does the same.
+ */
+export function PageSearchButton() {
+  const pathname = usePathname();
+  const [available, setAvailable] = useState(false);
+
+  useEffect(() => {
+    const find = () => document.querySelector<HTMLInputElement>('[data-page-search]');
+    // Defer to after the new page has painted.
+    const frame = requestAnimationFrame(() => setAvailable(Boolean(find())));
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const input = find();
+      if (!input) return;
+      event.preventDefault();
+      input.focus();
+      input.select();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [pathname]);
+
+  if (!available) return <div aria-hidden className="h-8 w-full max-w-sm" />;
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        const input = document.querySelector<HTMLInputElement>('[data-page-search]');
+        input?.focus();
+        input?.select();
+      }}
+      className="flex h-8 w-full max-w-sm items-center gap-2 rounded-lg bg-slate-900/[0.045] px-2.5 text-left text-sm text-slate-500 ring-1 ring-transparent transition hover:bg-white hover:ring-slate-300"
+    >
+      <Icon name="search" className="h-4 w-4 text-slate-400" strokeWidth={2} />
+      <span className="flex-1">Search this page…</span>
+      <kbd className="rounded border border-slate-300 bg-white px-1.5 font-sans text-[11px] leading-4 text-slate-500">
+        /
+      </kbd>
+    </button>
   );
 }

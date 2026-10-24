@@ -8,6 +8,7 @@ import { BagIcon, CloseIcon } from '@/components/header/icons';
 import { useDrawer } from '@/components/header/use-drawer';
 import { CART_ADDED_EVENT, CART_OPEN_EVENT } from './cart-events';
 import { CartLineControls } from './line-controls';
+import { lineProblem } from './line-status';
 
 /**
  * Slide-out cart from the right. It opens after an add to cart (`cart:added`) and when the
@@ -59,7 +60,7 @@ export function CartDrawer({ cart }: { cart: Cart | null }) {
         className="drawer-panel drawer-right absolute inset-y-0 right-0 flex w-full max-w-[26rem] flex-col bg-page text-ink shadow-2xl focus:outline-none"
       >
         <div className="flex items-center justify-between gap-4 border-b border-zinc-200 px-5 py-4 sm:px-6">
-          <h2 id="cart-drawer-title" className="font-heading text-lg font-semibold">
+          <h2 id="cart-drawer-title" className="t-title text-xl">
             Your cart
             {count > 0 ? (
               <span className="ml-2 align-middle text-sm font-normal tracking-normal text-zinc-500 normal-case">
@@ -83,7 +84,7 @@ export function CartDrawer({ cart }: { cart: Cart | null }) {
             <span className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100 text-zinc-500">
               <BagIcon width="28" height="28" />
             </span>
-            <h3 className="mt-5 font-heading text-xl font-semibold">Your cart is empty</h3>
+            <h3 className="t-title mt-5 text-2xl">Your cart is empty</h3>
             <p className="mt-2 text-sm text-zinc-500">
               Find something you love — it will be waiting here.
             </p>
@@ -105,43 +106,72 @@ export function CartDrawer({ cart }: { cart: Cart | null }) {
                 </ul>
               ) : null}
               <ul className="divide-y divide-zinc-200">
-                {lines.map((line) => (
-                  <li key={line.id} className="flex gap-4 py-5">
-                    <Link
-                      href={`/products/${line.productHandle}`}
-                      tabIndex={-1}
-                      aria-hidden="true"
-                      className="cart-thumb h-24 w-20 shrink-0 overflow-hidden rounded-md bg-zinc-100"
-                    >
-                      {line.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={line.imageUrl} alt="" className="h-full w-full object-cover" />
-                      ) : null}
-                    </Link>
-                    <div className="flex min-w-0 flex-1 flex-col gap-3">
-                      <div className="flex justify-between gap-3">
-                        <div className="min-w-0">
-                          <Link
-                            href={`/products/${line.productHandle}`}
-                            className="text-sm leading-snug font-medium hover:underline"
+                {lines.map((line, index) => {
+                  const problem = lineProblem(line);
+                  const href =
+                    problem?.linkable === false ? null : `/products/${line.productHandle}`;
+                  const thumbClass = `cart-thumb h-24 w-20 shrink-0 overflow-hidden rounded-md bg-zinc-100 ${
+                    problem ? 'opacity-50 grayscale' : ''
+                  }`;
+                  const thumb = line.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={line.imageUrl}
+                      alt=""
+                      loading={index < 4 ? undefined : 'lazy'}
+                      decoding="async"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : null;
+                  return (
+                    <li key={line.id} className="flex gap-4 py-5">
+                      {href ? (
+                        <Link href={href} tabIndex={-1} aria-hidden="true" className={thumbClass}>
+                          {thumb}
+                        </Link>
+                      ) : (
+                        <span aria-hidden="true" className={thumbClass}>
+                          {thumb}
+                        </span>
+                      )}
+                      <div className="flex min-w-0 flex-1 flex-col gap-3">
+                        <div className="flex justify-between gap-3">
+                          <div className="min-w-0">
+                            {href ? (
+                              <Link href={href} className="card-title leading-snug hover:underline">
+                                {line.productTitle}
+                              </Link>
+                            ) : (
+                              <span className="card-title leading-snug text-zinc-500">
+                                {line.productTitle}
+                              </span>
+                            )}
+                            {line.variantTitle !== 'Default' ? (
+                              <p className="mt-0.5 text-xs text-zinc-500">{line.variantTitle}</p>
+                            ) : null}
+                            <p className="mt-0.5 text-xs text-zinc-500">
+                              {formatMoney(line.unitPrice, currency)}
+                            </p>
+                            {problem ? (
+                              <p className="mt-1 text-xs font-medium text-red-700">
+                                {problem.label}
+                              </p>
+                            ) : null}
+                          </div>
+                          <p
+                            className={`text-sm font-medium whitespace-nowrap tabular-nums ${
+                              problem ? 'text-zinc-400 line-through' : ''
+                            }`}
                           >
-                            {line.productTitle}
-                          </Link>
-                          {line.variantTitle !== 'Default' ? (
-                            <p className="mt-0.5 text-xs text-zinc-500">{line.variantTitle}</p>
-                          ) : null}
-                          <p className="mt-0.5 text-xs text-zinc-500">
-                            {formatMoney(line.unitPrice, currency)}
+                            {problem ? <span className="sr-only">Not included: </span> : null}
+                            {formatMoney(line.lineTotal, currency)}
                           </p>
                         </div>
-                        <p className="text-sm font-medium whitespace-nowrap tabular-nums">
-                          {formatMoney(line.lineTotal, currency)}
-                        </p>
+                        <CartLineControls key={`${line.id}-${line.quantity}`} line={line} compact />
                       </div>
-                      <CartLineControls key={`${line.id}-${line.quantity}`} line={line} compact />
-                    </div>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
             <div className="border-t border-zinc-200 bg-surface/40 px-5 pt-5 pb-6 sm:px-6">
@@ -155,13 +185,13 @@ export function CartDrawer({ cart }: { cart: Cart | null }) {
               <Link
                 href="/checkout"
                 aria-disabled={subtotal === 0}
-                className="btn mt-5 flex w-full px-4 py-3.5 text-sm"
+                className="btn btn-strong mt-5 flex min-h-[3.25rem] w-full px-4 py-3.5 text-sm"
               >
                 Check out
               </Link>
               <Link
                 href="/cart"
-                className="mt-3 flex w-full items-center justify-center rounded-md border border-zinc-300 px-4 py-3 text-sm font-medium hover:border-zinc-900"
+                className="btn btn-ghost mt-3 flex min-h-12 w-full px-4 py-3 text-sm"
               >
                 View cart
               </Link>

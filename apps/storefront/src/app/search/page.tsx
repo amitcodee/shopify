@@ -32,9 +32,7 @@ export default async function SearchPage({
 
   return (
     <>
-      <h1 className="mb-6 text-3xl font-semibold tracking-tight text-zinc-900 md:text-4xl">
-        Search
-      </h1>
+      <h1 className="mb-6 page-title t-title text-zinc-900">Search</h1>
       <form action="/search" role="search" className="mb-8 flex max-w-xl gap-2">
         <label htmlFor="q" className="sr-only">
           Search products
@@ -91,6 +89,7 @@ export default async function SearchPage({
               products={results.items}
               currency={shop.currency}
               theme={shop.theme.settings}
+              eagerFirstRow
             />
           )}
           <PageLinks

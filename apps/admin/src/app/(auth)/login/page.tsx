@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Alert } from '@/components/ui';
+import { Alert, linkClass } from '@/components/ui';
 import { LoginForm } from './login-form';
 
 export const metadata = { title: 'Sign in · Merchant Admin' };
@@ -12,8 +12,8 @@ export default async function LoginPage({
   const { next, expired, reset, unlocked } = await searchParams;
   return (
     <>
-      <h1 className="text-xl font-semibold text-slate-900">Sign in</h1>
-      <p className="mt-1 text-sm text-slate-500">Manage your stores, products and orders.</p>
+      <h1 className="text-[22px] leading-8 font-semibold tracking-tight text-slate-900">Sign in</h1>
+      <p className="mt-1.5 text-sm text-slate-500">Manage your stores, products and orders.</p>
       {expired ? (
         <div className="mt-4">
           <Alert tone="info">Your session ended. Please sign in again.</Alert>
@@ -30,14 +30,14 @@ export default async function LoginPage({
         </div>
       ) : null}
       <LoginForm next={next ?? '/stores'} />
-      <p className="mt-4 text-sm">
-        <Link href="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500">
+      <div className="mt-4 text-center text-sm">
+        <Link href="/forgot-password" className={linkClass}>
           Forgot your password?
         </Link>
-      </p>
-      <p className="mt-2 text-sm text-slate-500">
+      </div>
+      <p className="mt-6 border-t border-slate-100 pt-5 text-center text-sm text-slate-500">
         New here?{' '}
-        <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
+        <Link href="/signup" className={linkClass}>
           Create an account
         </Link>
       </p>

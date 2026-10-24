@@ -13,7 +13,7 @@ import {
 } from 'react';
 import { useFormStatus } from 'react-dom';
 import type { FormState } from '@/lib/form';
-import { Alert, buttonClass, type ButtonVariant } from './ui';
+import { Alert, buttonClass, type ButtonSize, type ButtonVariant, inputClass } from './ui';
 
 const FormStateContext = createContext<FormState>(undefined);
 
@@ -46,11 +46,15 @@ export function SubmitButton({
   variant = 'primary',
   name,
   value,
+  size,
+  fullWidth,
 }: {
   children: ReactNode;
   variant?: ButtonVariant;
   name?: string;
   value?: string;
+  size?: ButtonSize;
+  fullWidth?: boolean;
 }) {
   const { pending } = useFormStatus();
   return (
@@ -60,9 +64,31 @@ export function SubmitButton({
       value={value}
       disabled={pending}
       aria-disabled={pending}
-      className={buttonClass(variant)}
+      className={`${buttonClass(variant, size)}${fullWidth ? ' w-full' : ''}`}
     >
-      {pending ? 'Working…' : children}
+      {pending ? (
+        <>
+          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4 animate-spin" fill="none">
+            <circle
+              cx="12"
+              cy="12"
+              r="9"
+              stroke="currentColor"
+              strokeOpacity="0.25"
+              strokeWidth="3"
+            />
+            <path
+              d="M21 12a9 9 0 0 0-9-9"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+          </svg>
+          Working…
+        </>
+      ) : (
+        children
+      )}
     </button>
   );
 }
@@ -76,9 +102,8 @@ function useField(name: string, defaultValue?: string | number | null) {
 }
 
 const controlClass =
-  'block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm ' +
-  'focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ' +
-  'aria-[invalid=true]:border-red-500 disabled:bg-slate-100';
+  `${inputClass} w-full py-2 aria-[invalid=true]:border-red-500 ` +
+  'aria-[invalid=true]:focus:ring-red-500/15';
 
 function FieldShell({
   id,
@@ -94,18 +119,26 @@ function FieldShell({
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="block text-[13px] font-medium text-slate-800">
         {label}
       </label>
       {children}
       {hint && !error ? (
-        <p id={`${id}-hint`} className="text-xs text-slate-500">
+        <p id={`${id}-hint`} className="text-xs leading-5 text-slate-500">
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p id={`${id}-error`} className="text-xs text-red-600">
+        <p id={`${id}-error`} className="flex items-start gap-1 text-xs leading-5 text-red-600">
+          <svg
+            aria-hidden
+            viewBox="0 0 20 20"
+            className="mt-0.5 h-3.5 w-3.5 shrink-0"
+            fill="currentColor"
+          >
+            <path d="M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm-.75 4.5a.75.75 0 0 1 1.5 0v4a.75.75 0 0 1-1.5 0v-4ZM10 14.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z" />
+          </svg>
           {error}
         </p>
       ) : null}
@@ -206,27 +239,26 @@ export function CheckboxField({
 }) {
   const id = useId();
   return (
-    <div className="flex items-start gap-2">
+    <div className="flex items-start gap-2.5">
       <input
         id={id}
         type="checkbox"
         name={name}
         value={value}
         defaultChecked={defaultChecked}
-        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+        className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300"
       />
-      <label htmlFor={id} className="text-sm text-slate-700">
+      <label htmlFor={id} className="text-sm text-slate-800">
         {label}
-        {hint ? <span className="block text-xs text-slate-500">{hint}</span> : null}
+        {hint ? (
+          <span className="mt-0.5 block text-xs leading-5 text-slate-500">{hint}</span>
+        ) : null}
       </label>
     </div>
   );
 }
 
-const inlineClass =
-  'block w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm shadow-sm ' +
-  'focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ' +
-  'aria-[invalid=true]:border-red-500 disabled:bg-slate-100';
+const inlineClass = `${inputClass} w-full px-2.5 aria-[invalid=true]:border-red-500`;
 
 type InlineInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'defaultValue' | 'name'> & {
   name: string;

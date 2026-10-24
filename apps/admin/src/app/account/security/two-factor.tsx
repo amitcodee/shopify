@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import { SubmitButton } from '@/components/form';
-import { Alert } from '@/components/ui';
+import { Alert, inputClass } from '@/components/ui';
 import { disableTwoFactorAction, enableTwoFactorAction, startTwoFactorAction } from './actions';
 
 function CodeInput({ id }: { id: string }) {
@@ -19,7 +19,7 @@ function CodeInput({ id }: { id: string }) {
         pattern="\d{6}"
         maxLength={6}
         required
-        className="block w-40 rounded-md border border-slate-300 px-3 py-2 text-sm tracking-widest"
+        className={`${inputClass} w-40 py-2 tracking-widest`}
       />
     </div>
   );

@@ -19,10 +19,8 @@ export default async function NotFound() {
 
   return (
     <div className="mx-auto flex max-w-xl flex-col items-center py-14 text-center sm:py-24">
-      <p className="font-heading text-7xl font-bold tracking-tighter text-zinc-200 sm:text-8xl">
-        404
-      </p>
-      <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Page not found</h1>
+      <p className="t-display text-[7rem] leading-none text-zinc-200 sm:text-[10rem]">404</p>
+      <h1 className="page-title t-title mt-4">Page not found</h1>
       <p className="mt-3 text-zinc-600">
         The page you are looking for has moved or no longer exists. Try a search, or keep browsing{' '}
         {shop.name}.

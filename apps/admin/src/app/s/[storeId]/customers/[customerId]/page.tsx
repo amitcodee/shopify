@@ -39,7 +39,7 @@ export default async function CustomerPage({
         title={customer.name ?? customer.email}
         back={{ href: `/s/${storeId}/customers`, label: 'Customers' }}
       />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card title="Orders">
           {customer.orders.length === 0 ? (
             <p className="text-sm text-slate-500">No orders.</p>

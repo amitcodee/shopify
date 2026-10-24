@@ -1,7 +1,7 @@
 import type { ThemeSettings } from '@repo/contracts';
 
 const ICON = {
-  className: 'h-6 w-6 shrink-0',
+  className: 'h-5 w-5 shrink-0',
   fill: 'none',
   stroke: 'currentColor',
   strokeWidth: 1.5,
@@ -43,14 +43,16 @@ export function TrustBar({ theme }: { theme: ThemeSettings }) {
   return (
     <section aria-label="Why shop with us" className="store-section">
       <ul
-        className={`grid gap-px overflow-hidden rounded-xl border border-zinc-200 bg-zinc-200 ${columns}`}
+        className={`grid divide-y divide-zinc-200 border-y border-zinc-200 sm:divide-x sm:divide-y-0 ${columns}`}
       >
         {items.map((item) => (
           <li
             key={item.text}
-            className="flex items-center gap-3 bg-page px-5 py-4 text-sm font-medium sm:justify-center sm:py-5"
+            className="flex items-center gap-3.5 px-2 py-4 text-sm font-medium sm:justify-center sm:px-6 sm:py-6"
           >
-            <span className="text-accent">{item.icon}</span>
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[color-mix(in_oklab,var(--store-accent)_12%,var(--store-bg))] text-accent">
+              {item.icon}
+            </span>
             <span className="min-w-0 break-words">{item.text}</span>
           </li>
         ))}

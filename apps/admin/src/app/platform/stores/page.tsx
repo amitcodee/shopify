@@ -2,8 +2,10 @@ import type { CurrentUser, Paginated, Plan, PlatformStore } from '@repo/contract
 import { ActionForm, Field, SelectField, SubmitButton } from '@/components/form';
 import {
   Badge,
+  buttonClass,
   EmptyState,
   formatDateTime,
+  inputClass,
   PageHeader,
   Pagination,
   Table,
@@ -32,7 +34,7 @@ export default async function PlatformStoresPage({
   return (
     <>
       <PageHeader title="Stores" />
-      <form action="/platform/stores" className="mb-4 flex gap-2">
+      <form action="/platform/stores" className="mb-4 flex flex-wrap gap-2">
         <label htmlFor="store-search" className="sr-only">
           Search stores
         </label>
@@ -41,7 +43,7 @@ export default async function PlatformStoresPage({
           name="q"
           defaultValue={q}
           placeholder="Name, address or owner email"
-          className="w-72 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+          className={`${inputClass} w-full sm:w-72`}
         />
         <label htmlFor="store-status" className="sr-only">
           Status
@@ -50,13 +52,13 @@ export default async function PlatformStoresPage({
           id="store-status"
           name="status"
           defaultValue={status ?? ''}
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className={`${inputClass} w-auto`}
         >
           <option value="">All statuses</option>
           <option value="ACTIVE">Active</option>
           <option value="SUSPENDED">Suspended</option>
         </select>
-        <button type="submit" className="rounded-md border border-slate-300 px-3 py-1.5 text-sm">
+        <button type="submit" className={buttonClass('secondary', 'sm')}>
           Filter
         </button>
       </form>

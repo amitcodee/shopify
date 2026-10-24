@@ -1,6 +1,7 @@
 import { findThemeTemplate, parseTheme, type Theme } from '@repo/contracts';
 import Link from 'next/link';
-import { Card } from '@/components/ui';
+import { Icon } from '@/components/icons';
+import { buttonClass, Card } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
 import { storefrontUrlFor } from '@/lib/storefront';
@@ -34,9 +35,10 @@ export default async function ThemePage({
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
-        <div className="w-full shrink-0 overflow-hidden rounded-md border border-slate-200 sm:w-56">
+      <section className="flex flex-col gap-5 rounded-xl border border-slate-200/90 bg-white p-4 shadow-card sm:flex-row sm:items-center sm:p-5">
+        <div className="w-full shrink-0 overflow-hidden rounded-lg border border-slate-200 shadow-xs sm:w-60">
           <TemplateThumbnail
+            photos={current?.industry}
             preset={theme.preset}
             settings={s}
             storeName={store.name}
@@ -46,10 +48,11 @@ export default async function ThemePage({
           />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
-            Current theme
+          <p className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Current theme · live
           </p>
-          <h2 className="mt-0.5 text-lg font-semibold text-slate-900">
+          <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-900">
             {current ? current.name : 'Custom theme'}
           </h2>
           <p className="text-sm text-slate-500">
@@ -57,20 +60,24 @@ export default async function ThemePage({
               ? `${current.industryLabel} · ${current.styleLabel}`
               : 'Your own combination of colors, fonts and layout.'}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <a
               href={storefrontUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+              className={buttonClass('secondary', 'sm')}
             >
-              View storefront ↗
+              <Icon name="external" className="-ml-0.5 h-4 w-4 text-slate-500" />
+              View storefront
             </a>
           </div>
         </div>
       </section>
 
-      <nav aria-label="Theme" className="flex gap-1 rounded-lg bg-slate-100 p-1 sm:w-fit">
+      <nav
+        aria-label="Theme"
+        className="flex gap-0.5 rounded-lg bg-slate-900/[0.045] p-0.5 sm:w-fit"
+      >
         {(
           [
             ['templates', 'Templates'],
@@ -81,9 +88,9 @@ export default async function ThemePage({
             key={id}
             href={`${base}?tab=${id}`}
             aria-current={tab === id ? 'page' : undefined}
-            className={`flex-1 rounded-md px-4 py-1.5 text-center text-sm font-medium sm:flex-none ${
+            className={`flex-1 rounded-md px-4 py-1.5 text-center text-sm font-medium transition-colors sm:flex-none ${
               tab === id
-                ? 'bg-white text-slate-900 shadow-sm'
+                ? 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-900/[0.06]'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >

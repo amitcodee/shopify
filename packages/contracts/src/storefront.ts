@@ -53,6 +53,9 @@ export const productCardSchema = z.object({
   imageAlt: z.string(),
   /** Second product image, shown on hover. */
   secondImageUrl: z.string().nullable(),
+  /** Smaller WebP copies of the first image for `srcset` (narrowest first). */
+  imageRenditions: z.array(z.object({ width: z.number().int(), url: z.string() })).optional(),
+  secondImageRenditions: z.array(z.object({ width: z.number().int(), url: z.string() })).optional(),
 });
 export type ProductCard = z.infer<typeof productCardSchema>;
 
@@ -86,6 +89,8 @@ export const storefrontVariantSchema = z.object({
   compareAtPrice: z.number().int().nullable(),
   available: z.boolean(),
   sku: z.string().nullable(),
+  /** Image to show when this variant is selected (an `images[].id`), or null. */
+  imageId: z.uuid().nullable().optional(),
 });
 export type StorefrontVariant = z.infer<typeof storefrontVariantSchema>;
 
@@ -103,8 +108,28 @@ export const storefrontProductSchema = z.object({
   options: z.array(z.object({ name: z.string(), values: z.array(z.string()) })),
   variants: z.array(storefrontVariantSchema),
   images: z.array(
-    z.object({ url: z.string(), alt: z.string(), width: z.number(), height: z.number() }),
+    z.object({
+      id: z.uuid().optional(),
+      url: z.string(),
+      alt: z.string(),
+      width: z.number(),
+      height: z.number(),
+      /** Smaller WebP copies for `srcset` (narrowest first). */
+      renditions: z.array(z.object({ width: z.number().int(), url: z.string() })).optional(),
+    }),
   ),
+  /** Custom fields the merchant chose to show, in their order (e.g. "Material: Cotton"). */
+  specs: z
+    .array(
+      z.object({
+        key: z.string(),
+        /** Humanized key: "fabric_weight" -> "Fabric weight". */
+        label: z.string(),
+        type: z.string(),
+        value: z.string(),
+      }),
+    )
+    .optional(),
 });
 export type StorefrontProduct = z.infer<typeof storefrontProductSchema>;
 

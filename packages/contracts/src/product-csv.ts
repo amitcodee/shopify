@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import { minorToDecimalString, parseMoney } from './money.js';
 
-/** Shopify-style product CSV: one row per variant; product fields on a handle's first row. */
+/**
+ * Shopify-style product CSV: one row per variant; product fields on a handle's first row. Images
+ * ride along one per row (Image Src); a product with more images than variants gets extra rows
+ * carrying only Handle and the image columns.
+ */
 export const PRODUCT_CSV_COLUMNS = [
   'Handle',
   'Title',
@@ -28,6 +32,12 @@ export const PRODUCT_CSV_COLUMNS = [
   'Variant Inventory Qty',
   'SEO Title',
   'SEO Description',
+  'Cost per item',
+  'Country of origin',
+  'HS code',
+  'Image Src',
+  'Image Position',
+  'Image Alt Text',
 ] as const;
 type Column = (typeof PRODUCT_CSV_COLUMNS)[number];
 
@@ -44,6 +54,8 @@ export interface CsvProduct {
   seoTitle: string | null;
   seoDescription: string | null;
   options: { name: string; values: string[] }[];
+  /** Public image URLs in gallery order. */
+  images?: { url: string; alt: string }[];
   variants: {
     options: string[];
     sku: string | null;
@@ -56,6 +68,9 @@ export interface CsvProduct {
     trackInventory: boolean;
     allowBackorder: boolean;
     inventoryQuantity: number;
+    costPerItem?: number | null;
+    countryOfOrigin?: string | null;
+    hsCode?: string | null;
   }[];
 }
 
@@ -64,6 +79,11 @@ const yesNo = (value: boolean) => (value ? 'TRUE' : 'FALSE');
 export function productsToCsvRows(products: CsvProduct[], currency: string): string[][] {
   const rows: string[][] = [[...PRODUCT_CSV_COLUMNS]];
   for (const p of products) {
+    const images = p.images ?? [];
+    const imageCells = (i: number): string[] => {
+      const image = images[i];
+      return image ? [image.url, String(i + 1), image.alt] : ['', '', ''];
+    };
     p.variants.forEach((v, i) => {
       const first = i === 0;
       const option = (n: number): [string, string] => [
@@ -93,8 +113,20 @@ export function productsToCsvRows(products: CsvProduct[], currency: string): str
         String(v.inventoryQuantity),
         first ? (p.seoTitle ?? '') : '',
         first ? (p.seoDescription ?? '') : '',
+        v.costPerItem === null || v.costPerItem === undefined
+          ? ''
+          : minorToDecimalString(v.costPerItem, currency),
+        v.countryOfOrigin ?? '',
+        v.hsCode ?? '',
+        ...imageCells(i),
       ]);
     });
+    for (let i = p.variants.length; i < images.length; i++) {
+      const row: string[] = PRODUCT_CSV_COLUMNS.map(() => '');
+      row[0] = p.handle;
+      row.splice(PRODUCT_CSV_COLUMNS.indexOf('Image Src'), 3, ...imageCells(i));
+      rows.push(row);
+    }
   }
   return rows;
 }
@@ -112,6 +144,8 @@ export interface ParsedCsvProduct {
   handle: string;
   /** Raw product input; validated with productInputSchema by the importer. */
   input: Record<string, unknown>;
+  /** Image Src URLs (with alt text) in Image Position order, imported after the product. */
+  images: { url: string; alt: string }[];
 }
 
 /**
@@ -146,6 +180,7 @@ export function csvRowsToProducts(
       product: Record<string, unknown>;
       options: { name: string; values: string[] }[];
       variants: Record<string, unknown>[];
+      images: { url: string; alt: string; position: number }[];
     }
   >();
   body.forEach((cells, i) => {
@@ -186,6 +221,27 @@ export function csvRowsToProducts(
       return parsed;
     };
 
+    const imageSrc = get('Image Src');
+    const addImage = (target: { images: { url: string; alt: string; position: number }[] }) => {
+      if (!imageSrc) return;
+      const position = Number(get('Image Position'));
+      target.images.push({
+        url: imageSrc,
+        alt: get('Image Alt Text'),
+        position: Number.isInteger(position) && position > 0 ? position : 1_000_000 + rowNumber,
+      });
+    };
+    const existingGroup = groups.get(handle);
+    const imageOnly =
+      existingGroup &&
+      imageSrc !== '' &&
+      get('Variant Price') === '' &&
+      get('Variant SKU') === '' &&
+      (['Option1', 'Option2', 'Option3'] as const).every((o) => get(`${o} Value` as Column) === '');
+    if (existingGroup && imageOnly) {
+      addImage(existingGroup);
+      return;
+    }
     let group = groups.get(handle);
     if (!group) {
       const status = get('Status').toUpperCase() || 'DRAFT';
@@ -210,6 +266,7 @@ export function csvRowsToProducts(
           .filter(Boolean)
           .map((name) => ({ name, values: [] })),
         variants: [],
+        images: [],
       };
       groups.set(handle, group);
     }
@@ -232,7 +289,11 @@ export function csvRowsToProducts(
       trackInventory: bool('Variant Track Inventory', true),
       allowBackorder: bool('Variant Allow Backorder', false),
       inventoryQuantity: int('Variant Inventory Qty') ?? 0,
+      costPerItem: money('Cost per item', false),
+      countryOfOrigin: get('Country of origin'),
+      hsCode: get('HS code'),
     });
+    addImage(group);
   });
 
   return {
@@ -240,6 +301,9 @@ export function csvRowsToProducts(
       row: g.row,
       handle,
       input: { ...g.product, options: g.options, variants: g.variants },
+      images: g.images
+        .sort((a, b) => a.position - b.position)
+        .map(({ url, alt }) => ({ url, alt })),
     })),
     errors,
   };

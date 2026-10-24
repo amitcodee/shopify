@@ -9,17 +9,17 @@ import {
 } from '@repo/contracts';
 import { useActionState, useDeferredValue, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { Alert, Badge, buttonClass } from '@/components/ui';
+import { Alert, Badge, buttonClass, inputClass } from '@/components/ui';
 import type { FormState } from '@/lib/form';
 import { TemplateThumbnail } from './template-thumbnail';
 
 type ApplyAction = (state: FormState, formData: FormData) => Promise<FormState>;
 
 const chipClass = (active: boolean) =>
-  `shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${
+  `shrink-0 rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${
     active
-      ? 'bg-indigo-600 text-white ring-indigo-600'
-      : 'bg-white text-slate-700 ring-slate-300 hover:bg-slate-50'
+      ? 'bg-slate-900 text-white ring-slate-900'
+      : 'bg-white text-slate-700 ring-slate-200 hover:bg-slate-50 hover:ring-slate-300'
   }`;
 
 /** Filterable template catalog. Filtering runs in the browser over the bundled catalog. */
@@ -81,15 +81,18 @@ export function TemplateGallery({
           ))}
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="space-y-1 sm:w-56">
-            <label htmlFor="template-style" className="block text-sm font-medium text-slate-700">
+          <div className="space-y-1.5 sm:w-56">
+            <label
+              htmlFor="template-style"
+              className="block text-[13px] font-medium text-slate-800"
+            >
               Style
             </label>
             <select
               id="template-style"
               value={style}
               onChange={(event) => setStyle(event.target.value)}
-              className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 focus:outline-none"
+              className={`${inputClass} w-full py-2`}
             >
               <option value="all">All styles</option>
               {THEME_STYLES.map((s) => (
@@ -99,8 +102,11 @@ export function TemplateGallery({
               ))}
             </select>
           </div>
-          <div className="flex-1 space-y-1">
-            <label htmlFor="template-search" className="block text-sm font-medium text-slate-700">
+          <div className="flex-1 space-y-1.5">
+            <label
+              htmlFor="template-search"
+              className="block text-[13px] font-medium text-slate-800"
+            >
               Search templates
             </label>
             <input
@@ -109,11 +115,12 @@ export function TemplateGallery({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by name, e.g. Velvet"
-              className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 focus:outline-none"
+              data-page-search
+              className={`${inputClass} w-full py-2`}
             />
           </div>
         </div>
-        <p className="text-sm text-slate-500" aria-live="polite">
+        <p className="text-[13px] font-medium text-slate-500" aria-live="polite">
           {filtered
             ? `Showing ${visible.length} of ${THEME_TEMPLATES.length} templates`
             : `${THEME_TEMPLATES.length} templates`}
@@ -121,7 +128,7 @@ export function TemplateGallery({
       </div>
 
       {visible.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
           <p className="text-sm font-semibold text-slate-900">No templates match</p>
           <button
             type="button"
@@ -136,7 +143,7 @@ export function TemplateGallery({
           </button>
         </div>
       ) : (
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
           {visible.map((template) => (
             <TemplateCard
               key={template.id}
@@ -151,8 +158,8 @@ export function TemplateGallery({
 
       {state && state !== dismissed && (state.success || state.error) ? (
         // Fixed so the result is visible wherever in the long list Apply was pressed.
-        <div className="fixed inset-x-4 bottom-4 z-20 sm:left-auto sm:w-96">
-          <div className="relative shadow-lg">
+        <div className="fixed inset-x-4 bottom-4 z-40 sm:left-auto sm:w-96">
+          <div className="relative rounded-lg shadow-raised">
             <Alert tone={state.error ? 'error' : 'success'}>
               <span className="block pr-6">{state.error ?? state.success}</span>
             </Alert>
@@ -192,12 +199,13 @@ function TemplateCard({
     <li
       // Off-screen cards skip layout and paint until scrolled near.
       style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 390px' }}
-      className={`flex min-w-0 flex-col overflow-hidden rounded-lg border bg-white shadow-sm ${
-        current ? 'border-indigo-500 ring-2 ring-indigo-500/30' : 'border-slate-200'
+      className={`group flex min-w-0 flex-col overflow-hidden rounded-xl border bg-white shadow-card transition-shadow hover:shadow-raised ${
+        current ? 'border-indigo-500 ring-2 ring-indigo-500/25' : 'border-slate-200/90'
       }`}
     >
       <div className="border-b border-slate-100">
         <TemplateThumbnail
+          photos={template.industry}
           preset={template.preset}
           settings={template.settings}
           storeName={template.name}
@@ -205,7 +213,7 @@ function TemplateCard({
           announcement={template.sample.announcement}
         />
       </div>
-      <div className="flex flex-1 flex-col gap-1 px-4 py-3">
+      <div className="flex flex-1 flex-col gap-1 px-4 pt-3 pb-4">
         <div className="flex items-center justify-between gap-2">
           <h3 className="truncate text-sm font-semibold text-slate-900">{template.name}</h3>
           {current ? <Badge tone="indigo">Current</Badge> : null}
@@ -213,13 +221,13 @@ function TemplateCard({
         <p className="text-xs font-medium text-slate-500">
           {template.industryLabel} · {template.styleLabel}
         </p>
-        <p className="text-xs text-slate-500">{template.description}</p>
+        <p className="line-clamp-2 text-xs leading-5 text-slate-500">{template.description}</p>
         <div className="mt-auto flex items-center gap-2 pt-3">
           <a
             href={previewHref}
             target="_blank"
             rel="noreferrer"
-            className={`${buttonClass('secondary')} flex-1`}
+            className={`${buttonClass('secondary', 'sm')} flex-1`}
           >
             Preview<span className="sr-only"> {template.name}</span>
           </a>
@@ -242,7 +250,7 @@ function ApplyButton({ name, current }: { name: string; current: boolean }) {
       type="submit"
       disabled={pending}
       aria-disabled={pending}
-      className={`${buttonClass(current ? 'secondary' : 'primary')} flex-1`}
+      className={`${buttonClass(current ? 'secondary' : 'primary', 'sm')} flex-1`}
     >
       {pending ? 'Applying…' : 'Apply'}
       <span className="sr-only"> {name}</span>

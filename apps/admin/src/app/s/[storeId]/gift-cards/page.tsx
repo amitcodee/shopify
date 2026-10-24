@@ -1,7 +1,7 @@
 import { formatMoney, type GiftCard, type Paginated } from '@repo/contracts';
 import Link from 'next/link';
 import { ActionForm, CheckboxField, Field, SubmitButton } from '@/components/form';
-import { Card, EmptyState, PageHeader, Pagination, Table, Td } from '@/components/ui';
+import { Card, EmptyState, PageHeader, Pagination, SearchInput, Table, Td } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
 import { issueGiftCardAction } from './actions';
@@ -31,34 +31,32 @@ export default async function GiftCardsPage({
         title="Gift cards"
         description="Store credit customers spend at checkout. Codes are shown only once, when issued."
       />
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
-          <form action={base} className="flex gap-2">
-            <label htmlFor="gift-card-search" className="sr-only">
-              Search gift cards
-            </label>
-            <input
+          <form action={base}>
+            <SearchInput
               id="gift-card-search"
-              name="q"
+              label="Search gift cards"
               defaultValue={q}
               placeholder="Last 4 characters or customer email"
-              className="w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-full max-w-sm"
             />
           </form>
           {cards.items.length === 0 ? (
             <EmptyState
+              icon="giftCards"
               title={q ? 'No matching gift cards' : 'No gift cards yet'}
               description="Issue a gift card to give a customer store credit."
             />
           ) : (
             <>
-              <Table head={['Code', 'Customer', 'Status', 'Balance', 'Expires']}>
+              <Table head={['Code', 'Customer', 'Status', 'Balance', 'Expires']} numeric={[3]}>
                 {cards.items.map((c) => (
                   <tr key={c.id}>
                     <Td>
                       <Link
                         href={`${base}/${c.id}`}
-                        className="font-mono font-medium text-slate-900 hover:underline"
+                        className="font-mono font-medium whitespace-nowrap text-slate-900 hover:text-indigo-600"
                       >
                         •••• {c.lastCharacters}
                       </Link>
@@ -67,14 +65,16 @@ export default async function GiftCardsPage({
                     <Td>
                       <GiftCardStatusBadge status={c.status} />
                     </Td>
-                    <Td>
-                      {formatMoney(c.balance, c.currency)}
+                    <Td numeric>
+                      <span className="font-medium text-slate-900">
+                        {formatMoney(c.balance, c.currency)}
+                      </span>
                       <span className="text-xs text-slate-400">
                         {' '}
                         / {formatMoney(c.initialValue, c.currency)}
                       </span>
                     </Td>
-                    <Td>{c.expiresOn ?? 'Never'}</Td>
+                    <Td className="whitespace-nowrap text-slate-500">{c.expiresOn ?? 'Never'}</Td>
                   </tr>
                 ))}
               </Table>

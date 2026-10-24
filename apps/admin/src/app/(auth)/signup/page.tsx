@@ -1,6 +1,7 @@
 import { findThemeTemplate } from '@repo/contracts';
 import Link from 'next/link';
 import { ActionForm, Field, SubmitButton } from '@/components/form';
+import { linkClass } from '@/components/ui';
 import { signupAction } from '../actions';
 
 export const metadata = { title: 'Create account · Merchant Admin' };
@@ -15,10 +16,12 @@ export default async function SignupPage({
   const template = templateId ? findThemeTemplate(templateId) : undefined;
   return (
     <>
-      <h1 className="text-xl font-semibold text-slate-900">Create your account</h1>
+      <h1 className="text-[22px] leading-8 font-semibold tracking-tight text-slate-900">
+        Create your account
+      </h1>
       <p className="mt-1 text-sm text-slate-500">Start selling in minutes.</p>
       {template ? (
-        <p className="mt-4 rounded-md bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
+        <p className="mt-4 rounded-lg bg-indigo-50 px-3.5 py-2.5 text-sm text-indigo-900 ring-1 ring-indigo-600/10 ring-inset">
           Your store will start with the “{template.name}” template ({template.industryLabel} ·{' '}
           {template.styleLabel}).
         </p>
@@ -43,11 +46,11 @@ export default async function SignupPage({
           minLength={12}
           hint="At least 12 characters."
         />
-        <SubmitButton>Create account</SubmitButton>
+        <SubmitButton fullWidth>Create account</SubmitButton>
       </ActionForm>
-      <p className="mt-6 text-sm text-slate-500">
+      <p className="mt-6 border-t border-slate-100 pt-5 text-center text-sm text-slate-500">
         Already have an account?{' '}
-        <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+        <Link href="/login" className={linkClass}>
           Sign in
         </Link>
       </p>

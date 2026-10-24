@@ -17,11 +17,11 @@ export default async function OnboardingPage() {
     <>
       <TopBar user={user} />
       <main className="mx-auto max-w-lg px-4 py-12">
-        <h1 className="text-2xl font-semibold text-slate-900">Create your store</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Create your store</h1>
         <p className="mt-1 text-sm text-slate-500">
           You can change everything except the store address later.
         </p>
-        <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mt-8 rounded-xl border border-slate-200/90 bg-white p-6 shadow-card">
           <ActionForm action={createStoreAction}>
             <Field name="name" label="Store name" required maxLength={100} />
             <Field

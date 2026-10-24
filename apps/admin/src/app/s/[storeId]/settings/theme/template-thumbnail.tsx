@@ -14,6 +14,7 @@ export function TemplateThumbnail({
   heroTitle,
   announcement,
   height = 210,
+  photos,
 }: {
   preset: ThemePreset;
   settings: ThemeSettings;
@@ -21,6 +22,8 @@ export function TemplateThumbnail({
   heroTitle: string;
   announcement: string;
   height?: number;
+  /** Industry id whose sample photos (public/media/templates/<id>/) fill image slots. */
+  photos?: string;
 }) {
   const s = settings;
   const radius = RADII[s.radius];
@@ -34,7 +37,7 @@ export function TemplateThumbnail({
     lineHeight: 1.1,
     margin: 0,
   };
-  const ctx: Ctx = { s, radius, gap, muted, heading, heroTitle };
+  const ctx: Ctx = { s, radius, gap, muted, heading, heroTitle, photos };
 
   return (
     <div
@@ -75,6 +78,30 @@ interface Ctx {
   muted: string;
   heading: CSSProperties;
   heroTitle: string;
+  photos?: string;
+}
+
+const PHOTO_SIZES = { hero: [1500, 1000], product: [600, 600] } as const;
+
+/**
+ * A sample photo filling its (relatively positioned) parent; lazy so a long gallery only fetches
+ * what is on screen. The parent's own background shows if the photo is missing.
+ */
+function Photo({ photos, file }: { photos?: string; file: string }) {
+  if (!photos) return null;
+  const [width, height] = file === 'hero' ? PHOTO_SIZES.hero : PHOTO_SIZES.product;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`/media/templates/${photos}/${file}.webp`}
+      alt=""
+      width={width}
+      height={height}
+      loading="lazy"
+      decoding="async"
+      className="absolute inset-0 h-full w-full object-cover"
+    />
+  );
 }
 
 const RADII: Record<ThemeSettings['radius'], number> = {
@@ -222,20 +249,29 @@ function Hero({ ctx, preset }: { ctx: Ctx; preset: ThemePreset }) {
             <TextLines color={muted} widths={[90, 70]} />
             <Cta ctx={ctx} />
           </div>
-          <div style={{ height: 58, background: imageFill, borderRadius: radius }} />
+          <div
+            className="relative overflow-hidden"
+            style={{ height: 58, background: imageFill, borderRadius: radius }}
+          >
+            <Photo photos={ctx.photos} file="hero" />
+          </div>
         </div>
       );
     case 'fullbleed':
       return (
         <div
-          className="flex flex-col items-center justify-center gap-1.5 px-3 text-center"
+          className="relative flex flex-col items-center justify-center gap-1.5 overflow-hidden px-3 text-center"
           style={{
             height: 66,
             background: `linear-gradient(160deg, ${withAlpha(s.accentColor, 'dd')}, ${s.brandColor})`,
           }}
         >
-          {title(13, contrastingText(s.brandColor))}
-          <Cta ctx={ctx} on={s.brandColor} />
+          <Photo photos={ctx.photos} file="hero" />
+          {ctx.photos ? <span className="absolute inset-0 bg-black/35" /> : null}
+          <div className="relative flex flex-col items-center gap-1.5">
+            {title(13, ctx.photos ? '#ffffff' : contrastingText(s.brandColor))}
+            <Cta ctx={ctx} on={s.brandColor} />
+          </div>
         </div>
       );
     case 'editorial':
@@ -332,6 +368,7 @@ function ProductTile({ ctx, index }: { ctx: Ctx; index: number }) {
         background: `linear-gradient(${135 + index * 40}deg, ${s.surfaceColor}, ${withAlpha(s.accentColor, '55')})`,
       }}
     >
+      <Photo photos={ctx.photos} file={`p${(index % 4) + 1}`} />
       {overlay}
     </div>
   );

@@ -116,6 +116,7 @@ export class WebhookEmitter {
         handle: p.handle,
         title: p.title,
         status: p.status,
+        publishedAt: p.publishedAt?.toISOString() ?? null,
         variants: p.variants.map((v) => ({
           id: v.id,
           sku: v.sku,

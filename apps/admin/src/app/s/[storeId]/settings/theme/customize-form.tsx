@@ -32,7 +32,8 @@ const SOCIAL_FIELDS = [
   { name: 'socialTiktok', label: 'TikTok' },
 ] as const;
 
-const colorClass = 'h-10 w-full cursor-pointer rounded-md border border-slate-300 bg-white p-1';
+const colorClass =
+  'h-10 w-full cursor-pointer rounded-lg border border-slate-300 bg-white p-1 shadow-xs';
 
 function Group({
   title,

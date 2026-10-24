@@ -28,8 +28,8 @@ export function TextField({
 }) {
   const id = useId();
   return (
-    <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium text-zinc-800">
+    <div>
+      <label htmlFor={id} className="field-label">
         {label}
       </label>
       <input
@@ -37,12 +37,12 @@ export function TextField({
         name={name}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-err` : undefined}
-        className="block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 aria-[invalid=true]:border-red-600"
+        className="field"
         {...rest}
       />
-      {hint && !error ? <p className="text-xs text-zinc-500">{hint}</p> : null}
+      {hint && !error ? <p className="mt-1.5 text-xs text-zinc-500">{hint}</p> : null}
       {error ? (
-        <p id={`${id}-err`} className="text-xs text-red-700">
+        <p id={`${id}-err`} className="mt-1.5 text-xs text-red-700">
           {error}
         </p>
       ) : null}
@@ -59,7 +59,11 @@ export function Submit({
 }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="btn w-full px-4 py-3 text-sm">
+    <button
+      type="submit"
+      disabled={pending}
+      className="btn btn-strong min-h-12 w-full px-4 py-3 text-sm"
+    >
       {pending ? pendingLabel : children}
     </button>
   );

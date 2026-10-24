@@ -27,7 +27,7 @@ export default async function ContentPage({ params }: { params: Promise<{ handle
   if (!page) notFound();
   return (
     <article>
-      <h1 className="mb-6 text-3xl font-bold tracking-tight">{page.title}</h1>
+      <h1 className="page-title t-title mb-8">{page.title}</h1>
       <PlainText body={page.body} />
     </article>
   );

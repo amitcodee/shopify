@@ -35,7 +35,10 @@ export default async function CheckoutPage({
 
   return (
     <>
-      <h1 className="mb-6 text-3xl font-bold tracking-tight">Checkout</h1>
+      <div className="mb-10 border-b border-zinc-200 pb-6">
+        <p className="eyebrow text-zinc-500">Secure checkout</p>
+        <h1 className="page-title t-title mt-2">Checkout</h1>
+      </div>
       {cancelled || declined ? (
         <p
           role="alert"

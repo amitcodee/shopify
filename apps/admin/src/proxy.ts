@@ -9,6 +9,8 @@ const PUBLIC_PATHS = [
   '/forgot-password',
   '/reset-password',
   '/unlock',
+  // Static sample photos (template thumbnails, sign-in brand panel).
+  '/media',
 ];
 const isProd = process.env.NODE_ENV === 'production';
 const mediaOrigin = new URL(process.env.API_URL ?? 'http://localhost:4000').origin;

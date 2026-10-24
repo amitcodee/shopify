@@ -23,29 +23,44 @@ export default async function BlogPage({
 
   return (
     <>
-      <h1 className="text-3xl font-bold tracking-tight">{tag ? `Blog · ${tag}` : 'Blog'}</h1>
-      {tag ? (
-        <Link href="/blog" className="mt-2 inline-block text-sm text-zinc-600 underline">
-          All posts
-        </Link>
-      ) : null}
+      <header className="border-b border-zinc-200 pb-8">
+        <p className="eyebrow text-zinc-500">Journal</p>
+        <h1 className="page-title t-title mt-2">{tag ? `Blog · ${tag}` : 'Blog'}</h1>
+        {tag ? (
+          <Link
+            href="/blog"
+            className="mt-3 inline-block text-sm text-zinc-600 underline underline-offset-4 hover:text-zinc-900"
+          >
+            All posts
+          </Link>
+        ) : null}
+      </header>
       {posts.items.length === 0 ? (
-        <p className="mt-8 text-zinc-600">No posts yet.</p>
+        <p className="mt-10 text-zinc-600">No posts yet. Check back soon.</p>
       ) : (
-        <ul className="mt-8 grid gap-8 sm:grid-cols-2">
+        <ul className="mt-10 grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
           {posts.items.map((post) => (
             <li key={post.handle}>
-              <article>
-                <p className="text-xs uppercase tracking-wide text-zinc-500">
+              <article className="group relative flex h-full flex-col border-t border-zinc-900 pt-5">
+                <p className="eyebrow text-zinc-500">
                   <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
                   {post.author ? ` · ${post.author}` : ''}
                 </p>
-                <h2 className="mt-1 text-xl font-semibold">
-                  <Link href={`/blog/${post.handle}`} className="hover:underline">
+                <h2 className="t-title mt-3 text-2xl break-words">
+                  <Link
+                    href={`/blog/${post.handle}`}
+                    className="decoration-1 underline-offset-4 after:absolute after:inset-0 group-hover:underline"
+                  >
                     {post.title}
                   </Link>
                 </h2>
-                {post.excerpt ? <p className="mt-2 text-zinc-600">{post.excerpt}</p> : null}
+                {post.excerpt ? (
+                  <p className="mt-3 line-clamp-4 leading-relaxed text-zinc-600">{post.excerpt}</p>
+                ) : null}
+                <span aria-hidden="true" className="mt-auto pt-5 text-sm font-medium text-zinc-900">
+                  Read the story{' '}
+                  <span className="inline-block transition group-hover:translate-x-1">→</span>
+                </span>
               </article>
             </li>
           ))}

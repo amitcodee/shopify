@@ -17,8 +17,8 @@ const HEADER_CLASSES: Record<
   { row: string; logo: string; nav: string; search: string; actions: string; link: string }
 > = {
   inline: {
-    row: 'py-3 md:py-4',
-    logo: 'text-xl md:text-[1.375rem]',
+    row: 'py-3 md:py-5',
+    logo: 'text-xl md:text-2xl',
     nav: 'md:order-2 md:flex-1 md:gap-x-7',
     search: 'md:order-3 md:w-52 lg:w-64',
     actions: 'md:order-4',
@@ -63,12 +63,12 @@ export function StoreHeader({
   return (
     <StickyHeader sticky={s.stickyHeader} className="store-header">
       <div
-        className={`mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 gap-y-3 px-4 md:gap-x-6 ${c.row}`}
+        className={`store-container flex flex-wrap items-center gap-x-2 gap-y-3 md:gap-x-6 ${c.row}`}
       >
         <MobileMenu shopName={shop.name} links={shop.menus.main} collections={shop.collections} />
         <Link
           href="/"
-          className={`order-1 min-w-0 flex-1 truncate font-heading font-bold tracking-tight text-brand md:flex-none ${c.logo}`}
+          className={`store-logo order-1 min-w-0 flex-1 truncate text-brand md:flex-none ${c.logo}`}
         >
           {shop.name}
         </Link>
@@ -97,7 +97,7 @@ export function StoreHeader({
             name="q"
             type="search"
             placeholder="Search"
-            className="header-search w-full rounded-md border border-zinc-200 bg-zinc-50 py-2 pr-3 pl-9 text-sm placeholder:text-zinc-500"
+            className="header-search h-10 w-full rounded-[var(--store-button-radius)] border border-transparent bg-zinc-100 py-2 pr-3 pl-9 text-sm placeholder:text-zinc-500"
           />
         </form>
         <div

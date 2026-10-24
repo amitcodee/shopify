@@ -8,6 +8,7 @@ import {
   Pagination,
   Table,
   Td,
+  ViewTabs,
 } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
@@ -38,33 +39,41 @@ export default async function ReturnsPage({
   return (
     <>
       <PageHeader title="Returns" back={{ href: base, label: 'Orders' }} />
-      <nav aria-label="Return views" className="mb-4 flex gap-1">
-        {VIEWS.map((v) => (
-          <Link
-            key={v.key}
-            href={`${base}/returns?view=${v.key}`}
-            aria-current={current.key === v.key ? 'page' : undefined}
-            className={`rounded-md px-3 py-1.5 text-sm ${current.key === v.key ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
-          >
-            {v.label}
-          </Link>
-        ))}
-      </nav>
+      <div className="mb-4">
+        <ViewTabs
+          label="Return views"
+          items={VIEWS.map((v) => ({
+            label: v.label,
+            href: `${base}/returns?view=${v.key}`,
+            active: current.key === v.key,
+          }))}
+        />
+      </div>
       {returns.items.length === 0 ? (
-        <EmptyState title="Nothing here" description="Returns customers request appear here." />
+        <EmptyState
+          icon="inbox"
+          title="Nothing here"
+          description="Returns customers request appear here."
+        />
       ) : (
         <>
-          <Table head={['Order', 'Customer', 'Items', 'Value', 'Status', 'Requested']}>
+          <Table
+            head={['Order', 'Customer', 'Items', 'Value', 'Status', 'Requested']}
+            numeric={[2, 3]}
+          >
             {returns.items.map((r) => (
               <tr key={r.id}>
                 <Td>
-                  <Link href={`${base}/${r.orderId}`} className="font-medium hover:underline">
+                  <Link
+                    href={`${base}/${r.orderId}`}
+                    className="font-semibold text-slate-900 hover:text-indigo-600"
+                  >
                     #{r.orderNumber}
                   </Link>
                 </Td>
                 <Td>{r.email}</Td>
-                <Td>{r.lines.reduce((n, l) => n + l.quantity, 0)}</Td>
-                <Td>{formatMoney(r.suggestedRefund, store.currency)}</Td>
+                <Td numeric>{r.lines.reduce((n, l) => n + l.quantity, 0)}</Td>
+                <Td numeric>{formatMoney(r.suggestedRefund, store.currency)}</Td>
                 <Td>
                   <Badge tone={r.status === 'REQUESTED' ? 'yellow' : 'blue'}>
                     {r.status.toLowerCase()}

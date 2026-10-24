@@ -639,6 +639,10 @@ const DESIGN_FIELDS = [
 /** Template copy used only where the merchant has not written their own. */
 const COPY_FIELDS = ['heroSubtitle', 'heroCta', 'featuredTitle'] as const;
 
+function isTemplateCopy(field: (typeof COPY_FIELDS)[number], value: string): boolean {
+  return THEME_INDUSTRIES.some((industry) => industry.copy[field] === value);
+}
+
 /** The theme a store gets when it applies `template` over its current settings. */
 export function applyThemeTemplate(
   template: ThemeTemplate,
@@ -649,7 +653,10 @@ export function applyThemeTemplate(
     (settings as Record<string, unknown>)[field] = template.settings[field];
   }
   for (const field of COPY_FIELDS) {
-    if (!current[field]) settings[field] = template.settings[field];
+    // Text that came from a template is not the merchant's own words, so it follows the new one.
+    if (!current[field] || isTemplateCopy(field, current[field])) {
+      settings[field] = template.settings[field];
+    }
   }
   return { preset: template.preset, settings };
 }

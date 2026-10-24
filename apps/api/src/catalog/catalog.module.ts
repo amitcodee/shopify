@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CollectionsController } from './collections.controller.js';
 import { CollectionsService } from './collections.service.js';
+import { RemoteImageFetcher } from './image-fetcher.js';
 import { InventoryController, LocationsController } from './inventory.controller.js';
 import { InventoryService } from './inventory.service.js';
 import { ProductCsvController, ProductCsvService } from './product-csv.js';
@@ -15,7 +16,13 @@ import { ProductsService } from './products.service.js';
     CollectionsController,
     ProductCsvController,
   ],
-  providers: [ProductsService, InventoryService, CollectionsService, ProductCsvService],
+  providers: [
+    ProductsService,
+    InventoryService,
+    CollectionsService,
+    ProductCsvService,
+    RemoteImageFetcher,
+  ],
   exports: [ProductsService, InventoryService, CollectionsService],
 })
 export class CatalogModule {}

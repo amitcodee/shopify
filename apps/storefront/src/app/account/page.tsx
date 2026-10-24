@@ -22,7 +22,7 @@ export default async function AccountPage() {
     <>
       <div className="mb-8 flex items-end justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Your account</h1>
+          <h1 className="page-title t-title">Your account</h1>
           <p className="mt-1 text-zinc-600">
             {account.name ?? account.email} · {account.email}
           </p>

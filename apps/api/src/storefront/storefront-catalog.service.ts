@@ -13,6 +13,8 @@ import { Prisma, type TenantTx } from '@repo/db';
 import { decryptSecret } from '../common/crypto.js';
 import { ENV, type Env } from '../config/env.js';
 import { TenantDb } from '../database/database.module.js';
+import { imageRenditions } from '../catalog/product-mapper.js';
+import { LIVE_PRODUCT_SQL, liveProductWhere } from '../catalog/product-visibility.js';
 import { OnlineStoreService } from '../online-store/online-store.service.js';
 import { MediaUrls } from '../storage/storage.module.js';
 import { storefrontAccessToken } from './storefront.guard.js';
@@ -28,7 +30,15 @@ interface CardRow {
   available: boolean;
   image_key: string | null;
   image_alt: string | null;
+  image_widths: number[] | null;
   second_image_key: string | null;
+  second_image_widths: number[] | null;
+}
+
+/** "fabric_weight" -> "Fabric weight" (storefront label of a custom field). */
+export function humanizeKey(key: string): string {
+  const words = key.replace(/_+/g, ' ').trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 /**
@@ -141,7 +151,7 @@ export class StorefrontCatalogService {
       const select = { handle: true, updatedAt: true } as const;
       const [products, collections, pages, policies, posts] = await Promise.all([
         tx.product.findMany({
-          where: { storeId: shop.id, status: 'ACTIVE' },
+          where: { storeId: shop.id, ...liveProductWhere() },
           orderBy: { updatedAt: 'desc' },
           select,
           take: 5000,
@@ -176,10 +186,7 @@ export class StorefrontCatalogService {
 
   async listProducts(shop: ShopContext, query: StorefrontProductQuery): Promise<ProductCardPage> {
     return this.tenantDb.run(shop.id, async (tx) => {
-      const filters: Prisma.Sql[] = [
-        Prisma.sql`p."storeId" = ${shop.id}::uuid`,
-        Prisma.sql`p.status = 'ACTIVE'`,
-      ];
+      const filters: Prisma.Sql[] = [Prisma.sql`p."storeId" = ${shop.id}::uuid`, LIVE_PRODUCT_SQL];
 
       if (query.collection) {
         const collection = await tx.collection.findFirst({
@@ -223,7 +230,9 @@ export class StorefrontCatalogService {
                BOOL_OR(NOT v."trackInventory" OR v."allowBackorder" OR v."inventoryQuantity" > 0) AS available,
                (SELECT i."storageKey" FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position LIMIT 1) AS image_key,
                (SELECT i.alt FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position LIMIT 1) AS image_alt,
-               (SELECT i."storageKey" FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position OFFSET 1 LIMIT 1) AS second_image_key
+               (SELECT i."renditionWidths" FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position LIMIT 1) AS image_widths,
+               (SELECT i."storageKey" FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position OFFSET 1 LIMIT 1) AS second_image_key,
+               (SELECT i."renditionWidths" FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position OFFSET 1 LIMIT 1) AS second_image_widths
         FROM "Product" p
         JOIN "ProductVariant" v ON v."productId" = p.id
         WHERE ${where}
@@ -246,11 +255,12 @@ export class StorefrontCatalogService {
   async getProduct(shop: ShopContext, handle: string): Promise<StorefrontProduct> {
     const product = await this.tenantDb.run(shop.id, (tx) =>
       tx.product.findFirst({
-        where: { storeId: shop.id, handle, status: 'ACTIVE' },
+        where: { storeId: shop.id, handle, ...liveProductWhere() },
         include: {
           options: { orderBy: { position: 'asc' } },
           variants: { orderBy: { position: 'asc' } },
           images: { orderBy: { position: 'asc' } },
+          metafields: { where: { showOnStorefront: true }, orderBy: { position: 'asc' } },
         },
       }),
     );
@@ -267,6 +277,7 @@ export class StorefrontCatalogService {
       seoTitle: product.seoTitle,
       seoDescription: product.seoDescription,
       options: product.options.map((o) => ({ name: o.name, values: o.values })),
+      // Field by field: cost, customs data and stock counts stay admin-only.
       variants: product.variants.map((v) => ({
         id: v.id,
         title: v.title,
@@ -275,12 +286,21 @@ export class StorefrontCatalogService {
         compareAtPrice: v.compareAtPrice === null ? null : shopPrice(shop, v.compareAtPrice),
         available: isVariantAvailable(v),
         sku: v.sku,
+        imageId: v.imageId,
       })),
       images: product.images.map((i) => ({
+        id: i.id,
         url: this.media.url(i.storageKey),
         alt: i.alt || product.title,
         width: i.width,
         height: i.height,
+        renditions: imageRenditions(i, this.media),
+      })),
+      specs: product.metafields.map((m) => ({
+        key: m.key,
+        label: humanizeKey(m.key),
+        type: m.type,
+        value: m.value,
       })),
     };
   }
@@ -351,6 +371,18 @@ export class StorefrontCatalogService {
       imageUrl: r.image_key ? this.media.url(r.image_key) : null,
       imageAlt: r.image_alt || r.title,
       secondImageUrl: r.second_image_key ? this.media.url(r.second_image_key) : null,
+      imageRenditions: r.image_key
+        ? imageRenditions(
+            { storageKey: r.image_key, renditionWidths: r.image_widths ?? [] },
+            this.media,
+          )
+        : [],
+      secondImageRenditions: r.second_image_key
+        ? imageRenditions(
+            { storageKey: r.second_image_key, renditionWidths: r.second_image_widths ?? [] },
+            this.media,
+          )
+        : [],
     };
   }
 }

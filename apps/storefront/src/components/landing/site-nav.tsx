@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon, type IconName } from './icons';
 import { Logo } from './logo';
+import { Photo, type PhotoName } from './photos';
 import type { MarketingLinks } from './urls';
 
 type MenuId = 'why' | 'products' | 'resources';
@@ -26,6 +27,7 @@ interface NavCard {
   href: string;
   icon: IconName;
   external?: boolean;
+  photo?: PhotoName;
 }
 
 const WHY_US: NavCard[] = [
@@ -34,18 +36,21 @@ const WHY_US: NavCard[] = [
     body: '108 designs for 12 industries. Pick one when you sign up and open your store the same day.',
     href: '/templates',
     icon: 'rocket',
+    photo: 'boutique-interior',
   },
   {
     title: 'Switch from another platform',
     body: 'Bring your catalog over with a Shopify-style product CSV, then follow the launch checklist.',
     href: '/switch',
     icon: 'switch',
+    photo: 'shipping-boxes',
   },
   {
     title: 'Security built in',
     body: 'Database-level store isolation, hosted card payments and two-factor sign-in for staff.',
     href: '/security',
     icon: 'shield',
+    photo: 'team-planning',
   },
 ];
 
@@ -136,8 +141,8 @@ function resourceCards(links: MarketingLinks): NavCard[] {
 }
 
 const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400';
-const panelLink = `rounded-md text-sm text-slate-600 hover:text-indigo-600 ${focusRing.replace('400', '600')}`;
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600';
+const panelLink = `rounded-md text-sm text-slate-600 hover:text-indigo-700 ${focusRing}`;
 const summaryClass =
   'flex cursor-pointer list-none items-center justify-between py-4 text-lg font-semibold [&::-webkit-details-marker]:hidden';
 
@@ -243,8 +248,8 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
       aria-controls={`menu-${id}`}
       onClick={() => setOpen(open === id ? null : id)}
       onMouseEnter={() => setOpen(id)}
-      className={`flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition hover:text-white ${
-        open === id ? 'text-white' : 'text-slate-300'
+      className={`flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-medium transition hover:bg-slate-900/5 hover:text-slate-950 ${
+        open === id ? 'bg-slate-900/5 text-slate-950' : 'text-slate-700'
       } ${focusRing}`}
     >
       {label}
@@ -257,7 +262,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
       <a
         href={href}
         onMouseEnter={close}
-        className={`rounded-md px-3 py-2 text-sm font-medium text-slate-300 hover:text-white ${focusRing}`}
+        className={`rounded-full px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-900/5 hover:text-slate-950 ${focusRing}`}
       >
         {label}
       </a>
@@ -268,10 +273,10 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
     <div
       id={`menu-${id}`}
       hidden={open !== id}
-      className="absolute inset-x-0 top-full border-b border-slate-200 bg-white text-slate-900 shadow-2xl"
+      className="absolute inset-x-0 top-full border-b border-slate-900/10 bg-white text-slate-900 shadow-[0_30px_60px_-30px_rgb(15_23_42/0.35)]"
     >
       <ul
-        className={`mx-auto grid max-w-7xl gap-6 px-6 py-8 ${cards.length > 3 ? 'grid-cols-4' : 'grid-cols-3'}`}
+        className={`mx-auto grid max-w-7xl gap-5 px-8 py-8 ${cards.length > 3 ? 'grid-cols-4' : 'grid-cols-3'}`}
       >
         {cards.map((card) => (
           <li key={card.title}>
@@ -279,18 +284,31 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
               href={card.href}
               onClick={close}
               {...(card.external ? { target: '_blank', rel: 'noreferrer' } : {})}
-              className="group flex h-full flex-col rounded-2xl bg-gradient-to-br from-slate-50 to-indigo-50 p-6 ring-1 ring-slate-200 transition hover:ring-indigo-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              className={`group flex h-full flex-col overflow-hidden rounded-2xl bg-[#f6f4ef] ring-1 ring-slate-900/[0.06] transition hover:bg-white hover:shadow-lg hover:ring-slate-900/10 ${focusRing}`}
             >
-              <span className="flex size-10 items-center justify-center rounded-lg bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200">
-                <Icon name={card.icon} />
-              </span>
-              <span className="mt-4 font-semibold text-slate-900">
-                {card.title}
-                {card.external ? <ExternalMark /> : null}
-              </span>
-              <span className="mt-1.5 text-sm leading-6 text-slate-600">{card.body}</span>
-              <span className="mt-4 text-sm font-semibold text-indigo-600 group-hover:text-indigo-500">
-                {card.external ? 'Open' : 'Learn more'} <span aria-hidden="true">→</span>
+              {card.photo ? (
+                <span className="block aspect-[16/8] overflow-hidden">
+                  <Photo
+                    name={card.photo}
+                    alt=""
+                    className="transition duration-500 group-hover:scale-105"
+                  />
+                </span>
+              ) : null}
+              <span className="flex flex-1 flex-col p-6">
+                {card.photo ? null : (
+                  <span className="mb-4 flex size-10 items-center justify-center rounded-xl bg-white text-indigo-600 shadow-sm ring-1 ring-slate-900/10">
+                    <Icon name={card.icon} />
+                  </span>
+                )}
+                <span className="font-semibold text-slate-950">
+                  {card.title}
+                  {card.external ? <ExternalMark /> : null}
+                </span>
+                <span className="mt-1.5 text-sm leading-6 text-slate-600">{card.body}</span>
+                <span className="mt-auto pt-4 text-sm font-semibold text-indigo-700">
+                  {card.external ? 'Open' : 'Learn more'} <span aria-hidden="true">→</span>
+                </span>
               </span>
             </a>
           </li>
@@ -329,11 +347,11 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
         onBlur={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) close();
         }}
-        className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/95 text-white backdrop-blur"
+        className="sticky top-0 z-50 border-b border-slate-900/[0.08] bg-white/85 text-slate-900 backdrop-blur-xl backdrop-saturate-150"
       >
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
           <a href="/" className={`rounded-md ${focusRing}`} aria-label="Commerce Platform home">
-            <Logo tone="dark" />
+            <Logo tone="light" />
           </a>
           <nav aria-label="Main" className="hidden lg:block">
             <ul className="flex items-center gap-1">
@@ -347,13 +365,13 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
           <div className="ml-auto flex items-center gap-2">
             <a
               href={links.loginUrl}
-              className={`hidden rounded-md px-3 py-2 text-sm font-medium text-slate-300 hover:text-white sm:block ${focusRing}`}
+              className={`hidden rounded-full px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-900/5 hover:text-slate-950 sm:block ${focusRing}`}
             >
               Log in
             </a>
             <a
               href={links.signupUrl}
-              className={`rounded-full bg-white px-3.5 py-2 text-sm font-semibold whitespace-nowrap text-slate-950 hover:bg-indigo-100 ${focusRing}`}
+              className={`rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-indigo-700 ${focusRing}`}
             >
               Start for free
             </a>
@@ -363,7 +381,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
               aria-expanded={drawer}
               aria-controls="mobile-menu"
               onClick={() => setDrawer(true)}
-              className={`-mr-1 rounded-md p-2 text-slate-200 hover:text-white lg:hidden ${focusRing}`}
+              className={`-mr-1 rounded-md p-2 text-slate-700 hover:text-slate-950 lg:hidden ${focusRing}`}
             >
               <span className="sr-only">Open menu</span>
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-6">
@@ -384,19 +402,19 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
         <div
           id="menu-products"
           hidden={open !== 'products'}
-          className="absolute inset-x-0 top-full border-b border-slate-200 bg-white text-slate-900 shadow-2xl"
+          className="absolute inset-x-0 top-full border-b border-slate-900/10 bg-white text-slate-900 shadow-[0_30px_60px_-30px_rgb(15_23_42/0.35)]"
         >
-          <div className="mx-auto grid max-w-7xl grid-cols-[1fr_15rem] gap-8 px-6 py-8">
+          <div className="mx-auto grid max-w-7xl grid-cols-[1fr_17rem] gap-10 px-8 py-9">
             <div className="grid grid-cols-3 gap-x-8 gap-y-8">
               {PRODUCT_GROUPS.map((group) => (
                 <div key={group.title}>
-                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <span className="text-indigo-600">
+                  <p className="flex items-center gap-2.5 text-sm font-semibold text-slate-950">
+                    <span className="flex size-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
                       <Icon name={group.icon} className="size-4" />
                     </span>
                     {group.title}
                   </p>
-                  <ul className="mt-3 space-y-2 border-l border-slate-200 pl-6">
+                  <ul className="mt-3 space-y-2.5 pl-9.5">
                     {group.items.map((item) => (
                       <li key={item.label}>
                         <LinkItem link={item} className={panelLink} onClick={close} />
@@ -407,25 +425,30 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
               ))}
             </div>
             <div className="flex flex-col gap-4">
-              <div className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
-                <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <span className="text-indigo-600">
-                    <Icon name={extend.icon} className="size-4" />
-                  </span>
-                  {extend.title}
-                </p>
-                <ul className="mt-3 space-y-2">
-                  {extend.items.map((item) => (
-                    <li key={item.label}>
-                      <LinkItem link={item} className={panelLink} onClick={close} />
-                    </li>
-                  ))}
-                </ul>
+              <div className="overflow-hidden rounded-2xl bg-[#f6f4ef] ring-1 ring-slate-900/[0.06]">
+                <span className="block aspect-[16/8] overflow-hidden">
+                  <Photo name="laptop-shop-counter" alt="" />
+                </span>
+                <div className="p-5">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <span className="text-indigo-600">
+                      <Icon name={extend.icon} className="size-4" />
+                    </span>
+                    {extend.title}
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {extend.items.map((item) => (
+                      <li key={item.label}>
+                        <LinkItem link={item} className={panelLink} onClick={close} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
               <a
                 href="/features"
                 onClick={close}
-                className={`rounded-md px-1 text-sm font-semibold text-indigo-600 hover:text-indigo-500 ${focusRing.replace('400', '600')}`}
+                className={`rounded-md px-1 text-sm font-semibold text-indigo-700 hover:text-indigo-600 ${focusRing}`}
               >
                 See all features <span aria-hidden="true">→</span>
               </a>

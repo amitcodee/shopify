@@ -19,23 +19,29 @@ export function SectionHeader({
   children?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex items-end justify-between gap-4 sm:mb-8">
+    <div className="section-header">
       <div className="min-w-0">
-        {eyebrow ? <p className="eyebrow mb-2 text-zinc-500">{eyebrow}</p> : null}
-        <h2
-          id={id}
-          className="font-heading text-2xl font-semibold leading-tight tracking-tight break-words sm:text-3xl"
-        >
+        {eyebrow ? <p className="eyebrow mb-2.5 text-zinc-500">{eyebrow}</p> : null}
+        <h2 id={id} className="section-title t-title break-words">
           {title}
         </h2>
+        <span aria-hidden="true" className="section-rule" />
       </div>
       <div className="flex shrink-0 items-center gap-3">
         {href ? (
           <Link
             href={href}
-            className="text-sm font-medium text-zinc-700 underline decoration-zinc-300 underline-offset-4 transition hover:text-zinc-900 hover:decoration-zinc-900"
+            className="group/link inline-flex items-center gap-1.5 text-sm font-medium text-zinc-700 transition hover:text-zinc-950"
           >
-            {linkLabel}
+            <span className="underline decoration-zinc-300 underline-offset-[6px] transition group-hover/link:decoration-current">
+              {linkLabel}
+            </span>
+            <span
+              aria-hidden="true"
+              className="transition-transform group-hover/link:translate-x-0.5"
+            >
+              →
+            </span>
             <span className="sr-only"> {title}</span>
           </Link>
         ) : null}

@@ -24,8 +24,8 @@ export default async function OrderStatusPage({
 
   return (
     <>
-      <p className="text-sm text-zinc-500">Order #{order.number}</p>
-      <h1 className="mb-8 text-3xl font-bold tracking-tight">
+      <p className="eyebrow text-zinc-500">Order #{order.number}</p>
+      <h1 className="page-title t-title mt-2 mb-8">
         {from === 'checkout' && order.financialStatus === 'PAID'
           ? 'Thank you for your order!'
           : 'Your order'}

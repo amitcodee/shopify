@@ -1,11 +1,4 @@
-import type {
-  Paginated,
-  ProductCard,
-  ProductCardPage,
-  Shop,
-  StorefrontBlogPost,
-} from '@repo/contracts';
-import Link from 'next/link';
+import type { Paginated, ProductCardPage, StorefrontBlogPost } from '@repo/contracts';
 import { ProductGrid } from '@/components/product-grid';
 import { BlogPosts } from '@/components/sections/blog-posts';
 import { BrandStory } from '@/components/sections/brand-story';
@@ -14,169 +7,14 @@ import {
   type CollectionFeature,
   FeaturedCollections,
 } from '@/components/sections/featured-collections';
+import { Hero, type HeroImage } from '@/components/sections/hero';
 import { NewsletterSection } from '@/components/sections/newsletter-section';
 import { SectionHeader } from '@/components/sections/section-header';
 import { TrustBar } from '@/components/sections/trust-bar';
 import { sf, StorefrontApiError } from '@/lib/api';
+import { srcSetFor } from '@/lib/images';
 import { getShop, getThemePreview } from '@/lib/shop';
-
-interface HeroProps {
-  shop: Shop;
-  title: string;
-  subtitle: string;
-  /** A product photo the layout can feature (split and full-bleed heroes). */
-  image: ProductCard | undefined;
-}
-
-function Cta({
-  label,
-  variant = 'btn-accent',
-  className = 'mt-8',
-}: {
-  label: string;
-  variant?: string;
-  className?: string;
-}) {
-  return (
-    <Link href="/collections/all" className={`btn ${variant} ${className} px-6 py-3 text-sm`}>
-      {label}
-    </Link>
-  );
-}
-
-function Hero({ shop, title, subtitle, image }: HeroProps) {
-  const { preset, settings } = shop.theme;
-  const cta = settings.heroCta || 'Shop now';
-
-  switch (preset) {
-    case 'bold':
-      return (
-        <section className="store-section rounded-2xl bg-brand px-6 py-16 text-brand-contrast sm:px-12 sm:py-24">
-          <div className="mb-8 h-1.5 w-16 rounded-full bg-accent" />
-          <h1 className="max-w-4xl text-5xl font-extrabold leading-[0.95] tracking-tight break-words sm:text-7xl">
-            {title}
-          </h1>
-          <p className="mt-6 max-w-xl text-lg opacity-90">{subtitle}</p>
-          <Cta label={cta} variant="btn-on-brand" />
-        </section>
-      );
-
-    case 'classic':
-      return (
-        <section className="store-section border-y border-zinc-200 px-4 py-16 text-center sm:py-20">
-          <h1 className="text-4xl tracking-tight text-brand break-words sm:text-5xl">{title}</h1>
-          <div className="mx-auto mt-5 h-px w-16 bg-accent" />
-          <p className="mx-auto mt-5 max-w-xl text-zinc-600">{subtitle}</p>
-          <Cta label={cta} />
-        </section>
-      );
-
-    case 'split':
-      return (
-        <section className="store-section grid items-center gap-8 md:grid-cols-2 md:gap-12">
-          <div className="order-2 md:order-1">
-            <h1 className="text-4xl font-bold leading-tight tracking-tight text-brand break-words sm:text-5xl">
-              {title}
-            </h1>
-            <p className="mt-4 max-w-md text-lg text-zinc-600">{subtitle}</p>
-            <Cta label={cta} />
-          </div>
-          <div className="order-1 aspect-[4/3] overflow-hidden rounded-2xl bg-surface md:order-2 md:aspect-[4/5]">
-            {image?.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={image.imageUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div className="h-full w-full bg-[radial-gradient(circle_at_30%_30%,var(--store-accent),transparent_60%)] opacity-40" />
-            )}
-          </div>
-        </section>
-      );
-
-    case 'fullbleed': {
-      const photo = image?.imageUrl;
-      return (
-        <section
-          className={`store-section relative -mt-[var(--store-main-y)] ml-[calc(50%-50vw)] w-screen overflow-hidden ${
-            photo ? 'bg-[#111111] text-[#ffffff]' : 'bg-brand text-brand-contrast'
-          }`}
-        >
-          {photo ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo} alt="" className="absolute inset-0 h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#000000b3] via-[#00000066] to-[#00000026]" />
-            </>
-          ) : null}
-          <div className="relative mx-auto max-w-6xl px-4 py-24 sm:py-36">
-            <h1 className="max-w-4xl text-5xl font-bold leading-[0.95] tracking-tight break-words sm:text-7xl lg:text-8xl">
-              {title}
-            </h1>
-            <p className="mt-6 max-w-lg text-lg opacity-90">{subtitle}</p>
-            <Cta label={cta} variant={photo ? 'btn-on-image' : 'btn-on-brand'} />
-          </div>
-        </section>
-      );
-    }
-
-    case 'editorial': {
-      const issue = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      return (
-        <section className="store-section border-t border-zinc-900 pt-4">
-          <div className="eyebrow flex justify-between gap-4 text-zinc-600">
-            <span>{issue}</span>
-            <span className="hidden sm:inline">{shop.name}</span>
-          </div>
-          <h1 className="mt-10 max-w-5xl text-5xl font-normal leading-[1.05] tracking-tight text-brand break-words sm:mt-14 sm:text-7xl">
-            {title}
-          </h1>
-          <div className="mt-10 grid gap-6 border-t border-zinc-300 pt-6 sm:mt-14 md:grid-cols-[2fr_1fr] md:items-end">
-            <p className="max-w-xl text-lg leading-relaxed text-zinc-600">{subtitle}</p>
-            <div className="md:text-right">
-              <Cta label={cta} className="" />
-            </div>
-          </div>
-        </section>
-      );
-    }
-
-    case 'catalog':
-      return (
-        <section className="store-section flex flex-wrap items-end justify-between gap-4 border-b border-zinc-200 pb-5">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold tracking-tight text-brand break-words sm:text-3xl">
-              {title}
-            </h1>
-            <p className="mt-1 text-sm text-zinc-600">{subtitle}</p>
-          </div>
-          <Link href="/collections/all" className="btn px-4 py-2 text-sm">
-            {cta}
-          </Link>
-        </section>
-      );
-
-    case 'banner':
-      return (
-        <section className="store-section rounded-2xl bg-[linear-gradient(135deg,var(--store-banner-from),var(--store-banner-to))] px-6 py-20 text-center text-[var(--store-banner-text)] sm:py-28">
-          <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight break-words sm:text-6xl">
-            {title}
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-lg opacity-90">{subtitle}</p>
-          <Cta label={cta} variant="btn-on-banner" />
-        </section>
-      );
-
-    default:
-      return (
-        <section className="store-section rounded-2xl bg-surface px-6 py-14 sm:px-12 sm:py-20">
-          <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-brand break-words sm:text-5xl">
-            {title}
-          </h1>
-          <p className="mt-4 max-w-xl text-lg text-zinc-600">{subtitle}</p>
-          <Cta label={cta} />
-        </section>
-      );
-  }
-}
+import { themeStyleId } from '@/lib/theme';
 
 /** Image beside the brand story: left on these layouts, right on the rest. */
 const STORY_IMAGE_FIRST = new Set(['split', 'classic', 'banner', 'catalog']);
@@ -199,6 +37,7 @@ export default async function HomePage() {
   const shop = await getShop();
   if (!shop) return null;
   const { preset, settings } = shop.theme;
+  const style = themeStyleId(shop.theme);
   const pageSize = settings.gridColumns === 5 ? 10 : settings.gridColumns === 3 ? 9 : 8;
   // Collection cards use up to six collections; carousels the first three.
   const collections = shop.collections.slice(
@@ -229,10 +68,14 @@ export default async function HomePage() {
 
   const features: CollectionFeature[] = collections.map((c, i) => {
     const page = collectionPages[i];
+    const pictured = page?.items.find((p) => p.imageUrl);
     return {
       ...c,
       total: page?.total ?? null,
-      imageUrl: page?.items.find((p) => p.imageUrl)?.imageUrl ?? null,
+      imageUrl: pictured?.imageUrl ?? null,
+      imageSrcSet: pictured?.imageUrl
+        ? srcSetFor(pictured.imageUrl, pictured.imageRenditions)
+        : undefined,
     };
   });
 
@@ -244,23 +87,68 @@ export default async function HomePage() {
   } else if (preview) {
     story = SAMPLE_STORY;
   }
-  const withImages = latest.items.filter((p) => p.imageUrl);
-  const storyImage =
-    withImages[2]?.secondImageUrl ?? withImages[2]?.imageUrl ?? withImages[0]?.imageUrl ?? null;
+  // Each card's first photo with its renditions (cards without a photo are left out).
+  const photos = latest.items.flatMap((p) =>
+    p.imageUrl
+      ? [
+          {
+            card: p,
+            image: {
+              src: p.imageUrl,
+              alt: p.imageAlt,
+              srcSet: srcSetFor(p.imageUrl, p.imageRenditions),
+            } satisfies HeroImage,
+          },
+        ]
+      : [],
+  );
+  const storyCard = photos[2]?.card;
+  const storyPhoto: HeroImage | null = storyCard?.secondImageUrl
+    ? {
+        src: storyCard.secondImageUrl,
+        alt: '',
+        srcSet: srcSetFor(storyCard.secondImageUrl, storyCard.secondImageRenditions),
+      }
+    : (photos[2]?.image ?? photos[0]?.image ?? null);
+
+  // The hero features the store's own photos. While previewing a template, the template's
+  // industry photos stand in, so the preview shows the design as intended.
+  let heroImage: HeroImage | null = photos[0]?.image ?? null;
+  let heroExtras: HeroImage[] = photos.slice(1).map((p) => p.image);
+  if (preview) {
+    const base = `/media/templates/${preview.industry}`;
+    heroImage = { src: `${base}/hero.webp`, alt: '' };
+    heroExtras = ['p1', 'p2', 'p3'].map((name) => ({ src: `${base}/${name}.webp`, alt: '' }));
+  }
 
   return (
     <>
       <Hero
-        shop={shop}
+        style={style}
+        shopName={shop.name}
         title={settings.heroTitle || shop.name}
         subtitle={settings.heroSubtitle || 'Discover our latest products.'}
-        image={latest.items.find((p) => p.imageUrl)}
+        cta={settings.heroCta || 'Shop now'}
+        image={heroImage}
+        extras={heroExtras}
+        tiles={features
+          .filter((f) => f.total !== 0)
+          .map((f) => ({
+            label: f.title,
+            href: `/collections/${f.handle}`,
+            image: f.imageUrl,
+            imageSrcSet: f.imageSrcSet,
+          }))}
       />
 
       {settings.showTrustBar ? <TrustBar theme={settings} /> : null}
 
       {settings.showCollections && features.length > 0 ? (
-        <FeaturedCollections collections={features} dense={preset === 'catalog'} />
+        <FeaturedCollections
+          collections={features}
+          dense={preset === 'catalog'}
+          captionBelow={style === 'editorial' || style === 'classic'}
+        />
       ) : null}
 
       <section aria-labelledby="latest-heading" className="store-section">
@@ -291,15 +179,21 @@ export default async function HomePage() {
         <BrandStory
           title={story.title}
           text={story.text}
-          imageUrl={storyImage}
+          imageUrl={storyPhoto?.src ?? null}
+          imageSrcSet={storyPhoto?.srcSet}
           imageFirst={STORY_IMAGE_FIRST.has(preset)}
+          style={style}
         />
       ) : null}
 
       {posts.length > 0 ? <BlogPosts posts={posts} /> : null}
 
       {settings.showNewsletter ? (
-        <NewsletterSection title={settings.newsletterTitle} text={settings.newsletterText} />
+        <NewsletterSection
+          title={settings.newsletterTitle}
+          text={settings.newsletterText}
+          style={style}
+        />
       ) : null}
     </>
   );

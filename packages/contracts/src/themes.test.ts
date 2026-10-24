@@ -77,6 +77,21 @@ describe('theme templates', () => {
   });
 });
 
+describe('template copy', () => {
+  it('replaces text that came from another template but keeps the merchant’s own', () => {
+    const electronics = findThemeTemplate('electronics-minimal')!;
+    const books = findThemeTemplate('books-noir')!;
+    const fromElectronics = applyThemeTemplate(electronics, THEME_TEMPLATES[0]!.settings).settings;
+    const restyled = applyThemeTemplate(books, {
+      ...fromElectronics,
+      heroCta: 'Visit us',
+    }).settings;
+    expect(restyled.heroSubtitle).toBe(books.settings.heroSubtitle);
+    expect(restyled.featuredTitle).toBe(books.settings.featuredTitle);
+    expect(restyled.heroCta).toBe('Visit us');
+  });
+});
+
 describe('theme settings', () => {
   it('accepts https social links only', () => {
     const parse = (socialInstagram: string) =>

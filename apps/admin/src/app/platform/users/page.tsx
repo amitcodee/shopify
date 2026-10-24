@@ -1,5 +1,13 @@
 import type { Paginated, PlatformUser } from '@repo/contracts';
-import { Badge, formatDateTime, PageHeader, Pagination, Table, Td } from '@/components/ui';
+import {
+  Badge,
+  formatDateTime,
+  inputClass,
+  PageHeader,
+  Pagination,
+  Table,
+  Td,
+} from '@/components/ui';
 import { api } from '@/lib/api';
 import { getCurrentUser } from '@/lib/session';
 import { SmallAction } from '../../s/[storeId]/settings/small-action';
@@ -29,7 +37,7 @@ export default async function PlatformUsersPage({
           name="q"
           defaultValue={q}
           placeholder="Name or email"
-          className="w-72 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+          className={`${inputClass} w-full sm:w-72`}
         />
       </form>
       <Table head={['User', 'Role', 'Stores', 'Joined', 'Status', '']}>

@@ -66,9 +66,7 @@ export default async function CollectionPage({
         ]}
       />
       <header className="mb-8 max-w-3xl">
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 md:text-4xl">
-          {collection.title}
-        </h1>
+        <h1 className="page-title t-title text-zinc-900">{collection.title}</h1>
         {collection.description ? (
           <p className="mt-3 text-base leading-relaxed text-zinc-600">{collection.description}</p>
         ) : null}
@@ -113,6 +111,7 @@ export default async function CollectionPage({
           currency={shop.currency}
           theme={shop.theme.settings}
           collection={collection.handle === 'all' ? undefined : collection.handle}
+          eagerFirstRow
         />
       )}
       <PageLinks
