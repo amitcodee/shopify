@@ -19,7 +19,7 @@ export function SectionHeader({
   children?: ReactNode;
 }) {
   return (
-    <div className="section-header">
+    <div data-reveal className="section-header">
       <div className="min-w-0">
         {eyebrow ? <p className="eyebrow mb-2.5 text-zinc-500">{eyebrow}</p> : null}
         <h2 id={id} className="section-title t-title break-words">

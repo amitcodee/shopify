@@ -11,6 +11,7 @@ import {
   HEADER_OPTIONS,
   HEADING_CASE_OPTIONS,
   IMAGE_RATIO_OPTIONS,
+  MOTION_OPTIONS,
   PRESET_OPTIONS,
   RADIUS_OPTIONS,
 } from '@/lib/theme-options';
@@ -209,6 +210,7 @@ export const THEME_GROUPS: { title: string; fields: EditorField[] }[] = [
       { type: 'preset', label: 'Homepage layout' },
       { type: 'select', key: 'density', label: 'Spacing', options: DENSITY_OPTIONS },
       { type: 'select', key: 'radius', label: 'Corner radius', options: RADIUS_OPTIONS },
+      { type: 'select', key: 'motion', label: 'Animations', options: MOTION_OPTIONS },
     ],
   },
   {

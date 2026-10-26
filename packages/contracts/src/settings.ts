@@ -30,6 +30,8 @@ export const THEME_HEADER_STYLES = ['inline', 'centered', 'stacked'] as const;
 export const THEME_CARD_STYLES = ['plain', 'bordered', 'shadow', 'overlay', 'framed'] as const;
 export const THEME_IMAGE_RATIOS = ['square', 'portrait', 'landscape'] as const;
 export const THEME_DENSITIES = ['compact', 'comfortable', 'spacious'] as const;
+/** How much the storefront animates: none, gentle transitions, or scroll-in sections too. */
+export const THEME_MOTIONS = ['off', 'subtle', 'lively'] as const;
 export const THEME_FOOTER_STYLES = ['simple', 'columns', 'dark'] as const;
 export const THEME_HEADING_CASES = ['normal', 'uppercase'] as const;
 
@@ -98,6 +100,7 @@ export const themeSettingsSchema = z.strictObject({
   /** Product columns on wide screens. */
   gridColumns: z.number().int().min(2).max(5).default(4),
   density: z.enum(THEME_DENSITIES).default('comfortable'),
+  motion: z.enum(THEME_MOTIONS).default('subtle'),
   footerStyle: z.enum(THEME_FOOTER_STYLES).default('simple'),
   showCollections: z.boolean().default(true),
   heroTitle: z.string().trim().max(80).default(''),

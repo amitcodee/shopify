@@ -49,6 +49,7 @@ export async function saveThemeAction(
           imageRatio: text('imageRatio'),
           gridColumns: integer(formData, 'gridColumns') ?? 4,
           density: text('density'),
+          motion: text('motion'),
           footerStyle: text('footerStyle'),
           showCollections: checked('showCollections'),
           heroTitle: text('heroTitle'),

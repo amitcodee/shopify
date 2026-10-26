@@ -52,7 +52,7 @@ export function FeaturedCollections({
         eyebrow={dense ? undefined : 'Shop by category'}
       />
       {dense ? (
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul data-reveal="stagger" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {collections.map((c) => (
             <li key={c.handle}>
               <Link
@@ -94,7 +94,10 @@ export function FeaturedCollections({
           ))}
         </ul>
       ) : captionBelow ? (
-        <ul className={`grid gap-x-4 gap-y-8 lg:gap-x-8 ${gridFor(collections.length)}`}>
+        <ul
+          data-reveal="stagger"
+          className={`grid gap-x-4 gap-y-8 lg:gap-x-8 ${gridFor(collections.length)}`}
+        >
           {collections.map((c, i) => (
             <li key={c.handle} className={i === lastOdd ? 'col-span-2 md:col-span-1' : undefined}>
               <Link href={`/collections/${c.handle}`} className="group block">
@@ -135,7 +138,10 @@ export function FeaturedCollections({
           ))}
         </ul>
       ) : (
-        <ul className={`grid gap-3 sm:gap-4 lg:gap-6 ${gridFor(collections.length)}`}>
+        <ul
+          data-reveal="stagger"
+          className={`grid gap-3 sm:gap-4 lg:gap-6 ${gridFor(collections.length)}`}
+        >
           {collections.map((c, i) => (
             <li key={c.handle} className={i === lastOdd ? 'col-span-2 md:col-span-1' : undefined}>
               <Link

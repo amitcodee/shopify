@@ -10,7 +10,7 @@ export function BlogPosts({ posts }: { posts: StorefrontBlogPost[] }) {
   return (
     <section aria-labelledby="journal-heading" className="store-section">
       <SectionHeader id="journal-heading" title="From the blog" eyebrow="Journal" href="/blog" />
-      <ul className="grid gap-4 md:grid-cols-3 lg:gap-6">
+      <ul data-reveal="stagger" className="grid gap-4 md:grid-cols-3 lg:gap-6">
         {posts.map((post) => (
           <li key={post.handle}>
             <article className="group relative flex h-full flex-col rounded-xl border border-zinc-200 bg-page p-6 transition duration-300 hover:border-zinc-400 sm:p-7">
