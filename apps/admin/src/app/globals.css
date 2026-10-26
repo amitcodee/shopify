@@ -63,3 +63,12 @@
     background: var(--color-slate-50);
   }
 }
+
+/* Horizontally scrolling tab and chip strips: swipeable, without a visible scrollbar (Windows
+   draws one for even a pixel of overflow). Tables keep theirs. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

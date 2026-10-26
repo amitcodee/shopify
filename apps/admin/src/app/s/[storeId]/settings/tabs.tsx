@@ -118,7 +118,7 @@ export function SettingsTabs({
   return (
     <nav aria-label="Settings" className="min-w-0">
       {/* Phones and tablets: one scrollable row. */}
-      <div className="-mx-4 overflow-x-auto px-4 lg:hidden">
+      <div className="scrollbar-none -mx-4 overflow-x-auto px-4 lg:hidden">
         <div className="flex min-w-max gap-1 border-b border-slate-200 pb-px">
           {tabs.map((tab) => (
             <Link

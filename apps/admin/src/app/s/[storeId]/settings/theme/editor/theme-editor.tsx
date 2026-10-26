@@ -501,9 +501,8 @@ export function ThemeEditor({
               }}
             />
           </div>
-          {canEdit ? (
+          {canEdit && aiEnabled ? (
             <AiBar
-              enabled={aiEnabled}
               onAsk={async (prompt) => {
                 const result = await askAiAction(storeId, prompt, theme);
                 if (!result.ok) return result.error;
@@ -836,14 +835,11 @@ function SectionSettings({
   );
 }
 
-/** "Ask AI": a prompt bar floating over the preview, like an assistant in the canvas. */
-function AiBar({
-  enabled,
-  onAsk,
-}: {
-  enabled: boolean;
-  onAsk: (prompt: string) => Promise<string | null>;
-}) {
+/**
+ * "Ask AI": a prompt bar floating over the preview, like an assistant in the canvas. Only
+ * rendered when the platform has the assistant configured, so it never covers the preview idly.
+ */
+function AiBar({ onAsk }: { onAsk: (prompt: string) => Promise<string | null> }) {
   const [prompt, setPrompt] = useState('');
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -866,7 +862,7 @@ function AiBar({
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-6 z-10 flex justify-center px-6">
       <div className="pointer-events-auto w-full max-w-xl">
-        {open && enabled ? (
+        {open ? (
           <div className="mb-2 flex flex-wrap gap-1.5">
             {AI_IDEAS.map((idea) => (
               <button
@@ -898,17 +894,13 @@ function AiBar({
             onChange={(e) => setPrompt(e.target.value)}
             onFocus={() => setOpen(true)}
             maxLength={500}
-            disabled={!enabled || busy}
-            placeholder={
-              enabled
-                ? 'Ask AI to change your theme… e.g. “make it dark and elegant”'
-                : 'AI design assistant is not set up on this platform'
-            }
+            disabled={busy}
+            placeholder="Ask AI to change your theme… e.g. “make it dark and elegant”"
             className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-slate-400 disabled:cursor-not-allowed"
           />
           <button
             type="submit"
-            disabled={!enabled || busy || prompt.trim().length < 3}
+            disabled={busy || prompt.trim().length < 3}
             className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-40"
           >
             {busy ? 'Designing…' : 'Ask AI'}

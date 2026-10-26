@@ -58,7 +58,7 @@ export function TemplateGallery({
         <div
           role="group"
           aria-label="Industry"
-          className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible"
+          className="scrollbar-none -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible"
         >
           <button
             type="button"

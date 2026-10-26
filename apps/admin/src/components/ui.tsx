@@ -248,8 +248,8 @@ export interface TabItem {
 /** Saved views / filters: a segmented pill row of links. Scrolls sideways on phones. */
 export function ViewTabs({ label, items }: { label: string; items: TabItem[] }) {
   return (
-    <nav aria-label={label} className="-mx-1 max-w-full overflow-x-auto px-1">
-      <div className="inline-flex gap-0.5 rounded-lg bg-slate-900/[0.045] p-0.5">
+    <nav aria-label={label} className="scrollbar-none -mx-1 max-w-full overflow-x-auto px-1">
+      <div className="flex w-max gap-0.5 rounded-lg bg-slate-900/[0.045] p-0.5">
         {items.map((item) => (
           <Link
             key={item.href}
@@ -275,7 +275,7 @@ export function ViewTabs({ label, items }: { label: string; items: TabItem[] }) 
 /** Section tabs (sub-pages of an area) with an underline indicator. */
 export function UnderlineTabs({ label, items }: { label: string; items: TabItem[] }) {
   return (
-    <nav aria-label={label} className="-mx-1 overflow-x-auto px-1">
+    <nav aria-label={label} className="scrollbar-none -mx-1 overflow-x-auto px-1">
       <div className="flex min-w-max gap-5 border-b border-slate-200">
         {items.map((item) => (
           <Link

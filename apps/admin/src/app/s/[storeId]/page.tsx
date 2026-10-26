@@ -466,20 +466,75 @@ export default async function StoreOverview({
         ) : null}
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-          {analytics ? (
-            <Card
-              title="Net sales by day"
-              description={
-                analytics.refunded > 0
-                  ? `Gross ${money(analytics.grossSales)} · refunded ${money(analytics.refunded)}`
-                  : 'Paid orders, by payment date (UTC).'
-              }
-            >
-              <div className="pt-3">
-                <SalesChart days={analytics.daily} currency={store.currency} />
-              </div>
-            </Card>
-          ) : null}
+          <div className="min-w-0 space-y-6">
+            {analytics ? (
+              <Card
+                title="Net sales by day"
+                description={
+                  analytics.refunded > 0
+                    ? `Gross ${money(analytics.grossSales)} · refunded ${money(analytics.refunded)}`
+                    : 'Paid orders, by payment date (UTC).'
+                }
+              >
+                <div className="relative pt-3">
+                  <SalesChart days={analytics.daily} currency={store.currency} />
+                  {analytics.netSales === 0 && analytics.orderCount === 0 ? (
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center pb-8">
+                      <p className="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm text-slate-500 shadow-xs">
+                        No paid orders in the last {days} days yet
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              </Card>
+            ) : null}
+
+            {analytics ? (
+              <Card title="Top products" description={`By revenue, last ${days} days.`}>
+                {analytics.topProducts.length === 0 ? (
+                  <p className="text-sm text-slate-500">No sales in this period yet.</p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead className="sr-only">
+                      <tr>
+                        <th scope="col">Product</th>
+                        <th scope="col">Units</th>
+                        <th scope="col">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.topProducts.map((p, i) => (
+                        <tr key={p.title} className="align-top">
+                          <td className="py-2 pr-3">
+                            <div className="flex items-baseline gap-2">
+                              <span className="w-4 shrink-0 text-xs text-slate-400 tabular-nums">
+                                {i + 1}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-medium text-slate-800">{p.title}</p>
+                                <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-100">
+                                  <div
+                                    className="h-full rounded-full bg-indigo-400"
+                                    style={{ width: `${(p.revenue / topMax) * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2 pr-3 text-right whitespace-nowrap text-slate-500 tabular-nums">
+                            {p.quantity} sold
+                          </td>
+                          <td className="py-2 text-right font-medium whitespace-nowrap text-slate-900 tabular-nums">
+                            {money(p.revenue)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </Card>
+            ) : null}
+          </div>
 
           <div className="space-y-6">
             {live ? (
@@ -572,52 +627,6 @@ export default async function StoreOverview({
                       />
                     ))}
                   </ul>
-                )}
-              </Card>
-            ) : null}
-
-            {analytics ? (
-              <Card title="Top products" description={`By revenue, last ${days} days.`}>
-                {analytics.topProducts.length === 0 ? (
-                  <p className="text-sm text-slate-500">No sales in this period yet.</p>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead className="sr-only">
-                      <tr>
-                        <th scope="col">Product</th>
-                        <th scope="col">Units</th>
-                        <th scope="col">Revenue</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analytics.topProducts.map((p, i) => (
-                        <tr key={p.title} className="align-top">
-                          <td className="py-2 pr-3">
-                            <div className="flex items-baseline gap-2">
-                              <span className="w-4 shrink-0 text-xs text-slate-400 tabular-nums">
-                                {i + 1}
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate font-medium text-slate-800">{p.title}</p>
-                                <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-100">
-                                  <div
-                                    className="h-full rounded-full bg-indigo-400"
-                                    style={{ width: `${(p.revenue / topMax) * 100}%` }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-2 pr-3 text-right whitespace-nowrap text-slate-500 tabular-nums">
-                            {p.quantity} sold
-                          </td>
-                          <td className="py-2 text-right font-medium whitespace-nowrap text-slate-900 tabular-nums">
-                            {money(p.revenue)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 )}
               </Card>
             ) : null}
