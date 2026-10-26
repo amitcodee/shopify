@@ -846,3 +846,28 @@ html:has(body[data-theme]) {
     transition-delay: 350ms;
   }
 }
+
+/* Loading placeholders (src/components/states.tsx), in the theme's greys. */
+.skeleton {
+  background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in oklab, var(--color-white) 55%, transparent) 50%,
+      transparent 100%
+    )
+    var(--color-zinc-100) no-repeat;
+  background-size: 50% 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+}
+@keyframes skeleton-shimmer {
+  from {
+    background-position: -150% 0;
+  }
+  to {
+    background-position: 250% 0;
+  }
+}
