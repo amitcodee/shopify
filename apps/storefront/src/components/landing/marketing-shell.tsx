@@ -3,6 +3,7 @@ import { CookieNotice } from './cookie-notice';
 import { bodyFont, displayFont } from './fonts';
 import { SiteFooter } from './site-footer';
 import { SiteNav } from './site-nav';
+import { ScrollReveal } from './scroll-reveal';
 import { marketingLinks } from './urls';
 
 /** Keyframes for the marketing pages (kept here so storefront CSS stays store-only). */
@@ -31,6 +32,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
       </main>
       <SiteFooter />
       <CookieNotice />
+      <ScrollReveal />
     </div>
   );
 }

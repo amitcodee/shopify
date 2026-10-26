@@ -229,7 +229,7 @@ export function SectionHeading({
   size?: 'lg' | 'md';
 }) {
   return (
-    <div className={center ? 'mx-auto max-w-3xl text-center' : 'max-w-3xl'}>
+    <div data-reveal className={center ? 'mx-auto max-w-3xl text-center' : 'max-w-3xl'}>
       {eyebrow ? (
         <Eyebrow dark={dark} className={center ? 'justify-center' : ''}>
           {eyebrow}
@@ -261,7 +261,10 @@ export function IconGrid({
   columns?: 2 | 3;
 }) {
   return (
-    <ul className={`grid gap-4 sm:grid-cols-2 sm:gap-5 ${columns === 3 ? 'lg:grid-cols-3' : ''}`}>
+    <ul
+      data-reveal="stagger"
+      className={`grid gap-4 sm:grid-cols-2 sm:gap-5 ${columns === 3 ? 'lg:grid-cols-3' : ''}`}
+    >
       {items.map((item) => {
         const inner = (
           <>
@@ -306,6 +309,7 @@ export function Steps({
 }) {
   return (
     <ol
+      data-reveal="stagger"
       className={`relative grid gap-10 md:gap-8 ${steps.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}
     >
       {steps.map((step, i) => (

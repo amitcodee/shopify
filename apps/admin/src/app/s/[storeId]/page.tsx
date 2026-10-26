@@ -17,6 +17,7 @@ import {
 } from '@repo/contracts';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { CountUp } from '@/components/count-up';
 import { Icon, type IconName } from '@/components/icons';
 import { SalesChart } from '@/components/sales-chart';
 import { Alert, buttonClass, Card, PageHeader, ViewTabs } from '@/components/ui';
@@ -90,7 +91,7 @@ function Stat({
   trend,
 }: {
   label: string;
-  value: number | string;
+  value: ReactNode;
   footer?: ReactNode;
   href?: string;
   trend?: number[];
@@ -423,7 +424,7 @@ export default async function StoreOverview({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
             <Stat
               label={`Net sales (${days}d)`}
-              value={money(analytics.netSales)}
+              value={<CountUp value={analytics.netSales} currency={store.currency} />}
               trend={analytics.daily.map((d) => d.sales)}
               footer={
                 previous ? (
@@ -433,7 +434,7 @@ export default async function StoreOverview({
             />
             <Stat
               label="Orders"
-              value={analytics.orderCount}
+              value={<CountUp value={analytics.orderCount} />}
               trend={analytics.daily.map((d) => d.orders)}
               href={`${base}/orders`}
               footer={
@@ -444,7 +445,7 @@ export default async function StoreOverview({
             />
             <Stat
               label="Average order value"
-              value={money(analytics.averageOrderValue)}
+              value={<CountUp value={analytics.averageOrderValue} currency={store.currency} />}
               footer={
                 previous ? (
                   <Delta value={delta(analytics.averageOrderValue, prevAov)} days={days} />
@@ -453,7 +454,7 @@ export default async function StoreOverview({
             />
             <Stat
               label="Gross sales"
-              value={money(analytics.grossSales)}
+              value={<CountUp value={analytics.grossSales} currency={store.currency} />}
               footer={
                 analytics.refunded > 0 ? (
                   <span className="text-slate-500">{money(analytics.refunded)} refunded</span>

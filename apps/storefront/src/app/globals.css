@@ -7,6 +7,9 @@
  */
 /* The platform marketing site's palette (stores use the --store-* colors below). */
 @theme {
+  /* Motion: shared easings (ease-out-soft, ease-spring utilities) and durations below. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --color-azure-50: #eef3ff;
   --color-azure-100: #dfe8ff;
   --color-azure-200: #c5d4ff;
@@ -318,10 +321,14 @@ body {
       border-color 200ms,
       color 200ms,
       box-shadow 200ms,
-      translate 200ms;
+      translate 200ms,
+      scale var(--motion-fast, 120ms) ease-out;
   }
   .btn:hover {
     opacity: 0.88;
+  }
+  .btn:active:not(:disabled) {
+    scale: 0.97;
   }
   .btn:focus-visible {
     outline: 2px solid var(--store-text);
@@ -799,4 +806,43 @@ html:has(body[data-theme]) {
 }
 .qty-stepper:focus-within {
   border-color: var(--color-zinc-500);
+}
+
+/* Motion durations, shared by the marketing site and storefronts. */
+:root {
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 320ms;
+  --motion-slower: 500ms;
+}
+
+/* Scroll reveal (src/components/landing/scroll-reveal.tsx): only armed elements still below the
+   fold start hidden; everything else is visible as rendered. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal]:not([data-reveal='stagger'])[data-armed],
+  [data-reveal='stagger'][data-armed] > * {
+    transition:
+      opacity var(--motion-slower) var(--ease-out-soft),
+      translate var(--motion-slower) var(--ease-out-soft);
+  }
+  [data-reveal]:not([data-reveal='stagger'])[data-armed]:not([data-revealed]),
+  [data-reveal='stagger'][data-armed]:not([data-revealed]) > * {
+    opacity: 0;
+    translate: 0 1.25rem;
+  }
+  [data-reveal='stagger'][data-armed] > :nth-child(2) {
+    transition-delay: 70ms;
+  }
+  [data-reveal='stagger'][data-armed] > :nth-child(3) {
+    transition-delay: 140ms;
+  }
+  [data-reveal='stagger'][data-armed] > :nth-child(4) {
+    transition-delay: 210ms;
+  }
+  [data-reveal='stagger'][data-armed] > :nth-child(5) {
+    transition-delay: 280ms;
+  }
+  [data-reveal='stagger'][data-armed] > :nth-child(n + 6) {
+    transition-delay: 350ms;
+  }
 }

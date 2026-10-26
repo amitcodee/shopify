@@ -6,6 +6,9 @@
  * sky = informational.
  */
 @theme {
+  /* Motion: shared easings (ease-out-soft, ease-spring utilities); durations on :root below. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --font-sans:
     'Inter', 'Inter var', 'Segoe UI Variable Text', 'Segoe UI', ui-sans-serif, system-ui,
     -apple-system, 'Helvetica Neue', Arial, sans-serif;
@@ -70,5 +73,38 @@
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* Motion durations. */
+:root {
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 320ms;
+  --motion-slower: 500ms;
+}
+
+/* Sales chart bars grow up from the baseline on first render (src/components/sales-chart.tsx). */
+.chart-bar {
+  transform-origin: bottom;
+  animation: chart-bar-grow var(--motion-slower) var(--ease-out-soft) both;
+}
+@keyframes chart-bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+/* Honour reduced motion everywhere: animations and transitions finish instantly. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
   }
 }

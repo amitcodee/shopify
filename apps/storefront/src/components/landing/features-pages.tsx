@@ -129,7 +129,7 @@ export function FeaturesHub() {
         aria-label="Feature areas"
         className="sticky top-16 z-30 border-y border-slate-900/[0.08] bg-white/90 backdrop-blur-xl"
       >
-        <ul className={`${container} flex gap-2 overflow-x-auto py-3`}>
+        <ul className={`${container} flex gap-2 overflow-x-auto [scrollbar-width:none] py-3`}>
           {FEATURE_AREAS.map((a) => (
             <li key={a.slug} className="shrink-0">
               <a
