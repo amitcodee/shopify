@@ -9,17 +9,19 @@ import {
   type InputHTMLAttributes,
   useActionState,
   useContext,
+  useEffect,
   useId,
 } from 'react';
 import { useFormStatus } from 'react-dom';
 import type { FormState } from '@/lib/form';
+import { toast } from '@/lib/toast';
 import { Alert, buttonClass, type ButtonSize, type ButtonVariant, inputClass } from './ui';
 
 const FormStateContext = createContext<FormState>(undefined);
 
 type Action = (state: FormState, formData: FormData) => Promise<FormState>;
 
-/** A form bound to a server action; shows errors/success and feeds field errors to <Field>. */
+/** A form bound to a server action: errors inline, success as a toast, field errors to <Field>. */
 export function ActionForm({
   action,
   children,
@@ -30,11 +32,14 @@ export function ActionForm({
   className?: string;
 }) {
   const [state, formAction] = useActionState(action, undefined);
+  // Success is confirmed with a toast; errors stay inline, next to the form they belong to.
+  useEffect(() => {
+    if (state?.success) toast(state.success);
+  }, [state]);
   return (
     <FormStateContext value={state}>
       <form action={formAction} className={className ?? 'space-y-4'} noValidate={false}>
         {state?.error ? <Alert tone="error">{state.error}</Alert> : null}
-        {state?.success ? <Alert tone="success">{state.success}</Alert> : null}
         {children}
       </form>
     </FormStateContext>

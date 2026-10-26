@@ -1,7 +1,7 @@
 import type { Product } from '@repo/contracts';
 import { notFound } from 'next/navigation';
 import { ActionForm, SubmitButton } from '@/components/form';
-import { Alert, Badge, Card, formatDateTime, PageHeader } from '@/components/ui';
+import { Badge, Card, formatDateTime, PageHeader } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { getStore } from '@/lib/session';
 import {
@@ -17,6 +17,7 @@ import {
 } from '../actions';
 import { ConfirmButton } from '../../confirm-button';
 import { MediaManager } from '../media-manager';
+import { FlashToast } from '@/components/flash-toast';
 import { ProductEditor } from '../product-editor';
 import { statusTone } from '../status';
 
@@ -58,22 +59,13 @@ export default async function ProductPage({
           </>
         }
       />
-      {created ? (
-        <div className="mb-6">
-          <Alert tone="success">Product created.</Alert>
-        </div>
-      ) : null}
-      {saved ? (
-        <div className="mb-6">
-          <Alert tone="success">Product saved.</Alert>
-        </div>
-      ) : null}
+      {created ? <FlashToast param="created" message="Product created." /> : null}
+      {saved ? <FlashToast param="saved" message="Product saved." /> : null}
       {duplicated ? (
-        <div className="mb-6">
-          <Alert tone="success">
-            Draft copy created. Add images, SKUs and stock, then set it to Active.
-          </Alert>
-        </div>
+        <FlashToast
+          param="duplicated"
+          message="Draft copy created. Add images, SKUs and stock, then set it to Active."
+        />
       ) : null}
 
       <ProductEditor
