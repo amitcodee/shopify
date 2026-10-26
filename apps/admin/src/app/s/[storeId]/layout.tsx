@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { type Command, CommandPalette, CommandPaletteButton } from '@/components/command-palette';
 import { Icon } from '@/components/icons';
 import { LogoMark } from '@/components/logo';
 import { UserMenu } from '@/components/top-bar';
@@ -83,6 +84,106 @@ export default async function StoreLayout({
     },
   ];
 
+  // Command palette (Ctrl/⌘+K): every page the merchant can open, plus common actions.
+  const can = (p: (typeof store.permissions)[number]) => store.permissions.includes(p);
+  const SHORTCUTS: Record<string, string> = {
+    Overview: 'g h',
+    Orders: 'g o',
+    Products: 'g p',
+    Inventory: 'g i',
+    Collections: 'g l',
+    Customers: 'g c',
+    Discounts: 'g d',
+    Settings: 'g s',
+  };
+  const settingsPages: [string, string, string][] = [
+    ['General', '', 'store name contact currency'],
+    ['Payments', '/payments', 'stripe razorpay gateway checkout'],
+    ['Shipping', '/shipping', 'rates zones delivery'],
+    ['Taxes', '/taxes', 'vat gst'],
+    ['Domains', '/domains', 'custom domain dns'],
+    ['Locations', '/locations', 'warehouse stock'],
+    ['Staff', '/staff', 'team invite permissions'],
+    ['Theme', '/theme', 'templates design'],
+    ['Currencies', '/currencies', 'multi currency'],
+    ['Plan & billing', '/billing', 'subscription invoice'],
+    ['Audit log', '/audit-log', 'history activity'],
+  ];
+  const actions: (Omit<Command, 'group'> & { when: boolean })[] = [
+    {
+      when: can('products:write'),
+      label: 'Add product',
+      href: `${base}/products/new`,
+      icon: 'plus',
+      keywords: 'new create product',
+    },
+    {
+      when: can('products:write'),
+      label: 'Create collection',
+      href: `${base}/collections/new`,
+      icon: 'plus',
+      keywords: 'new collection',
+    },
+    {
+      when: can('orders:write'),
+      label: 'Create draft order',
+      href: `${base}/orders/drafts/new`,
+      icon: 'plus',
+      keywords: 'new order invoice manual',
+    },
+    {
+      when: can('customers:read'),
+      label: 'Create customer segment',
+      href: `${base}/customers/segments/new`,
+      icon: 'plus',
+      keywords: 'new segment audience',
+    },
+    {
+      when: can('settings:read'),
+      label: 'Customize theme',
+      href: `${base}/settings/theme/editor`,
+      icon: 'palette',
+      keywords: 'theme editor design storefront',
+    },
+  ];
+  const commands: Command[] = [
+    ...items
+      .filter((item) => !item.permission || can(item.permission))
+      .map((item) => ({
+        label: item.label,
+        href: item.href,
+        icon: item.icon,
+        group: 'Go to',
+        shortcut: SHORTCUTS[item.label],
+      })),
+    ...actions.filter((a) => a.when).map(({ when: _when, ...a }) => ({ ...a, group: 'Actions' })),
+    ...(can('settings:read')
+      ? settingsPages.map(([label, path, keywords]) => ({
+          label: `Settings: ${label}`,
+          href: `${base}/settings${path}`,
+          icon: 'settings' as const,
+          group: 'Settings',
+          keywords,
+        }))
+      : []),
+    {
+      label: 'View storefront',
+      href: storefrontUrl,
+      icon: 'external',
+      group: 'Store',
+      external: true,
+      keywords: 'shop website preview',
+    },
+    { label: 'Switch store', href: '/stores', icon: 'selector', group: 'Store' },
+    {
+      label: 'Account security',
+      href: '/account/security',
+      icon: 'eye',
+      group: 'Store',
+      keywords: 'password two-factor 2fa',
+    },
+  ];
+
   const switcher = (
     <Link
       href="/stores"
@@ -144,6 +245,7 @@ export default async function StoreLayout({
                 <PageSearchButton />
               </div>
             </div>
+            <CommandPaletteButton />
             <UserMenu user={user} />
           </div>
         </header>
@@ -164,6 +266,7 @@ export default async function StoreLayout({
           )}
         </main>
       </div>
+      <CommandPalette commands={commands} />
     </div>
   );
 }
