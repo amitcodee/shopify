@@ -38,7 +38,7 @@ export function ReturnsCard({
     <Card title="Returns">
       <div className="space-y-4">
         {order.returns.map((r) => (
-          <div key={r.id} className="rounded-md border border-slate-200 p-3 text-sm">
+          <div key={r.id} className="rounded-lg border border-slate-200 p-3 text-sm">
             <div className="flex items-center justify-between gap-2">
               <span>
                 <Badge tone={TONES[r.status]}>{r.status.toLowerCase()}</Badge>{' '}
@@ -98,7 +98,7 @@ export function ReturnsCard({
         ))}
         {canWrite && paid ? (
           <details className="text-sm">
-            <summary className="cursor-pointer text-brand-600">Create a return</summary>
+            <summary className="cursor-pointer text-indigo-600">Create a return</summary>
             <ActionForm
               action={createReturnAction.bind(null, storeId, order.id)}
               className="mt-3 space-y-2"

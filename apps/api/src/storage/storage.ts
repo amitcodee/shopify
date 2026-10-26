@@ -1,55 +1,57 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, resolve, sep } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 
-/** Port for binary objects (product media); swap the adapter (S3, GCS…) by configuration. */
+/** Port for binary object storage (local disk in development, S3-compatible in production). */
 export interface ObjectStorage {
-  put(key: string, data: Buffer, contentType?: string): Promise<void>;
-  /** The object's bytes, or null when it does not exist. */
+  put(key: string, data: Buffer, contentType: string): Promise<void>;
   get(key: string): Promise<Buffer | null>;
   delete(key: string): Promise<void>;
 }
 
 export const OBJECT_STORAGE = Symbol('OBJECT_STORAGE');
 
-/** Keys are slash-separated segments of safe characters; no "..", no absolute paths. */
-const KEY_PATTERN = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9]+)?(\/[A-Za-z0-9_-]+(\.[A-Za-z0-9]+)?)*$/;
+/** Keys are generated server-side only; this pattern also blocks path traversal on reads. */
+export const MEDIA_KEY =
+  /^stores\/[0-9a-f-]{36}\/(products|branding)\/[0-9a-f-]{36}(?:_w\d{2,4})?\.webp$/;
 
-export function isValidKey(key: string): boolean {
-  return key.length <= 512 && KEY_PATTERN.test(key);
+/** Key of an image's resized copy: `…/<id>.webp` -> `…/<id>_w600.webp`. */
+export function renditionKey(key: string, width: number): string {
+  return key.replace(/\.webp$/, `_w${width}.webp`);
 }
 
-/** Development / single-host adapter: objects are files under `<STORAGE_DIR>`. */
+/** The stored object and all of its renditions (what to delete with the image). */
+export function imageKeys(image: { storageKey: string; renditionWidths: number[] }): string[] {
+  return [image.storageKey, ...image.renditionWidths.map((w) => renditionKey(image.storageKey, w))];
+}
+
 export class LocalDiskStorage implements ObjectStorage {
   private readonly root: string;
 
-  constructor(dir: string) {
-    this.root = resolve(dir);
+  constructor(root: string) {
+    this.root = resolve(root);
+  }
+
+  private pathFor(key: string): string {
+    const full = resolve(join(this.root, key));
+    if (!full.startsWith(this.root + sep)) throw new Error('Invalid storage key');
+    return full;
   }
 
   async put(key: string, data: Buffer): Promise<void> {
-    const file = this.path(key);
-    await mkdir(dirname(file), { recursive: true });
-    await writeFile(file, data);
+    const path = this.pathFor(key);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, data);
   }
 
   async get(key: string): Promise<Buffer | null> {
     try {
-      return await readFile(this.path(key));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-      throw error;
+      return await readFile(this.pathFor(key));
+    } catch {
+      return null;
     }
   }
 
   async delete(key: string): Promise<void> {
-    await rm(this.path(key), { force: true });
-  }
-
-  private path(key: string): string {
-    if (!isValidKey(key)) throw new Error(`Invalid storage key: ${key}`);
-    const file = resolve(this.root, key);
-    // Defense in depth: the pattern already rules out traversal.
-    if (!file.startsWith(this.root + sep)) throw new Error(`Invalid storage key: ${key}`);
-    return file;
+    await rm(this.pathFor(key), { force: true });
   }
 }

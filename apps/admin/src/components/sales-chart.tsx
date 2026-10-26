@@ -1,4 +1,4 @@
-import { formatMoney } from '@repo/contracts';
+import { currencyDigits, formatMoney } from '@repo/contracts';
 
 interface Day {
   date: string;
@@ -6,98 +6,118 @@ interface Day {
   orders: number;
 }
 
-const WIDTH = 720;
-const HEIGHT = 200;
-const PAD = { top: 12, right: 8, bottom: 24, left: 8 };
-const BAR = 'var(--color-brand-500)'; // #5964f6 — validated: lightness band, chroma, contrast vs white
+/** A "nice" axis ceiling and step (1/2/2.5/5 × 10^k) so gridlines land on round amounts. */
+function niceScale(max: number, ticks = 4): { top: number; step: number } {
+  if (max <= 0) return { top: ticks, step: 1 };
+  const raw = max / ticks;
+  const magnitude = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * magnitude).find((s) => s >= raw) ?? raw;
+  return { top: step * ticks, step };
+}
+
+function shortDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1)));
+}
 
 /**
- * Daily sales bars (single series: the card title names it, so no legend). Each day has a
- * full-height hover target with a native tooltip; a visually hidden table carries the data
- * for screen readers.
+ * Daily sales bars (single series: the card title names it, so no legend). Drawn with HTML so
+ * axis text stays crisp at any width. Each day has a native tooltip; a visually hidden table
+ * carries the data for screen readers.
  */
 export function SalesChart({ days, currency }: { days: Day[]; currency: string }) {
-  const max = Math.max(1, ...days.map((d) => d.sales));
-  const plotW = WIDTH - PAD.left - PAD.right;
-  const plotH = HEIGHT - PAD.top - PAD.bottom;
-  const slot = plotW / Math.max(1, days.length);
-  const gap = Math.min(2, slot * 0.2);
-  const barW = Math.max(1, slot - gap);
-  const baseline = PAD.top + plotH;
-  const labelEvery = Math.ceil(days.length / 6);
+  const max = Math.max(0, ...days.map((d) => d.sales));
+  const { top, step } = niceScale(max);
+  const ticks = Array.from({ length: Math.round(top / step) + 1 }, (_, i) => i * step);
+  const unit = 10 ** currencyDigits(currency);
+  const axis = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  });
+  const labelEvery = Math.max(1, Math.ceil(days.length / 6));
+  const peak = days.reduce<Day | undefined>(
+    (best, d) => (!best || d.sales > best.sales ? d : best),
+    undefined,
+  );
 
   return (
     <figure>
-      <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="h-auto w-full"
+      <div
+        className="flex gap-3"
         role="img"
-        aria-label={`Daily sales over the last ${days.length} days, peaking at ${formatMoney(max, currency)}`}
+        aria-label={`Daily sales over the last ${days.length} days${peak && peak.sales > 0 ? `, peaking at ${formatMoney(peak.sales, currency)} on ${shortDate(peak.date)}` : ''}`}
       >
-        <line
-          x1={PAD.left}
-          x2={WIDTH - PAD.right}
-          y1={baseline}
-          y2={baseline}
-          stroke="#e2e8f0"
-          strokeWidth={1}
-        />
-        <line
-          x1={PAD.left}
-          x2={WIDTH - PAD.right}
-          y1={PAD.top}
-          y2={PAD.top}
-          stroke="#f1f5f9"
-          strokeWidth={1}
-          strokeDasharray="4 4"
-        />
-        <text x={WIDTH - PAD.right} y={PAD.top - 2} textAnchor="end" fontSize={10} fill="#64748b">
-          {formatMoney(max, currency)}
-        </text>
-        {days.map((d, i) => {
-          const h = d.sales === 0 ? 0 : Math.max(2, (d.sales / max) * plotH);
-          const x = PAD.left + i * slot + gap / 2;
-          const r = Math.min(4, barW / 2, h);
-          // Rounded data-end on top, square at the baseline.
-          const path =
-            h === 0
-              ? ''
-              : `M${x},${baseline} V${baseline - h + r} Q${x},${baseline - h} ${x + r},${baseline - h} H${x + barW - r} Q${x + barW},${baseline - h} ${x + barW},${baseline - h + r} V${baseline} Z`;
-          return (
-            <g key={d.date} className="group">
-              <rect
-                x={PAD.left + i * slot}
-                y={PAD.top}
-                width={slot}
-                height={plotH}
-                rx={3}
-                className="fill-transparent group-hover:fill-slate-100"
-              />
-              {path ? <path d={path} fill={BAR} className="pointer-events-none" /> : null}
-              <rect
-                x={PAD.left + i * slot}
-                y={PAD.top}
-                width={slot}
-                height={plotH}
-                fill="transparent"
+        <div
+          aria-hidden
+          className="relative h-52 w-12 shrink-0 text-right text-[11px] text-slate-400 tabular-nums"
+        >
+          {ticks.map((t) => (
+            <span
+              key={t}
+              className="absolute right-0 translate-y-1/2 leading-none"
+              style={{ bottom: `${(t / top) * 100}%` }}
+            >
+              {max > 0 ? axis.format(t / unit) : t === 0 ? axis.format(0) : ''}
+            </span>
+          ))}
+        </div>
+        <div aria-hidden className="relative h-52 min-w-0 flex-1">
+          {ticks.map((t) => (
+            <div
+              key={t}
+              className={`absolute inset-x-0 border-t ${t === 0 ? 'border-slate-300' : 'border-dashed border-slate-200'}`}
+              style={{ bottom: `${(t / top) * 100}%` }}
+            />
+          ))}
+          <div className="absolute inset-0 flex items-end gap-[2px] sm:gap-[3px]">
+            {days.map((d) => (
+              <div
+                key={d.date}
+                title={`${shortDate(d.date)}: ${formatMoney(d.sales, currency)} · ${d.orders} order${d.orders === 1 ? '' : 's'}`}
+                className="group flex h-full min-w-0 flex-1 items-end rounded-t-[3px] hover:bg-slate-900/[0.035]"
               >
-                <title>{`${d.date}: ${formatMoney(d.sales, currency)} · ${d.orders} order${d.orders === 1 ? '' : 's'}`}</title>
-              </rect>
-              {i % labelEvery === 0 ? (
-                <text
-                  x={x + barW / 2}
-                  y={HEIGHT - 6}
-                  textAnchor="middle"
-                  fontSize={10}
-                  fill="#64748b"
-                >
-                  {d.date.slice(5)}
-                </text>
-              ) : null}
-            </g>
-          );
-        })}
-      </svg>
+                <div
+                  className="w-full rounded-t-[3px] bg-indigo-500 transition-colors group-hover:bg-indigo-600"
+                  style={{
+                    height: d.sales > 0 ? `max(2px, ${(d.sales / top) * 100}%)` : '0',
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div aria-hidden className="mt-2 flex gap-3 text-[11px] text-slate-400">
+        <div className="w-12 shrink-0" />
+        <div className="relative h-4 min-w-0 flex-1">
+          {days.map((d, i) =>
+            i % labelEvery === 0 || i === days.length - 1 ? (
+              <span
+                key={d.date}
+                className={`absolute whitespace-nowrap ${i === days.length - 1 ? 'right-0' : '-translate-x-1/2'} ${
+                  i !== days.length - 1 && days.length - 1 - i < labelEvery / 2 ? 'hidden' : ''
+                }`}
+                style={
+                  i === days.length - 1
+                    ? undefined
+                    : { left: `${((i + 0.5) / days.length) * 100}%` }
+                }
+              >
+                {i === 0 ? '' : shortDate(d.date)}
+              </span>
+            ) : null,
+          )}
+          <span className="absolute left-0 whitespace-nowrap">
+            {days[0] ? shortDate(days[0].date) : ''}
+          </span>
+        </div>
+      </div>
       <table className="sr-only">
         <caption>Daily sales</caption>
         <thead>

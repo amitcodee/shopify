@@ -40,6 +40,8 @@ ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 WORKDIR /app
 COPY --from=build --chown=node:node /repo/apps/admin/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/admin/.next/static ./apps/admin/.next/static
+# Standalone output leaves out public/ (stock photos under /media, synced from packages/assets).
+COPY --from=build --chown=node:node /repo/apps/admin/public ./apps/admin/public
 USER node
 EXPOSE 3000
 CMD ["node", "apps/admin/server.js"]
@@ -49,6 +51,8 @@ ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 WORKDIR /app
 COPY --from=build --chown=node:node /repo/apps/storefront/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/storefront/.next/static ./apps/storefront/.next/static
+# Standalone output leaves out public/ (stock photos under /media, synced from packages/assets).
+COPY --from=build --chown=node:node /repo/apps/storefront/public ./apps/storefront/public
 USER node
 EXPOSE 3000
 CMD ["node", "apps/storefront/server.js"]

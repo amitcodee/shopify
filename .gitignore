@@ -36,6 +36,7 @@ packages/db/src/generated/
 
 # local uploads (dev storage adapter)
 storage/
+# ...but not the storage module's source code
 !apps/api/src/storage/
 /e2e-results/
 

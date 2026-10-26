@@ -1,27 +1,23 @@
 import { formatMoney, type OrderListItem, type Paginated } from '@repo/contracts';
 import Link from 'next/link';
+import { Icon } from '@/components/icons';
 import {
+  buttonClass,
   ButtonLink,
   EmptyState,
   formatDateTime,
   PageHeader,
   Pagination,
+  SearchInput,
   Table,
   Td,
+  ViewTabs,
 } from '@/components/ui';
 import { api } from '@/lib/api';
 import { FinancialBadge, FulfillmentBadge, OrderStatusBadge } from './badges';
+import { ORDER_VIEWS } from './views';
 
-const VIEWS = [
-  { key: 'all', label: 'All', query: {} },
-  {
-    key: 'unfulfilled',
-    label: 'Unfulfilled',
-    query: { status: 'OPEN', fulfillmentStatus: 'UNFULFILLED' },
-  },
-  { key: 'unpaid', label: 'Awaiting payment', query: { status: 'PENDING_PAYMENT' } },
-  { key: 'cancelled', label: 'Cancelled', query: { status: 'CANCELLED' } },
-] as const;
+const VIEWS = ORDER_VIEWS;
 
 export default async function OrdersPage({
   params,
@@ -50,78 +46,86 @@ export default async function OrdersPage({
       <PageHeader
         title="Orders"
         actions={
-          <div className="flex items-center gap-4">
-            <Link
-              href={`${base}/abandoned`}
-              className="text-sm text-brand-600 hover:text-brand-500"
-            >
+          <>
+            <Link href={`${base}/abandoned`} className={buttonClass('ghost', 'sm')}>
               Abandoned checkouts
             </Link>
-            <Link href={`${base}/returns`} className="text-sm text-brand-600 hover:text-brand-500">
+            <Link href={`${base}/returns`} className={buttonClass('ghost', 'sm')}>
               Returns
             </Link>
-            <ButtonLink href={`${base}/drafts`} variant="secondary">
+            {/* A route handler download, not a page: plain <a>, no client-side navigation. */}
+            <a
+              href={href({ page: undefined }).replace(base, `${base}/export`)}
+              className={buttonClass('secondary', 'sm')}
+              download
+            >
+              <Icon name="download" className="-ml-0.5 h-4 w-4" />
+              Export
+            </a>
+            <ButtonLink href={`${base}/drafts`} variant="primary" size="sm">
               Draft orders
             </ButtonLink>
-          </div>
+          </>
         }
       />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <nav aria-label="Order views" className="flex gap-1">
-          {VIEWS.map((v) => (
-            <Link
-              key={v.key}
-              href={href({ view: v.key, page: undefined })}
-              aria-current={current.key === v.key ? 'page' : undefined}
-              className={`rounded-md px-3 py-1.5 text-sm ${current.key === v.key ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
-            >
-              {v.label}
-            </Link>
-          ))}
-        </nav>
-        <form action={base} className="flex gap-2">
+        <ViewTabs
+          label="Order views"
+          items={VIEWS.map((v) => ({
+            label: v.label,
+            href: href({ view: v.key, page: undefined }),
+            active: current.key === v.key,
+          }))}
+        />
+        <form action={base} className="w-full sm:w-auto">
           {view !== 'all' ? <input type="hidden" name="view" value={view} /> : null}
-          <label htmlFor="order-search" className="sr-only">
-            Search orders
-          </label>
-          <input
+          <SearchInput
             id="order-search"
-            name="q"
+            label="Search orders"
             defaultValue={q}
             placeholder="Order # or email"
-            className="w-56 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
           />
         </form>
       </div>
       {orders.items.length === 0 ? (
         <EmptyState
-          title="No orders yet"
-          description="Orders placed on your storefront appear here."
+          icon="orders"
+          title={q ? 'No matching orders' : 'No orders yet'}
+          description={
+            q
+              ? 'Try a different order number or email.'
+              : 'Orders placed on your storefront appear here.'
+          }
         />
       ) : (
         <>
-          <Table head={['Order', 'Date', 'Customer', 'Payment', 'Fulfillment', 'Items', 'Total']}>
+          <Table
+            head={['Order', 'Date', 'Customer', 'Payment', 'Fulfillment', 'Items', 'Total']}
+            numeric={[5, 6]}
+          >
             {orders.items.map((o) => (
-              <tr key={o.id} className="hover:bg-slate-50">
-                <Td>
+              <tr key={o.id}>
+                <Td className="whitespace-nowrap">
                   <Link
                     href={`${base}/${o.id}`}
-                    className="font-medium text-slate-900 hover:underline"
+                    className="font-semibold text-slate-900 hover:text-indigo-600"
                   >
                     #{o.number}
                   </Link>{' '}
                   <OrderStatusBadge status={o.status} />
                 </Td>
-                <Td className="whitespace-nowrap">{formatDateTime(o.createdAt)}</Td>
-                <Td>{o.customerName ?? o.email}</Td>
+                <Td className="whitespace-nowrap text-slate-500">{formatDateTime(o.createdAt)}</Td>
+                <Td className="max-w-[220px] truncate">{o.customerName ?? o.email}</Td>
                 <Td>
                   <FinancialBadge status={o.financialStatus} />
                 </Td>
                 <Td>
                   <FulfillmentBadge status={o.fulfillmentStatus} />
                 </Td>
-                <Td>{o.itemCount}</Td>
-                <Td>{formatMoney(o.total, o.currency)}</Td>
+                <Td numeric>{o.itemCount}</Td>
+                <Td numeric className="font-medium text-slate-900">
+                  {formatMoney(o.total, o.currency)}
+                </Td>
               </tr>
             ))}
           </Table>

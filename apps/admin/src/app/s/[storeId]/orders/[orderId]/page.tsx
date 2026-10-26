@@ -3,7 +3,17 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ActionForm, CheckboxField, Field, SubmitButton } from '@/components/form';
 import { DisputeSummary } from '@/components/disputes';
-import { Alert, Card, formatDateTime, PageHeader, Table, Td } from '@/components/ui';
+import { Icon } from '@/components/icons';
+import {
+  Alert,
+  buttonClass,
+  Card,
+  formatDateTime,
+  inputClass,
+  PageHeader,
+  Table,
+  Td,
+} from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { getStore } from '@/lib/session';
 import { ConfirmButton } from '../../confirm-button';
@@ -11,6 +21,8 @@ import { SmallAction } from '../../settings/small-action';
 import { cancelOrderAction, fulfillAction, refundAction, sandboxDisputeAction } from '../actions';
 import { FinancialBadge, FulfillmentBadge, OrderStatusBadge } from '../badges';
 import { ReturnsCard } from '../returns-card';
+
+const countryName = new Intl.DisplayNames(['en'], { type: 'region' });
 
 export default async function OrderPage({
   params,
@@ -37,12 +49,21 @@ export default async function OrderPage({
         title={`Order #${order.number}`}
         description={formatDateTime(order.createdAt)}
         back={{ href: `/s/${storeId}/orders`, label: 'Orders' }}
-        actions={
-          <div className="flex items-center gap-2">
+        meta={
+          <>
             <OrderStatusBadge status={order.status} />
             <FinancialBadge status={order.financialStatus} />
             <FulfillmentBadge status={order.fulfillmentStatus} />
-          </div>
+          </>
+        }
+        actions={
+          <Link
+            href={`/packing-slip/${storeId}/${orderId}`}
+            className={buttonClass('secondary', 'sm')}
+          >
+            <Icon name="orders" className="-ml-0.5 h-4 w-4 text-slate-500" />
+            Print packing slip
+          </Link>
         }
       />
       {order.disputes.some((d) => d.status === 'NEEDS_RESPONSE') ? (
@@ -54,17 +75,17 @@ export default async function OrderPage({
           </Alert>
         </div>
       ) : null}
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
-          <Card title="Items">
-            <Table head={['Product', 'SKU', 'Price', 'Qty', 'Total']}>
+          <Card title="Items" flush>
+            <Table head={['Product', 'SKU', 'Price', 'Qty', 'Total']} numeric={[2, 3, 4]} bare>
               {order.lines.map((l) => (
                 <tr key={l.id}>
                   <Td>
                     {l.productId ? (
                       <Link
                         href={`/s/${storeId}/products/${l.productId}`}
-                        className="font-medium hover:underline"
+                        className="font-medium text-slate-900 hover:text-indigo-600"
                       >
                         {l.title}
                       </Link>
@@ -78,14 +99,16 @@ export default async function OrderPage({
                       <p className="text-xs text-slate-500">{l.restockedQuantity} restocked</p>
                     ) : null}
                   </Td>
-                  <Td>{l.sku ?? '—'}</Td>
-                  <Td>{money(l.unitPrice)}</Td>
-                  <Td>{l.quantity}</Td>
-                  <Td>{money(l.total)}</Td>
+                  <Td className="text-slate-500">{l.sku ?? '—'}</Td>
+                  <Td numeric>{money(l.unitPrice)}</Td>
+                  <Td numeric>× {l.quantity}</Td>
+                  <Td numeric className="font-medium text-slate-900">
+                    {money(l.total)}
+                  </Td>
                 </tr>
               ))}
             </Table>
-            <dl className="ml-auto mt-4 max-w-xs space-y-1 text-sm">
+            <dl className="space-y-1.5 border-t border-slate-100 bg-slate-50/60 px-5 py-4 text-sm text-slate-600 tabular-nums sm:pl-[45%]">
               <div className="flex justify-between">
                 <dt>Subtotal</dt>
                 <dd>{money(order.subtotal)}</dd>
@@ -104,7 +127,7 @@ export default async function OrderPage({
                 <dt>Tax</dt>
                 <dd>{money(order.taxTotal)}</dd>
               </div>
-              <div className="flex justify-between font-semibold">
+              <div className="mt-2 flex justify-between border-t border-slate-200 pt-2.5 text-[15px] font-semibold text-slate-900">
                 <dt>Total</dt>
                 <dd>{money(order.total)}</dd>
               </div>
@@ -173,7 +196,7 @@ export default async function OrderPage({
                 </div>
                 {order.lines.some((l) => l.restockable > 0) ? (
                   <fieldset className="space-y-2">
-                    <legend className="text-sm font-medium text-slate-700">
+                    <legend className="mb-1 text-[13px] font-medium text-slate-800">
                       Return items to stock
                     </legend>
                     {order.lines
@@ -185,7 +208,7 @@ export default async function OrderPage({
                             id={`rs-${l.id}`}
                             name="restockLine"
                             value={l.id}
-                            className="h-4 w-4"
+                            className="h-4 w-4 rounded border-slate-300"
                           />
                           <label htmlFor={`rs-${l.id}`} className="flex-1">
                             {l.title} {l.variantTitle !== 'Default' ? `(${l.variantTitle})` : ''}
@@ -200,7 +223,7 @@ export default async function OrderPage({
                             min={1}
                             max={l.restockable}
                             defaultValue={l.restockable}
-                            className="w-20 rounded-md border border-slate-300 px-2 py-1"
+                            className={`${inputClass} w-20`}
                           />
                         </div>
                       ))}
@@ -214,13 +237,25 @@ export default async function OrderPage({
           <ReturnsCard order={order} storeId={storeId} canWrite={canWrite} money={money} />
 
           <Card title="Timeline">
-            <ol className="space-y-3 text-sm">
-              {order.events.map((e) => (
-                <li key={e.id} className="flex gap-3">
-                  <span className="w-40 shrink-0 text-slate-500">
-                    {formatDateTime(e.createdAt)}
-                  </span>
-                  <span>{e.message}</span>
+            <ol className="relative text-sm">
+              {order.events.map((e, i) => (
+                <li key={e.id} className="relative flex gap-3 pb-5 last:pb-0">
+                  {i < order.events.length - 1 ? (
+                    <span
+                      aria-hidden
+                      className="absolute top-4 bottom-0 left-[5px] w-px bg-slate-200"
+                    />
+                  ) : null}
+                  <span
+                    aria-hidden
+                    className={`relative mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full ring-4 ring-white ${
+                      i === order.events.length - 1 ? 'bg-indigo-500' : 'bg-slate-300'
+                    }`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-slate-800 [overflow-wrap:anywhere]">{e.message}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{formatDateTime(e.createdAt)}</p>
+                  </div>
                 </li>
               ))}
             </ol>
@@ -229,21 +264,27 @@ export default async function OrderPage({
 
         <div className="space-y-6">
           <Card title="Customer">
-            <p className="text-sm">
-              {order.customer ? (
-                <Link
-                  href={`/s/${storeId}/customers/${order.customer.id}`}
-                  className="font-medium hover:underline"
-                >
-                  {order.customer.name ?? order.customer.email}
-                </Link>
-              ) : null}
-            </p>
-            <p className="text-sm text-slate-600">{order.email}</p>
-            <h3 className="mt-4 text-xs font-semibold uppercase text-slate-500">
-              Shipping address
-            </h3>
-            <address className="mt-1 text-sm not-italic text-slate-700">
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600"
+              >
+                {(order.customer?.name ?? order.email).trim().charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0">
+                {order.customer ? (
+                  <Link
+                    href={`/s/${storeId}/customers/${order.customer.id}`}
+                    className="block truncate text-sm font-medium text-slate-900 hover:text-indigo-600"
+                  >
+                    {order.customer.name ?? order.customer.email}
+                  </Link>
+                ) : null}
+                <p className="truncate text-sm text-slate-500">{order.email}</p>
+              </div>
+            </div>
+            <h3 className="mt-5 text-xs font-medium text-slate-500">Shipping address</h3>
+            <address className="mt-1 text-sm leading-6 text-slate-700 not-italic">
               {a.name}
               <br />
               {a.line1}
@@ -257,7 +298,7 @@ export default async function OrderPage({
               {a.city}
               {a.region ? `, ${a.region}` : ''} {a.postalCode}
               <br />
-              {a.country}
+              {countryName.of(a.country) ?? a.country}
               {a.phone ? (
                 <>
                   <br />
@@ -267,7 +308,7 @@ export default async function OrderPage({
             </address>
             {order.note ? (
               <>
-                <h3 className="mt-4 text-xs font-semibold uppercase text-slate-500">Note</h3>
+                <h3 className="mt-5 text-xs font-medium text-slate-500">Note</h3>
                 <p className="mt-1 text-sm text-slate-700">{order.note}</p>
               </>
             ) : null}
@@ -283,7 +324,7 @@ export default async function OrderPage({
                       ·{' '}
                       <a
                         href={f.trackingUrl}
-                        className="text-brand-600 underline"
+                        className="text-indigo-600 underline"
                         target="_blank"
                         rel="noreferrer noopener"
                       >
@@ -316,8 +357,8 @@ export default async function OrderPage({
               </p>
             ))}
             {canWrite && sandboxPaid ? (
-              <div className="mt-3 flex flex-wrap gap-4 border-t border-slate-100 pt-3">
-                <span className="text-xs text-slate-500">Sandbox:</span>
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-dashed border-slate-300 px-3 py-2.5">
+                <span className="text-xs font-medium text-slate-500">Sandbox:</span>
                 {(['NEEDS_RESPONSE', 'WON', 'LOST'] as const).map((status) => (
                   <SmallAction
                     key={status}

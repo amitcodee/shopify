@@ -1,57 +1,802 @@
 @import 'tailwindcss';
 
+/*
+ * Theme tokens arrive as --store-* custom properties on <body> (see src/lib/theme.ts), so these
+ * are `inline`: utilities resolve the store variables where they are used, not at :root. Plain
+ * CSS below reads the --store-* variables directly for the same reason.
+ */
+/* The platform marketing site's palette (stores use the --store-* colors below). */
 @theme {
+  --color-azure-50: #eef3ff;
+  --color-azure-100: #dfe8ff;
+  --color-azure-200: #c5d4ff;
+  --color-azure-300: #9db5ff;
+  --color-azure-400: #6e8dff;
+  --color-azure-500: #4a6cff;
+  --color-azure-600: #305eff;
+  --color-azure-700: #2347e6;
+  --color-azure-800: #1f3bb8;
+  --color-azure-900: #1f3790;
+  --color-azure-950: #162257;
+  --color-navy-900: #192839;
+  --color-navy-950: #0a2236;
+  --color-leaf-300: #6fe0a0;
+  --color-leaf-400: #34c77b;
+  --color-leaf-500: #16a35f;
+  --color-leaf-600: #0f8a4f;
+  --color-mist: #f2f5f9;
+}
+
+@theme inline {
   --color-brand: var(--store-brand, #111827);
   --color-brand-contrast: var(--store-brand-contrast, #ffffff);
   --color-accent: var(--store-accent, #4f46e5);
   --color-accent-contrast: var(--store-accent-contrast, #ffffff);
+  --color-page: var(--store-bg, #ffffff);
+  --color-surface: var(--store-surface, #f4f4f5);
+  --color-ink: var(--store-text, #18181b);
+  --font-heading: var(
+    --store-heading-font,
+    var(--store-font, ui-sans-serif, system-ui, sans-serif)
+  );
+}
 
-  --shadow-card: 0 1px 2px 0 rgb(24 24 27 / 0.04), 0 1px 3px 0 rgb(24 24 27 / 0.06);
-  --shadow-lift: 0 18px 40px -20px rgb(24 24 27 / 0.35);
+/*
+ * Every page is styled with zinc greys and white. On a themed store those become mixes of the
+ * theme's text and background colors, so light, tinted and dark themes all stay readable.
+ */
+[data-theme],
+.theme-band {
+  --color-white: var(--store-bg);
+  --color-zinc-50: color-mix(in oklab, var(--store-text) 4%, var(--store-bg));
+  --color-zinc-100: color-mix(in oklab, var(--store-text) 8%, var(--store-bg));
+  --color-zinc-200: color-mix(in oklab, var(--store-text) 15%, var(--store-bg));
+  --color-zinc-300: color-mix(in oklab, var(--store-text) 26%, var(--store-bg));
+  --color-zinc-400: color-mix(in oklab, var(--store-text) 45%, var(--store-bg));
+  --color-zinc-500: color-mix(in oklab, var(--store-text) 64%, var(--store-bg));
+  --color-zinc-600: color-mix(in oklab, var(--store-text) 76%, var(--store-bg));
+  --color-zinc-700: color-mix(in oklab, var(--store-text) 86%, var(--store-bg));
+  --color-zinc-800: color-mix(in oklab, var(--store-text) 93%, var(--store-bg));
+  --color-zinc-900: var(--store-text);
+  --color-zinc-950: var(--store-text);
+
+  background-color: var(--store-bg);
+  color: var(--store-text);
+  /* Full-bleed sections span 100vw; never let that (or the scrollbar) scroll the page sideways. */
+  overflow-x: clip;
+}
+
+[data-theme] {
+  --store-section: 4.5rem;
+  --store-main-y: 2.5rem;
+  /* Content width; full-bleed bands ignore it. */
+  --store-page-width: 82rem;
+  /*
+   * Typographic roles, tuned per design style below: hero headlines (display), section and page
+   * titles (title), product card titles and prices.
+   */
+  --display-weight: 600;
+  --display-tracking: -0.03em;
+  --display-leading: 1.02;
+  --title-weight: 600;
+  --title-tracking: -0.02em;
+  --card-font: var(--store-font);
+  --card-size: 0.9375rem;
+  --card-weight: 500;
+  --card-tracking: 0;
+  --card-case: none;
+  --price-weight: 600;
+  --eyebrow-tracking: 0.18em;
+  --btn-case: none;
+  --btn-tracking: 0.01em;
+  --btn-weight: 600;
+  --field-radius: var(--radius-md, 0.375rem);
+}
+
+/* A band in the theme's inverse colors (the "dark" footer); greys above are re-derived inside. */
+.theme-band {
+  --store-bg: var(--store-band-bg);
+  --store-text: var(--store-band-text);
+}
+
+/* Status colors: light tints with dark text by default, dark tints with light text on dark themes. */
+[data-dark] {
+  color-scheme: dark;
+  --color-red-50: color-mix(in oklab, oklch(63.7% 0.237 25.331) 16%, var(--store-bg));
+  --color-red-200: color-mix(in oklab, oklch(63.7% 0.237 25.331) 40%, var(--store-bg));
+  --color-red-600: oklch(70.4% 0.191 22.216);
+  --color-red-700: oklch(70.4% 0.191 22.216);
+  --color-red-800: oklch(80.8% 0.114 19.571);
+  --color-amber-50: color-mix(in oklab, oklch(76.9% 0.188 70.08) 14%, var(--store-bg));
+  --color-amber-200: color-mix(in oklab, oklch(76.9% 0.188 70.08) 36%, var(--store-bg));
+  --color-amber-400: oklch(76.9% 0.188 70.08);
+  --color-amber-800: oklch(87.9% 0.169 91.605);
+  --color-amber-900: oklch(92.4% 0.12 95.746);
+  --color-emerald-50: color-mix(in oklab, oklch(69.6% 0.17 162.48) 14%, var(--store-bg));
+  --color-emerald-200: color-mix(in oklab, oklch(69.6% 0.17 162.48) 36%, var(--store-bg));
+  --color-emerald-700: oklch(76.5% 0.177 163.223);
+  --color-emerald-800: oklch(84.5% 0.143 164.978);
+  --color-emerald-900: oklch(90.5% 0.093 164.15);
 }
 
 body {
   font-family: var(--store-font, ui-sans-serif, system-ui, sans-serif);
-  font-feature-settings: 'ss01';
 }
 
-@layer base {
-  ::selection {
-    background: color-mix(in oklab, var(--color-accent) 25%, white);
+[data-theme] :where(h1, h2, h3) {
+  font-family: var(--store-heading-font, inherit);
+}
+
+[data-heading-case='uppercase'] :where(h1, h2) {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+[data-theme][data-heading-case='uppercase'] {
+  --display-tracking: -0.005em;
+  --title-tracking: 0.02em;
+}
+
+/* Corner radius: Tailwind's rounded-* utilities read these. */
+[data-radius='none'] {
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+}
+[data-radius='small'] {
+  --radius-sm: 0.125rem;
+  --radius-md: 0.1875rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.3125rem;
+  --radius-2xl: 0.375rem;
+}
+[data-radius='large'],
+[data-radius='pill'] {
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.75rem;
+}
+
+/* Spacing between home sections and around page content. */
+[data-density='compact'] {
+  --store-section: 2rem;
+  --store-main-y: 1.5rem;
+}
+[data-density='spacious'] {
+  --store-section: 6.5rem;
+  --store-main-y: 3.5rem;
+}
+@media (max-width: 639px) {
+  [data-theme] {
+    --store-section: 3.25rem;
   }
-  :focus-visible {
-    outline-color: var(--color-accent);
+  [data-density='compact'] {
+    --store-section: 2rem;
   }
-  h1,
-  h2,
-  h3 {
+  [data-density='spacious'] {
+    --store-section: 4rem;
+  }
+}
+
+/*
+ * Design styles (data-style, from the template the theme came from). Tokens set colors, shapes
+ * and layout; the style sets the typographic voice so the nine looks differ in more than color.
+ */
+[data-style='minimal'] {
+  --display-tracking: -0.035em;
+}
+[data-style='bold'] {
+  --display-weight: 800;
+  --display-leading: 0.92;
+  --title-weight: 800;
+  --card-weight: 700;
+  --price-weight: 700;
+  --btn-case: uppercase;
+  --btn-tracking: 0.06em;
+  --btn-weight: 800;
+}
+[data-style='bold'][data-heading-case='uppercase'] {
+  --display-tracking: -0.02em;
+  --title-tracking: -0.005em;
+}
+[data-style='classic'] {
+  --display-weight: 500;
+  --display-tracking: -0.015em;
+  --display-leading: 1.08;
+  --title-weight: 500;
+  --title-tracking: -0.01em;
+  --card-font: var(--store-heading-font);
+  --card-size: 1rem;
+  --card-weight: 400;
+  --price-weight: 500;
+  --btn-case: uppercase;
+  --btn-tracking: 0.14em;
+}
+[data-style='split'] {
+  --display-weight: 650;
+  --display-tracking: -0.035em;
+}
+[data-style='fullbleed'] {
+  --display-weight: 700;
+  --display-leading: 0.92;
+  --title-weight: 700;
+  --card-size: 0.8125rem;
+  --card-weight: 600;
+  --card-case: uppercase;
+  --card-tracking: 0.08em;
+  --price-weight: 500;
+  --btn-case: uppercase;
+  --btn-tracking: 0.16em;
+  --btn-weight: 700;
+}
+[data-style='editorial'] {
+  --store-page-width: 78rem;
+  --display-weight: 400;
+  --display-tracking: -0.04em;
+  --display-leading: 0.98;
+  --title-weight: 400;
+  --title-tracking: -0.025em;
+  --card-font: var(--store-heading-font);
+  --card-size: 1.0625rem;
+  --card-weight: 400;
+  --price-weight: 400;
+  --eyebrow-tracking: 0.26em;
+  --btn-case: uppercase;
+  --btn-tracking: 0.18em;
+  --btn-weight: 500;
+}
+[data-style='catalog'] {
+  --store-page-width: 90rem;
+  --display-weight: 700;
+  --display-tracking: -0.025em;
+  --display-leading: 1.05;
+  --title-weight: 700;
+  --card-size: 0.8125rem;
+  --card-weight: 500;
+  --price-weight: 700;
+  --eyebrow-tracking: 0.12em;
+}
+[data-style='banner'] {
+  --display-weight: 750;
+  --display-tracking: -0.035em;
+  --title-weight: 700;
+  --card-weight: 600;
+}
+[data-style='noir'] {
+  --display-weight: 500;
+  --title-weight: 500;
+  --card-size: 0.75rem;
+  --card-weight: 500;
+  --card-case: uppercase;
+  --card-tracking: 0.14em;
+  --price-weight: 400;
+  --eyebrow-tracking: 0.3em;
+  --btn-case: uppercase;
+  --btn-tracking: 0.2em;
+  --btn-weight: 500;
+}
+[data-style='noir'][data-heading-case='uppercase'] {
+  --display-tracking: 0.06em;
+  --title-tracking: 0.12em;
+}
+
+@layer components {
+  .store-main {
+    padding-block: var(--store-main-y, 2rem);
+  }
+  .store-section {
+    margin-bottom: var(--store-section, 3rem);
+  }
+
+  /*
+   * Primary call-to-action. --btn-bg/--btn-fg pick the colors (brand by default); the theme's
+   * button style decides whether they fill the button, outline it, or tint it.
+   */
+  .btn {
+    --btn-bg: var(--store-brand, #111827);
+    --btn-fg: var(--store-brand-contrast, #ffffff);
+    --btn-base: var(--store-bg, #ffffff);
+    --btn-ink: color-mix(in oklab, var(--btn-bg) 82%, var(--store-text, #18181b));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1.5px solid var(--btn-bg);
+    border-radius: var(--store-button-radius, 0.375rem);
+    background-color: var(--btn-bg);
+    color: var(--btn-fg);
+    font-weight: var(--btn-weight, 600);
+    letter-spacing: var(--btn-tracking, 0.01em);
+    text-transform: var(--btn-case, none);
+    text-align: center;
+    transition:
+      opacity 150ms,
+      background-color 200ms,
+      border-color 200ms,
+      color 200ms,
+      box-shadow 200ms,
+      translate 200ms;
+  }
+  .btn:hover {
+    opacity: 0.88;
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--store-text);
+    outline-offset: 3px;
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+  .btn-accent {
+    --btn-bg: var(--store-accent, #4f46e5);
+    --btn-fg: var(--store-accent-contrast, #ffffff);
+  }
+  /* On a brand-colored panel: the button takes the panel's text color. */
+  .btn-on-brand {
+    --btn-bg: var(--store-brand-contrast, #ffffff);
+    --btn-fg: var(--store-brand, #111827);
+    --btn-base: var(--store-brand, #111827);
+    --btn-ink: var(--btn-bg);
+  }
+  .btn-on-banner {
+    --btn-bg: var(--store-banner-text, #ffffff);
+    --btn-fg: var(--store-banner-text-contrast, #000000);
+    --btn-base: var(--store-banner-from, #111827);
+    --btn-ink: var(--btn-bg);
+  }
+  .btn-on-image {
+    --btn-bg: #ffffff;
+    --btn-fg: #111111;
+    --btn-base: #111111;
+    --btn-ink: #ffffff;
+  }
+  [data-buttons='outline'] .btn {
+    background-color: transparent;
+    color: var(--btn-ink);
+    border-color: var(--btn-ink);
+  }
+  [data-buttons='outline'] .btn:not(:disabled):hover {
+    opacity: 1;
+    background-color: var(--btn-bg);
+    border-color: var(--btn-bg);
+    color: var(--btn-fg);
+  }
+  /* Soft: a filled, borderless button that floats on a diffuse shadow of its own color. */
+  [data-buttons='soft'] .btn {
+    border-color: transparent;
+    box-shadow: 0 10px 24px -12px color-mix(in oklab, var(--btn-bg) 70%, transparent);
+  }
+  [data-buttons='soft'] .btn:not(:disabled):hover {
+    opacity: 1;
+    translate: 0 -1px;
+    box-shadow: 0 14px 28px -12px color-mix(in oklab, var(--btn-bg) 80%, transparent);
+  }
+  /* Checkout-critical actions stay filled whatever the button style. */
+  [data-buttons='outline'] .btn.btn-strong {
+    background-color: var(--btn-bg);
+    border-color: var(--btn-bg);
+    color: var(--btn-fg);
+  }
+  [data-buttons='outline'] .btn.btn-strong:not(:disabled):hover {
+    opacity: 0.88;
+  }
+  /* A quiet secondary button: outlined in the text color in every style. */
+  .btn.btn-ghost,
+  [data-buttons] .btn.btn-ghost {
+    background-color: transparent;
+    border-color: var(--color-zinc-300);
+    color: var(--store-text);
+    box-shadow: none;
+  }
+  .btn.btn-ghost:not(:disabled):hover,
+  [data-buttons] .btn.btn-ghost:not(:disabled):hover {
+    opacity: 1;
+    translate: none;
+    border-color: var(--store-text);
+    background-color: transparent;
+    color: var(--store-text);
+  }
+
+  /* Small-caps label above editorial headlines. */
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: var(--eyebrow-tracking, 0.18em);
+    text-transform: uppercase;
+  }
+
+  /* Typographic roles (see the tokens on [data-theme]). */
+  .t-display {
+    font-family: var(--store-heading-font, inherit);
+    font-weight: var(--display-weight, 600);
+    letter-spacing: var(--display-tracking, -0.03em);
+    line-height: var(--display-leading, 1.02);
     text-wrap: balance;
   }
-}
+  .t-title {
+    font-family: var(--store-heading-font, inherit);
+    font-weight: var(--title-weight, 600);
+    letter-spacing: var(--title-tracking, -0.02em);
+    line-height: 1.12;
+    text-wrap: balance;
+  }
+  .card-title {
+    font-family: var(--card-font, inherit);
+    font-size: var(--card-size, 0.9375rem);
+    font-weight: var(--card-weight, 500);
+    letter-spacing: var(--card-tracking, 0);
+    text-transform: var(--card-case, none);
+    line-height: 1.35;
+  }
+  .card-price {
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .price-now {
+    font-weight: var(--price-weight, 600);
+  }
 
-/* Text inputs share one look across account, cart and checkout forms. */
-@utility field {
-  display: block;
-  width: 100%;
-  border-radius: 0.625rem;
-  border: 1px solid var(--color-zinc-300);
-  background: white;
-  padding: 0.625rem 0.875rem;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  box-shadow: 0 1px 2px 0 rgb(24 24 27 / 0.04);
-  transition:
-    border-color 150ms,
-    box-shadow 150ms;
-  &:hover {
+  /* Form fields shared by account, checkout, contact and password pages. */
+  .field {
+    display: block;
+    width: 100%;
+    min-height: 2.875rem;
+    border: 1px solid var(--color-zinc-300);
+    border-radius: var(--field-radius, 0.375rem);
+    background-color: var(--store-bg, #ffffff);
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+    color: var(--store-text, #18181b);
+    transition:
+      border-color 150ms,
+      box-shadow 150ms;
+  }
+  .field::placeholder {
+    color: var(--color-zinc-400);
+  }
+  .field:hover {
     border-color: var(--color-zinc-400);
   }
-  &:focus {
+  .field:focus {
     outline: none;
-    border-color: var(--color-zinc-900);
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 22%, transparent);
+    border-color: var(--store-text, #18181b);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--store-text, #18181b) 14%, transparent);
   }
-  &[aria-invalid='true'] {
+  .field[aria-invalid='true'] {
     border-color: var(--color-red-600);
   }
+  .field[readonly] {
+    background-color: var(--color-zinc-50);
+    color: var(--color-zinc-600);
+  }
+  select.field {
+    appearance: none;
+    padding-right: 2.5rem;
+    background-image:
+      linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position:
+      calc(100% - 1.15rem) 50%,
+      calc(100% - 0.8rem) 50%;
+    background-size: 0.35rem 0.35rem;
+    background-repeat: no-repeat;
+  }
+  .field-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-zinc-700);
+  }
+
+  /* A raised panel (order summary, sign-in card) that reads on light and dark themes. */
+  .panel {
+    border: 1px solid var(--color-zinc-200);
+    border-radius: var(--radius-xl, 0.75rem);
+    background-color: color-mix(in oklab, var(--store-surface, #f4f4f5) 55%, var(--store-bg, #fff));
+  }
+}
+
+/* Content column shared by header, main and footer. */
+.store-container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--store-page-width, 82rem);
+  padding-inline: 1rem;
+}
+@media (min-width: 640px) {
+  .store-container {
+    padding-inline: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .store-container {
+    padding-inline: 2.5rem;
+  }
+}
+
+/* Section headings: a rule above in editorial, a ruled bar in catalog, centered in classic/noir. */
+.section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+.section-title {
+  font-size: 1.625rem;
+}
+.section-rule {
+  display: none;
+  margin: 0.875rem auto 0;
+  height: 1px;
+  width: 3rem;
+  background-color: var(--store-accent);
+}
+[data-style='catalog'] .section-header {
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-zinc-200);
+  padding-bottom: 0.75rem;
+}
+[data-style='catalog'] .section-title {
+  font-size: 1.25rem;
+}
+[data-style='editorial'] .section-header {
+  border-top: 1px solid var(--store-text);
+  padding-top: 1rem;
+}
+[data-style='bold'] .section-title {
+  font-size: 2rem;
+}
+[data-style='classic'] .section-header,
+[data-style='noir'] .section-header {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+[data-style='classic'] .section-rule,
+[data-style='noir'] .section-rule {
+  display: block;
+}
+[data-style='noir'] .section-title {
+  font-size: 1.375rem;
+}
+@media (min-width: 640px) {
+  .section-header {
+    margin-bottom: 2.25rem;
+  }
+  .section-title {
+    font-size: 2.125rem;
+  }
+  [data-style='catalog'] .section-title {
+    font-size: 1.5rem;
+  }
+  [data-style='bold'] .section-title {
+    font-size: 3rem;
+  }
+  [data-style='editorial'] .section-title {
+    font-size: 2.75rem;
+  }
+  [data-style='noir'] .section-title {
+    font-size: 1.75rem;
+  }
+}
+
+/* Page titles (collection, cart, account, blog and so on). */
+.page-title {
+  font-size: 2rem;
+}
+@media (min-width: 640px) {
+  .page-title {
+    font-size: 2.75rem;
+  }
+  [data-style='editorial'] .page-title {
+    font-size: 3.5rem;
+  }
+  [data-style='catalog'] .page-title,
+  [data-style='noir'] .page-title {
+    font-size: 2.25rem;
+  }
+}
+
+/* Product and collection images: a slow, subtle zoom on hover. */
+.media-zoom {
+  transition:
+    scale 900ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 500ms ease-out;
+}
+@media (hover: hover) {
+  .group:hover .media-zoom {
+    scale: 1.045;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .media-zoom {
+    transition: none;
+  }
+}
+
+/* Copy set over photos gets a soft shadow for legibility. */
+.on-photo {
+  text-shadow: 0 1px 28px rgb(0 0 0 / 0.28);
+}
+
+/* Header, footer and side drawers (src/components/header, footer, cart). */
+html:has(body[data-theme]) {
+  scroll-padding-top: 5rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:has(body[data-theme]) {
+    scroll-behavior: smooth;
+  }
+}
+
+.store-header {
+  background-color: var(--store-bg);
+  border-bottom: 1px solid var(--color-zinc-200);
+}
+.store-header[data-sticky] {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background-color: color-mix(in oklab, var(--store-bg) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(14px);
+  transition: box-shadow 200ms;
+}
+.store-header[data-scrolled] {
+  box-shadow: 0 10px 30px -18px color-mix(in oklab, var(--store-text) 45%, transparent);
+}
+.store-header .header-search {
+  transition:
+    border-color 150ms,
+    background-color 150ms;
+}
+/* Centered headers use a quieter, underlined search field. */
+[data-header='centered'] .store-header .header-search {
+  border-color: transparent;
+  border-bottom-color: var(--color-zinc-300);
+  border-radius: 0;
+  background-color: transparent;
+}
+.store-header .header-search:focus {
+  outline: none;
+  border-color: var(--color-zinc-500);
+  background-color: var(--store-bg);
+}
+
+/* The store name in the header, in the style's voice. */
+.store-logo {
+  font-family: var(--store-heading-font, inherit);
+  font-weight: var(--logo-weight, 700);
+  letter-spacing: var(--logo-tracking, -0.02em);
+  text-transform: var(--logo-case, none);
+}
+[data-style='editorial'],
+[data-style='classic'] {
+  --logo-weight: 500;
+  --logo-tracking: -0.01em;
+}
+[data-style='bold'] {
+  --logo-weight: 800;
+  --logo-case: uppercase;
+  --logo-tracking: -0.01em;
+}
+[data-style='fullbleed'] {
+  --logo-case: uppercase;
+  --logo-tracking: 0.08em;
+}
+[data-style='noir'] {
+  --logo-weight: 500;
+  --logo-case: uppercase;
+  --logo-tracking: 0.22em;
+}
+[data-style='catalog'] {
+  --logo-weight: 800;
+}
+@media (max-width: 767px) {
+  [data-style='noir'] {
+    --logo-tracking: 0.1em;
+  }
+  [data-style='fullbleed'] {
+    --logo-tracking: 0.03em;
+  }
+}
+[data-style='bold'] .store-header .nav-link,
+[data-style='fullbleed'] .store-header .nav-link {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+[data-style='noir'] .store-header .nav-link {
+  letter-spacing: 0.2em;
+}
+
+/* Menu links grow an underline from the left on hover. */
+.nav-link {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  background-size: 0 1px;
+  transition:
+    background-size 250ms,
+    color 150ms;
+}
+.nav-link:hover,
+.nav-link[aria-expanded='true'] {
+  background-size: 100% 1px;
+}
+
+.dropdown-panel {
+  animation: dropdown-in 160ms ease-out;
+}
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+
+/* Side drawers: the overlay fades and the panel slides in; data-state="closing" plays it back. */
+.drawer-overlay {
+  background-color: rgb(0 0 0 / 0.45);
+  animation: drawer-fade 220ms ease-out both;
+}
+.drawer-panel {
+  animation: drawer-slide 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.drawer-left {
+  --drawer-from: -100%;
+}
+.drawer-right {
+  --drawer-from: 100%;
+}
+.drawer-root[data-state='closing'] {
+  pointer-events: none;
+}
+.drawer-root[data-state='closing'] .drawer-overlay {
+  animation: drawer-fade 200ms ease-in reverse both;
+}
+.drawer-root[data-state='closing'] .drawer-panel {
+  animation: drawer-slide-out 200ms ease-in both;
+}
+@keyframes drawer-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes drawer-slide {
+  from {
+    translate: var(--drawer-from) 0;
+  }
+}
+@keyframes drawer-slide-out {
+  to {
+    translate: var(--drawer-from) 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer-overlay,
+  .drawer-panel,
+  .dropdown-panel {
+    animation-duration: 1ms !important;
+  }
+}
+
+/* Quantity steppers type into a bare number field; hide the browser's spin buttons. */
+.qty-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.qty-input::-webkit-inner-spin-button,
+.qty-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.qty-stepper:focus-within {
+  border-color: var(--color-zinc-500);
 }

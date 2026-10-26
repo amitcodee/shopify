@@ -117,5 +117,7 @@ export interface WebhookProductPayload {
   handle: string;
   title?: string;
   status?: string;
+  /** When the product goes (or went) live on the storefront; a future time means scheduled. */
+  publishedAt?: string | null;
   variants?: { id: string; sku: string | null; price: number; inventoryQuantity: number }[];
 }

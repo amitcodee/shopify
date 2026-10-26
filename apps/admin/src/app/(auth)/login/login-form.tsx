@@ -2,13 +2,13 @@
 
 import { useActionState } from 'react';
 import { Field, SubmitButton } from '@/components/form';
-import { Alert } from '@/components/ui';
+import { Alert, inputClass } from '@/components/ui';
 import { loginAction } from '../actions';
 
 export function LoginForm({ next }: { next: string }) {
   const [state, action] = useActionState(loginAction, undefined);
   return (
-    <form action={action} className="mt-6 space-y-4">
+    <form action={action} className="mt-7 space-y-4">
       {state?.error ? <Alert tone="error">{state.error}</Alert> : null}
       <input type="hidden" name="next" value={next} />
       {state?.mfaToken ? (
@@ -17,8 +17,8 @@ export function LoginForm({ next }: { next: string }) {
           <p className="text-sm text-slate-600">
             Enter the 6-digit code from your authenticator app.
           </p>
-          <div className="space-y-1">
-            <label htmlFor="code" className="block text-sm font-medium text-slate-700">
+          <div className="space-y-1.5">
+            <label htmlFor="code" className="block text-[13px] font-medium text-slate-800">
               Authentication code
             </label>
             <input
@@ -30,10 +30,10 @@ export function LoginForm({ next }: { next: string }) {
               maxLength={6}
               required
               autoFocus
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm tracking-widest"
+              className={`${inputClass} w-full py-2 text-center text-base tracking-[0.5em]`}
             />
           </div>
-          <SubmitButton>Verify</SubmitButton>
+          <SubmitButton fullWidth>Verify</SubmitButton>
         </>
       ) : (
         <>
@@ -45,7 +45,7 @@ export function LoginForm({ next }: { next: string }) {
             autoComplete="current-password"
             required
           />
-          <SubmitButton>Sign in</SubmitButton>
+          <SubmitButton fullWidth>Sign in</SubmitButton>
         </>
       )}
     </form>

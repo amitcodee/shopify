@@ -5,12 +5,19 @@ import { StorefrontCatalogService } from './storefront-catalog.service.js';
 import { StorefrontController } from './storefront.controller.js';
 import { StorefrontGuard } from './storefront.guard.js';
 import { StoreResolver } from './store-resolver.js';
+import { ThemePreviewService } from './theme-preview.js';
 import { TlsCheckController } from './tls-check.controller.js';
 
 @Module({
   imports: [OnlineStoreModule],
   controllers: [StorefrontController, TlsCheckController],
-  providers: [StoreResolver, StorefrontGuard, StorefrontCatalogService, CartService],
+  providers: [
+    StoreResolver,
+    StorefrontGuard,
+    StorefrontCatalogService,
+    CartService,
+    ThemePreviewService,
+  ],
   exports: [StoreResolver, StorefrontGuard, CartService, StorefrontCatalogService],
 })
 export class StorefrontModule {}

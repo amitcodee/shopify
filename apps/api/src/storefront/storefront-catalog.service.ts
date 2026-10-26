@@ -13,6 +13,8 @@ import { Prisma, type TenantTx } from '@repo/db';
 import { decryptSecret } from '../common/crypto.js';
 import { ENV, type Env } from '../config/env.js';
 import { TenantDb } from '../database/database.module.js';
+import { imageRenditions } from '../catalog/product-mapper.js';
+import { LIVE_PRODUCT_SQL, liveProductWhere } from '../catalog/product-visibility.js';
 import { OnlineStoreService } from '../online-store/online-store.service.js';
 import { MediaUrls } from '../storage/storage.module.js';
 import { storefrontAccessToken } from './storefront.guard.js';
@@ -28,20 +30,44 @@ interface CardRow {
   available: boolean;
   image_key: string | null;
   image_alt: string | null;
+  image_widths: number[] | null;
+  second_image_key: string | null;
+  second_image_widths: number[] | null;
+  published_at: Date | null;
 }
 
-/** Turns free text into a prefix-matching tsquery: "blue sho" -> "blue:* & sho:*". */
-export function toPrefixTsQuery(input: string): string | null {
+/** Whether the store's New arrival badges app marks a product published at `publishedAt`. */
+function isNewArrival(shop: ShopContext, publishedAt: Date | null): boolean {
+  const badges = shop.apps.productBadges;
+  if (!badges.enabled || !publishedAt) return false;
+  return Date.now() - publishedAt.getTime() <= badges.newDays * 24 * 60 * 60 * 1000;
+}
+
+/** "fabric_weight" -> "Fabric weight" (storefront label of a custom field). */
+export function humanizeKey(key: string): string {
+  const words = key.replace(/_+/g, ' ').trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/**
+ * Splits free text into search words. A plural's trailing "s" is dropped ("shirts" -> "shirt")
+ * so prefix matching also finds the singular; the plural still matches.
+ */
+export function searchWords(input: string): string[] {
   const words = input
     .toLowerCase()
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .match(/[\p{L}\p{N}]+/gu);
-  if (!words || words.length === 0) return null;
-  return words
+  return (words ?? [])
     .slice(0, 8)
-    .map((w) => `${w}:*`)
-    .join(' & ');
+    .map((w) => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w));
+}
+
+/** Turns free text into a prefix-matching tsquery: "blue sho" -> "blue:* & sho:*". */
+export function toPrefixTsQuery(input: string): string | null {
+  const words = searchWords(input);
+  return words.length === 0 ? null : words.map((w) => `${w}:*`).join(' & ');
 }
 
 export function isVariantAvailable(v: {
@@ -72,6 +98,7 @@ export class StorefrontCatalogService {
           contactEmail: shop.contactEmail,
           collections: [],
           theme: shop.theme,
+          apps: shop.apps,
           menus: { main: [], footer: [] },
           policies: [],
           locked: true,
@@ -94,6 +121,7 @@ export class StorefrontCatalogService {
         contactEmail: shop.contactEmail,
         collections,
         theme: shop.theme,
+        apps: shop.apps,
         ...navigation,
         locked: false,
         passwordMessage: '',
@@ -133,7 +161,7 @@ export class StorefrontCatalogService {
       const select = { handle: true, updatedAt: true } as const;
       const [products, collections, pages, policies, posts] = await Promise.all([
         tx.product.findMany({
-          where: { storeId: shop.id, status: 'ACTIVE' },
+          where: { storeId: shop.id, ...liveProductWhere() },
           orderBy: { updatedAt: 'desc' },
           select,
           take: 5000,
@@ -168,10 +196,7 @@ export class StorefrontCatalogService {
 
   async listProducts(shop: ShopContext, query: StorefrontProductQuery): Promise<ProductCardPage> {
     return this.tenantDb.run(shop.id, async (tx) => {
-      const filters: Prisma.Sql[] = [
-        Prisma.sql`p."storeId" = ${shop.id}::uuid`,
-        Prisma.sql`p.status = 'ACTIVE'`,
-      ];
+      const filters: Prisma.Sql[] = [Prisma.sql`p."storeId" = ${shop.id}::uuid`, LIVE_PRODUCT_SQL];
 
       if (query.collection) {
         const collection = await tx.collection.findFirst({
@@ -185,24 +210,39 @@ export class StorefrontCatalogService {
         );
       }
 
+      if (query.inStock) {
+        filters.push(
+          Prisma.sql`EXISTS (SELECT 1 FROM "ProductVariant" sv WHERE sv."productId" = p.id AND (NOT sv."trackInventory" OR sv."allowBackorder" OR sv."inventoryQuantity" > 0))`,
+        );
+      }
+
       const tsQuery = query.q ? toPrefixTsQuery(query.q) : null;
       if (query.q && !tsQuery) {
         return { items: [], page: query.page, pageSize: query.pageSize, total: 0 };
       }
       const document = Prisma.sql`app_product_search_document(p.title, p.description, p.tags)`;
-      if (tsQuery) filters.push(Prisma.sql`${document} @@ to_tsquery('simple', ${tsQuery})`);
+      // Every word must match: as a word prefix anywhere, or inside the title ("coat" finds
+      // "Overcoat"). Words are letters and digits only, so they carry no LIKE wildcards.
+      for (const word of query.q ? searchWords(query.q) : []) {
+        filters.push(
+          Prisma.sql`(${document} @@ to_tsquery('simple', ${`${word}:*`}) OR p.title ILIKE ${`%${word}%`})`,
+        );
+      }
 
       const where = Prisma.join(filters, ' AND ');
       const order = this.orderBy(query.sort, tsQuery, document);
 
       const rows = await tx.$queryRaw<CardRow[]>`
-        SELECT p.id, p.title, p.handle,
+        SELECT p.id, p.title, p.handle, p."publishedAt" AS published_at,
                MIN(v.price)::int AS min_price,
                MAX(v.price)::int AS max_price,
                MAX(v."compareAtPrice")::int AS compare_at,
                BOOL_OR(NOT v."trackInventory" OR v."allowBackorder" OR v."inventoryQuantity" > 0) AS available,
                (SELECT i."storageKey" FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position LIMIT 1) AS image_key,
-               (SELECT i.alt FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position LIMIT 1) AS image_alt
+               (SELECT i.alt FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position LIMIT 1) AS image_alt,
+               (SELECT i."renditionWidths" FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position LIMIT 1) AS image_widths,
+               (SELECT i."storageKey" FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position OFFSET 1 LIMIT 1) AS second_image_key,
+               (SELECT i."renditionWidths" FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position OFFSET 1 LIMIT 1) AS second_image_widths
         FROM "Product" p
         JOIN "ProductVariant" v ON v."productId" = p.id
         WHERE ${where}
@@ -225,11 +265,12 @@ export class StorefrontCatalogService {
   async getProduct(shop: ShopContext, handle: string): Promise<StorefrontProduct> {
     const product = await this.tenantDb.run(shop.id, (tx) =>
       tx.product.findFirst({
-        where: { storeId: shop.id, handle, status: 'ACTIVE' },
+        where: { storeId: shop.id, handle, ...liveProductWhere() },
         include: {
           options: { orderBy: { position: 'asc' } },
           variants: { orderBy: { position: 'asc' } },
           images: { orderBy: { position: 'asc' } },
+          metafields: { where: { showOnStorefront: true }, orderBy: { position: 'asc' } },
         },
       }),
     );
@@ -246,6 +287,7 @@ export class StorefrontCatalogService {
       seoTitle: product.seoTitle,
       seoDescription: product.seoDescription,
       options: product.options.map((o) => ({ name: o.name, values: o.values })),
+      // Field by field: cost, customs data and stock counts stay admin-only.
       variants: product.variants.map((v) => ({
         id: v.id,
         title: v.title,
@@ -254,12 +296,21 @@ export class StorefrontCatalogService {
         compareAtPrice: v.compareAtPrice === null ? null : shopPrice(shop, v.compareAtPrice),
         available: isVariantAvailable(v),
         sku: v.sku,
+        imageId: v.imageId,
       })),
       images: product.images.map((i) => ({
+        id: i.id,
         url: this.media.url(i.storageKey),
         alt: i.alt || product.title,
         width: i.width,
         height: i.height,
+        renditions: imageRenditions(i, this.media),
+      })),
+      specs: product.metafields.map((m) => ({
+        key: m.key,
+        label: humanizeKey(m.key),
+        type: m.type,
+        value: m.value,
       })),
     };
   }
@@ -304,6 +355,20 @@ export class StorefrontCatalogService {
     }
   }
 
+  /**
+   * Newsletter sign-up: records marketing consent on the store's customer for this email,
+   * creating a guest customer when needed. The response never reveals whether one existed.
+   */
+  async subscribe(shop: ShopContext, email: string): Promise<void> {
+    await this.tenantDb.run(shop.id, (tx) =>
+      tx.customer.upsert({
+        where: { storeId_email: { storeId: shop.id, email } },
+        create: { storeId: shop.id, email, acceptsMarketing: true },
+        update: { acceptsMarketing: true },
+      }),
+    );
+  }
+
   private toCard(shop: ShopContext, r: CardRow): ProductCard {
     return {
       id: r.id,
@@ -313,8 +378,23 @@ export class StorefrontCatalogService {
       maxPrice: shopPrice(shop, r.max_price),
       compareAtPrice: r.compare_at === null ? null : shopPrice(shop, r.compare_at),
       available: r.available,
+      publishedAt: r.published_at ? r.published_at.toISOString() : null,
+      isNew: isNewArrival(shop, r.published_at),
       imageUrl: r.image_key ? this.media.url(r.image_key) : null,
       imageAlt: r.image_alt || r.title,
+      secondImageUrl: r.second_image_key ? this.media.url(r.second_image_key) : null,
+      imageRenditions: r.image_key
+        ? imageRenditions(
+            { storageKey: r.image_key, renditionWidths: r.image_widths ?? [] },
+            this.media,
+          )
+        : [],
+      secondImageRenditions: r.second_image_key
+        ? imageRenditions(
+            { storageKey: r.second_image_key, renditionWidths: r.second_image_widths ?? [] },
+            this.media,
+          )
+        : [],
     };
   }
 }

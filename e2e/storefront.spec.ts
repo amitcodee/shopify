@@ -48,6 +48,10 @@ test('shopper browses a store by subdomain, searches, and manages the cart', asy
   await shopper.getByRole('button', { name: 'Add to cart' }).click();
   await expect(shopper.getByText('Added to cart.')).toBeVisible();
   await expect(shopper.getByRole('link', { name: 'Cart (2)' })).toBeVisible();
+  // Adding opens the slide-out cart; close it to keep shopping.
+  await expect(shopper.getByRole('dialog', { name: 'Your cart' })).toBeVisible();
+  await shopper.keyboard.press('Escape');
+  await expect(shopper.getByRole('dialog', { name: 'Your cart' })).toBeHidden();
 
   // Asking for more than stock is refused with a clear message.
   await shopper.getByLabel('Quantity').fill('2');
@@ -79,8 +83,22 @@ test('shopper browses a store by subdomain, searches, and manages the cart', asy
   expect(robots).toContain(`Sitemap: ${storefrontUrl(subdomain, '/sitemap.xml')}`);
 
   // Unknown subdomains show a not-found page; the bare domain shows the platform landing.
-  await shopper.goto(storefrontUrl('no-such-store'));
+  const unknown = await shopper.goto(storefrontUrl('no-such-store'));
+  expect(unknown?.status()).toBe(404);
   await expect(shopper.getByRole('heading', { name: 'Store not found' })).toBeVisible();
-  await shopper.goto('http://localhost:3210/');
-  await expect(shopper.getByRole('heading', { name: 'Start your online store' })).toBeVisible();
+  expect((await shopper.goto(storefrontUrl('no-such-store', '/cart')))?.status()).toBe(404);
+  const landing = await shopper.goto('http://localhost:3210/');
+  expect(landing?.status()).toBe(200);
+  await expect(
+    shopper.getByRole('heading', {
+      level: 1,
+      name: 'Your online store, ready to sell today',
+    }),
+  ).toBeVisible();
+  // Store-only routes and unknown paths are real 404s on the platform site.
+  for (const path of ['/products/anything', '/cart', '/no-such-page']) {
+    expect((await shopper.goto(`http://localhost:3210${path}`))?.status()).toBe(404);
+    await expect(shopper.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+  }
+  expect((await shopper.goto('http://localhost:3210/pricing'))?.status()).toBe(200);
 });

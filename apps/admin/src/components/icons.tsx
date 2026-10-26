@@ -1,143 +1,218 @@
-import type { ReactNode, SVGProps } from 'react';
+import type { ReactNode } from 'react';
 
-/** Small inline icon set (24px grid, 1.7 stroke) so the admin ships no icon dependency. */
+/**
+ * The admin's icon set: 24×24 outline glyphs drawn with `currentColor`. Icons are decorative
+ * (aria-hidden); the text beside them carries the accessible name.
+ */
 const PATHS = {
-  home: (
-    <>
-      <path d="M3.5 10.5 12 4l8.5 6.5" />
-      <path d="M5.5 9v10.5h13V9" />
-      <path d="M10 19.5v-5h4v5" />
-    </>
-  ),
-  orders: (
-    <>
-      <path d="M5 4.5h14l-1 15.5H6L5 4.5Z" />
-      <path d="M9 8.5a3 3 0 0 0 6 0" />
-    </>
-  ),
+  home: <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
+  orders: <path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM9 8h6M9 12h6" />,
   products: (
     <>
-      <path d="M3.5 7.5 12 3.5l8.5 4v9l-8.5 4-8.5-4v-9Z" />
-      <path d="m3.5 7.5 8.5 4 8.5-4M12 11.5v9" />
+      <path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z" />
+      <circle cx="7.5" cy="7.5" r="1.5" />
     </>
   ),
-  inventory: (
-    <>
-      <path d="M4 9.5h16v10H4z" />
-      <path d="M3 5.5h18v4H3zM10 13h4" />
-    </>
-  ),
+  inventory: <path d="m3 7 9-4 9 4v10l-9 4-9-4zm0 0 9 4 9-4m-9 4v10" />,
   collections: (
     <>
-      <rect x="4" y="4" width="7" height="7" rx="1.5" />
-      <rect x="13" y="4" width="7" height="7" rx="1.5" />
-      <rect x="4" y="13" width="7" height="7" rx="1.5" />
-      <rect x="13" y="13" width="7" height="7" rx="1.5" />
+      <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" />
+      <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" />
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" />
     </>
   ),
   customers: (
     <>
-      <circle cx="9" cy="8.5" r="3.5" />
-      <path d="M2.5 19.5c.8-3.3 3.3-5 6.5-5s5.7 1.7 6.5 5" />
-      <path d="M15.5 5.2a3.5 3.5 0 0 1 0 6.6M18 14.8c1.8.7 3 2.3 3.5 4.7" />
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14c1.8.8 3 2.9 3 5.5" />
     </>
   ),
   discounts: (
     <>
-      <path d="M3.5 12.4V4.5a1 1 0 0 1 1-1h7.9l8.6 8.6a1.5 1.5 0 0 1 0 2.1l-6.8 6.8a1.5 1.5 0 0 1-2.1 0l-8.6-8.6Z" />
-      <circle cx="8" cy="8" r="1.4" />
+      <path d="M19 5 5 19" />
+      <circle cx="7" cy="7" r="2.5" />
+      <circle cx="17" cy="17" r="2.5" />
     </>
   ),
-  gift: (
+  giftCards: (
     <>
-      <rect x="3.5" y="8" width="17" height="4" rx="1" />
-      <path d="M5 12v8h14v-8M12 8v12" />
-      <path d="M12 8C10.5 4 6.5 4 7 6.5 7.4 8 12 8 12 8Zm0 0c1.5-4 5.5-4 5-1.5C16.6 8 12 8 12 8Z" />
+      <rect x="3" y="8" width="18" height="13" rx="1.5" />
+      <path d="M3 12.5h18M12 8v13M12 8c-1.5-3-5.5-3.5-5.5-1S9.5 8 12 8c2.5 0 5.5 1.5 5.5-1S13.5 5 12 8" />
     </>
   ),
-  store: (
-    <>
-      <path d="M4 9.5 5.5 4h13L20 9.5" />
-      <path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0" />
-      <path d="M5.5 12v8h13v-8M10 20v-4.5h4V20" />
-    </>
-  ),
+  onlineStore: <path d="M4 9h16l-1.5-5h-13zm1 0v11h14V9m-9 11v-5h4v5" />,
   settings: (
     <>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5" />
+      <path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" />
+      <circle cx="15" cy="6" r="2" />
+      <circle cx="9" cy="12" r="2" />
+      <circle cx="17" cy="18" r="2" />
     </>
   ),
-  plans: (
+  search: (
     <>
-      <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
-      <path d="M3.5 9.5h17M7 14.5h4" />
-    </>
-  ),
-  users: (
-    <>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 20.5c1-4 4-6 8-6s7 2 8 6" />
-    </>
-  ),
-  audit: (
-    <>
-      <path d="M6 3.5h9l4 4v13H6z" />
-      <path d="M14.5 3.5v4.5H19M9 12h6M9 16h6" />
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m20 20-4.4-4.4" />
     </>
   ),
   external: (
+    <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+  ),
+  chevronLeft: <path d="m15 5-7 7 7 7" />,
+  chevronRight: <path d="m9 5 7 7-7 7" />,
+  chevronDown: <path d="m6 9 6 6 6-6" />,
+  selector: <path d="m8 9 4-4 4 4M8 15l4 4 4-4" />,
+  menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+  close: <path d="M6 6l12 12M18 6 6 18" />,
+  plus: <path d="M12 5v14M5 12h14" />,
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  checkCircle: (
     <>
-      <path d="M14 4.5h5.5V10M19.5 4.5 11 13" />
-      <path d="M18 14v5.5H4.5V6H10" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8 12.5 2.8 2.8L16.5 9.5" />
     </>
   ),
-  chevronsUpDown: <path d="m8 9 4-4 4 4M8 15l4 4 4-4" />,
-  logout: (
+  info: (
     <>
-      <path d="M14 4.5H6v15h8" />
-      <path d="M17 8.5 20.5 12 17 15.5M20.5 12H10" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5M12 7.6v.1" />
     </>
   ),
-  shield: <path d="M12 3.5 19.5 6v6c0 4.5-3.2 7.6-7.5 8.5C7.7 19.6 4.5 16.5 4.5 12V6L12 3.5Z" />,
+  warning: <path d="M12 4 2.8 19.5h18.4zM12 10v4.5M12 17.3v.1" />,
+  error: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5v5.5M12 16.3v.1" />
+    </>
+  ),
+  arrowUp: <path d="M12 19V5M6 11l6-6 6 6" />,
+  arrowDown: <path d="M12 5v14M6 13l6 6 6-6" />,
+  arrowRight: <path d="M5 12h14M13 6l6 6-6 6" />,
+  download: <path d="M12 4v11M7 10.5 12 15.5l5-5M5 20h14" />,
+  upload: <path d="M12 16V5M7 9.5 12 4.5l5 5M5 20h14" />,
+  logout: <path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10" />,
+  image: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="10" r="1.8" />
+      <path d="m3.5 18 5.5-5.5 4 4 2.5-2.5 5 5" />
+    </>
+  ),
+  truck: (
+    <>
+      <path d="M3 6h11v10H3zM14 9h4l3 3.5V16h-7" />
+      <circle cx="7" cy="17.5" r="1.8" />
+      <circle cx="17.5" cy="17.5" r="1.8" />
+    </>
+  ),
+  card: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 10h18M7 15h3" />
+    </>
+  ),
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3c2.5 2.7 3.6 5.7 3.6 9S14.5 18.3 12 21c-2.5-2.7-3.6-5.7-3.6-9S9.5 5.7 12 3" />
+    </>
+  ),
+  palette: (
+    <>
+      <path d="M12 3a9 9 0 1 0 0 18c1.3 0 2-.8 2-1.8 0-1.4-1.2-1.6-1.2-2.8 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z" />
+      <circle cx="7.5" cy="11" r="1.2" />
+      <circle cx="10.5" cy="7.2" r="1.2" />
+      <circle cx="15.5" cy="7.8" r="1.2" />
+    </>
+  ),
+  alert: <path d="M12 4 2.8 19.5h18.4zM12 10v4.5M12 17.3v.1" />,
+  inbox: (
+    <path d="M3 13.5 5.5 5h13l2.5 8.5V19a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1zm0 0h5l1.5 2.5h5L16 13.5h5" />
+  ),
+  grip: (
+    <>
+      <circle cx="9" cy="6" r="1" />
+      <circle cx="15" cy="6" r="1" />
+      <circle cx="9" cy="12" r="1" />
+      <circle cx="15" cy="12" r="1" />
+      <circle cx="9" cy="18" r="1" />
+      <circle cx="15" cy="18" r="1" />
+    </>
+  ),
+  trash: (
+    <path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 12a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1l1-12M9 7V4h6v3" />
+  ),
+  pencil: <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16zM13.5 6.5l4 4" />,
+  link: (
+    <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
+  sparkles: (
+    <path d="M12 3.5 13.6 8 18 9.5 13.6 11 12 15.5 10.4 11 6 9.5 10.4 8zM18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" />
+  ),
+  eye: (
+    <>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  eyeOff: (
+    <path d="M4 4l16 16M10.6 6.1A9.6 9.6 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-2.6 3.3M6.6 7.6C4 9.4 2.5 12 2.5 12S6 18.5 12 18.5c1.6 0 3-.4 4.3-1.1M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+  ),
+  desktop: (
+    <>
+      <rect x="3" y="4" width="18" height="12" rx="1.5" />
+      <path d="M8 20h8M12 16v4" />
+    </>
+  ),
+  mobile: (
+    <>
+      <rect x="7" y="2.5" width="10" height="19" rx="2" />
+      <path d="M11 18.5h2" />
+    </>
+  ),
+  undo: <path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />,
+  redo: <path d="m15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />,
+  apps: (
+    <>
+      <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" />
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" />
+      <path d="M17.25 3v7.5M13.5 6.75H21" />
+    </>
+  ),
+  layers: <path d="m12 3 9 5-9 5-9-5zm-9 9 9 5 9-5m-18 4 9 5 9-5" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof PATHS;
 
-export function Icon({ name, ...props }: { name: IconName } & SVGProps<SVGSVGElement>) {
+export function Icon({
+  name,
+  className = 'h-4 w-4',
+  strokeWidth = 1.75,
+}: {
+  name: IconName;
+  className?: string;
+  strokeWidth?: number;
+}) {
   return (
     <svg
+      aria-hidden
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.7}
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
-      {...props}
+      className={`shrink-0 ${className}`}
     >
       {PATHS[name]}
     </svg>
-  );
-}
-
-/** The platform mark: a rounded tile with a stylised bag. */
-export function LogoMark({ className = 'size-8' }: { className?: string }) {
-  return (
-    <span
-      aria-hidden
-      className={`grid shrink-0 place-items-center rounded-[10px] bg-gradient-to-br from-brand-400 to-brand-700 text-white shadow-sm shadow-brand-900/30 inset-ring inset-ring-white/20 ${className}`}
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        className="size-[55%]"
-      >
-        <path d="M5.5 8h13l-1 12h-11l-1-12Z" strokeLinejoin="round" />
-        <path d="M9 10.5V7a3 3 0 0 1 6 0v3.5" strokeLinecap="round" />
-      </svg>
-    </span>
   );
 }

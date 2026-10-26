@@ -7,8 +7,16 @@ export function contentSecurityPolicy(options: {
   nonce: string;
   dev: boolean;
   imageOrigins: string[];
-  frameAncestors?: "'none'" | "'self'";
+  /** Other origins forms may submit to (e.g. the storefront's sign-up form to the admin). */
+  formActionOrigins?: string[];
+  /** Who may frame this page: nobody (default), same origin, or listed origins. */
+  frameAncestors?: "'none'" | "'self'" | string[];
+  /** Origins this page may frame (e.g. the theme editor's storefront preview). */
+  frameOrigins?: string[];
 }): string {
+  const ancestors = Array.isArray(options.frameAncestors)
+    ? options.frameAncestors.join(' ') || "'none'"
+    : (options.frameAncestors ?? "'none'");
   const directives = [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${options.nonce}' 'strict-dynamic'${options.dev ? " 'unsafe-eval'" : ''}`,
@@ -16,8 +24,9 @@ export function contentSecurityPolicy(options: {
     `img-src 'self' data: blob: ${options.imageOrigins.join(' ')}`.trim(),
     `font-src 'self' data:`,
     `connect-src 'self'${options.dev ? ' ws: wss:' : ''}`,
-    `frame-ancestors ${options.frameAncestors ?? "'none'"}`,
-    `form-action 'self'`,
+    `frame-src 'self' ${(options.frameOrigins ?? []).join(' ')}`.trim(),
+    `frame-ancestors ${ancestors}`,
+    `form-action 'self' ${(options.formActionOrigins ?? []).join(' ')}`.trim(),
     `base-uri 'self'`,
     `object-src 'none'`,
   ];

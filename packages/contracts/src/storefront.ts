@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { storeAppsSchema } from './apps.js';
 import { themeInputSchema } from './settings.js';
 import { policyKindSchema, resolvedLinkSchema } from './online-store.js';
 
@@ -27,6 +28,8 @@ export const shopSchema = z.object({
   contactEmail: z.string(),
   collections: z.array(z.object({ title: z.string(), handle: z.string() })),
   theme: themeInputSchema,
+  /** Installed storefront apps (see apps.ts). */
+  apps: storeAppsSchema,
   /** Header and footer navigation, already resolved to hrefs. */
   menus: z.object({ main: z.array(resolvedLinkSchema), footer: z.array(resolvedLinkSchema) }),
   /** Policies the store has published (linked from the footer and checkout). */
@@ -49,8 +52,17 @@ export const productCardSchema = z.object({
   maxPrice: z.number().int(),
   compareAtPrice: z.number().int().nullable(),
   available: z.boolean(),
+  /** When the product went live (for “New” badges). */
+  publishedAt: z.iso.datetime().nullable().optional(),
+  /** Shown with a “New” badge (the store's New arrival badges app). */
+  isNew: z.boolean().optional(),
   imageUrl: z.string().nullable(),
   imageAlt: z.string(),
+  /** Second product image, shown on hover. */
+  secondImageUrl: z.string().nullable(),
+  /** Smaller WebP copies of the first image for `srcset` (narrowest first). */
+  imageRenditions: z.array(z.object({ width: z.number().int(), url: z.string() })).optional(),
+  secondImageRenditions: z.array(z.object({ width: z.number().int(), url: z.string() })).optional(),
 });
 export type ProductCard = z.infer<typeof productCardSchema>;
 
@@ -61,6 +73,8 @@ export const storefrontProductQuerySchema = z.strictObject({
   q: z.string().trim().max(100).optional(),
   collection: z.string().max(120).optional(),
   sort: productSortSchema.default('newest'),
+  /** Only products with at least one variant that can be bought. */
+  inStock: z.stringbool().optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
   pageSize: z.coerce.number().int().min(1).max(48).default(24),
 });
@@ -82,6 +96,8 @@ export const storefrontVariantSchema = z.object({
   compareAtPrice: z.number().int().nullable(),
   available: z.boolean(),
   sku: z.string().nullable(),
+  /** Image to show when this variant is selected (an `images[].id`), or null. */
+  imageId: z.uuid().nullable().optional(),
 });
 export type StorefrontVariant = z.infer<typeof storefrontVariantSchema>;
 
@@ -99,8 +115,28 @@ export const storefrontProductSchema = z.object({
   options: z.array(z.object({ name: z.string(), values: z.array(z.string()) })),
   variants: z.array(storefrontVariantSchema),
   images: z.array(
-    z.object({ url: z.string(), alt: z.string(), width: z.number(), height: z.number() }),
+    z.object({
+      id: z.uuid().optional(),
+      url: z.string(),
+      alt: z.string(),
+      width: z.number(),
+      height: z.number(),
+      /** Smaller WebP copies for `srcset` (narrowest first). */
+      renditions: z.array(z.object({ width: z.number().int(), url: z.string() })).optional(),
+    }),
   ),
+  /** Custom fields the merchant chose to show, in their order (e.g. "Material: Cotton"). */
+  specs: z
+    .array(
+      z.object({
+        key: z.string(),
+        /** Humanized key: "fabric_weight" -> "Fabric weight". */
+        label: z.string(),
+        type: z.string(),
+        value: z.string(),
+      }),
+    )
+    .optional(),
 });
 export type StorefrontProduct = z.infer<typeof storefrontProductSchema>;
 
@@ -127,6 +163,8 @@ export const cartLineSchema = z.object({
   productHandle: z.string(),
   variantTitle: z.string(),
   imageUrl: z.string().nullable(),
+  /** Smaller WebP copies of the line image for `srcset` (narrowest first). */
+  imageRenditions: z.array(z.object({ width: z.number().int(), url: z.string() })).optional(),
   unitPrice: z.number().int(),
   quantity: z.number().int(),
   lineTotal: z.number().int(),
@@ -164,3 +202,9 @@ export type StorefrontSitemap = z.infer<typeof storefrontSitemapSchema>;
 export const storefrontPasswordInputSchema = z.strictObject({
   password: z.string().min(1).max(100),
 });
+
+/** Storefront newsletter sign-up: subscribes the email to the store's marketing list. */
+export const newsletterSignupSchema = z.strictObject({
+  email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
+});
+export type NewsletterSignup = z.infer<typeof newsletterSignupSchema>;

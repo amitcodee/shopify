@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { parseTheme, type Theme } from '@repo/contracts';
+import { parseStoreApps, parseTheme, type StoreApps, type Theme } from '@repo/contracts';
 import type { PrismaClient } from '@repo/db';
 import { ENV, type Env } from '../config/env.js';
 import { APP_DB } from '../database/database.module.js';
@@ -18,6 +18,8 @@ export interface ShopContext {
   currency: string;
   contactEmail: string;
   theme: Theme;
+  /** Installed storefront apps. */
+  apps: StoreApps;
   /** Set while the store is password protected; changes whenever the password changes. */
   accessVersion: string | null;
   passwordMessage: string;
@@ -125,6 +127,7 @@ export class StoreResolver {
     storefrontPasswordChangedAt: Date | null;
     passwordMessage: string;
     presentmentCurrencies: unknown;
+    apps: unknown;
   }): ShopContext {
     return {
       id: store.id,
@@ -133,6 +136,7 @@ export class StoreResolver {
       currency: store.currency,
       contactEmail: store.contactEmail,
       theme: parseTheme(store.themePreset, store.themeSettings),
+      apps: parseStoreApps(store.apps),
       accessVersion:
         store.passwordProtected && store.storefrontPasswordChangedAt
           ? store.storefrontPasswordChangedAt.toISOString()

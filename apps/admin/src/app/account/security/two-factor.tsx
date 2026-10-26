@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import { SubmitButton } from '@/components/form';
-import { Alert } from '@/components/ui';
+import { Alert, inputClass } from '@/components/ui';
 import { disableTwoFactorAction, enableTwoFactorAction, startTwoFactorAction } from './actions';
 
 function CodeInput({ id }: { id: string }) {
@@ -19,7 +19,7 @@ function CodeInput({ id }: { id: string }) {
         pattern="\d{6}"
         maxLength={6}
         required
-        className="block w-40 rounded-md border border-slate-300 px-3 py-2 text-sm tracking-widest"
+        className={`${inputClass} w-40 py-2 tracking-widest`}
       />
     </div>
   );
@@ -62,7 +62,7 @@ export function TwoFactor({ enabled }: { enabled: boolean }) {
               <code className="mt-1 block break-all rounded bg-slate-100 px-2 py-1 font-mono">
                 {setup.secret}
               </code>
-              <a href={setup.otpauthUrl} className="text-xs text-brand-600 underline">
+              <a href={setup.otpauthUrl} className="text-xs text-indigo-600 underline">
                 Open in an authenticator app on this device
               </a>
             </li>

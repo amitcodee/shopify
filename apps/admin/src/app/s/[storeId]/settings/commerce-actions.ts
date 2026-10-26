@@ -1,8 +1,8 @@
 'use server';
 
-import { parseMoney } from '@repo/contracts';
+import { applyThemeTemplate, findThemeTemplate, parseMoney, type Theme } from '@repo/contracts';
 import { revalidatePath } from 'next/cache';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { type FormState, optionalString, requiredString, toFormState } from '@/lib/form';
 
 const settingsPath = (storeId: string, tab: string) => `/s/${storeId}/settings/${tab}`;
@@ -25,26 +25,94 @@ export async function saveThemeAction(
   _: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  const text = (key: string) => requiredString(formData, key);
+  const checked = (key: string) => formData.get(key) === 'on';
   try {
     await api(`/admin/stores/${storeId}/theme`, {
       method: 'PUT',
       body: {
-        preset: requiredString(formData, 'preset'),
+        preset: text('preset'),
         settings: {
-          brandColor: requiredString(formData, 'brandColor'),
-          accentColor: requiredString(formData, 'accentColor'),
-          font: requiredString(formData, 'font'),
-          heroTitle: requiredString(formData, 'heroTitle'),
-          heroSubtitle: requiredString(formData, 'heroSubtitle'),
-          announcement: requiredString(formData, 'announcement'),
+          template: text('template'),
+          brandColor: text('brandColor'),
+          accentColor: text('accentColor'),
+          backgroundColor: text('backgroundColor'),
+          surfaceColor: text('surfaceColor'),
+          textColor: text('textColor'),
+          font: text('font'),
+          headingFont: text('headingFont'),
+          headingCase: text('headingCase'),
+          radius: text('radius'),
+          buttonStyle: text('buttonStyle'),
+          headerStyle: text('headerStyle'),
+          cardStyle: text('cardStyle'),
+          imageRatio: text('imageRatio'),
+          gridColumns: integer(formData, 'gridColumns') ?? 4,
+          density: text('density'),
+          footerStyle: text('footerStyle'),
+          showCollections: checked('showCollections'),
+          heroTitle: text('heroTitle'),
+          heroSubtitle: text('heroSubtitle'),
+          heroCta: text('heroCta'),
+          featuredTitle: text('featuredTitle'),
+          announcement: text('announcement'),
+          stickyHeader: checked('stickyHeader'),
+          cartStyle: text('cartStyle'),
+          showTrustBar: checked('showTrustBar'),
+          trustItem1: text('trustItem1'),
+          trustItem2: text('trustItem2'),
+          trustItem3: text('trustItem3'),
+          showCollectionCarousels: checked('showCollectionCarousels'),
+          showBrandStory: checked('showBrandStory'),
+          brandStoryTitle: text('brandStoryTitle'),
+          brandStoryText: text('brandStoryText'),
+          showBlogPosts: checked('showBlogPosts'),
+          showNewsletter: checked('showNewsletter'),
+          newsletterTitle: text('newsletterTitle'),
+          newsletterText: text('newsletterText'),
+          socialInstagram: text('socialInstagram'),
+          socialFacebook: text('socialFacebook'),
+          socialX: text('socialX'),
+          socialYoutube: text('socialYoutube'),
+          socialTiktok: text('socialTiktok'),
         },
       },
     });
   } catch (error) {
-    return toFormState(error, formData);
+    const state = toFormState(error, formData);
+    // The API reports `settings.brandColor`; the form's fields are named `brandColor`.
+    const fieldErrors = Object.fromEntries(
+      Object.entries(state?.fieldErrors ?? {}).map(([key, message]) => [
+        key.replace(/^settings\./, ''),
+        message,
+      ]),
+    );
+    return { ...state, fieldErrors };
   }
   revalidatePath(settingsPath(storeId, 'theme'));
   return { success: 'Theme saved. Your storefront updates within 30 seconds.' };
+}
+
+/** Applies a catalog template's design, keeping the merchant's own homepage text. */
+export async function applyTemplateAction(
+  storeId: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const template = findThemeTemplate(requiredString(formData, 'templateId'));
+  if (!template) return { error: 'That template no longer exists.' };
+  try {
+    const current = await api<Theme>(`/admin/stores/${storeId}/theme`);
+    await api(`/admin/stores/${storeId}/theme`, {
+      method: 'PUT',
+      body: applyThemeTemplate(template, current.settings),
+    });
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+    return { error: `“${template.name}” could not be applied: ${error.message}` };
+  }
+  revalidatePath(settingsPath(storeId, 'theme'));
+  return { success: `“${template.name}” applied. Your storefront updates within 30 seconds.` };
 }
 
 // Domains

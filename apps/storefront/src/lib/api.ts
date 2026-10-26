@@ -4,6 +4,8 @@ import {
   type ProblemDetails,
   STOREFRONT_HEADERS,
   storefrontSignaturePayload,
+  THEME_DRAFT_HEADER,
+  THEME_DRAFT_PARAM,
 } from '@repo/contracts';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -70,6 +72,10 @@ export async function sf<T>(path: string, options: SfOptions = {}): Promise<T> {
   const currency = jar.get(CURRENCY_COOKIE)?.value;
   if (currency && /^[A-Z]{3}$/.test(currency))
     requestHeaders.set(STOREFRONT_HEADERS.currency, currency);
+  // The theme editor's preview frame: a signed token (from src/proxy.ts or its partitioned
+  // cookie) that makes the API serve the unpublished draft.
+  const draft = incoming.get(THEME_DRAFT_HEADER) ?? jar.get(THEME_DRAFT_PARAM)?.value;
+  if (draft && draft.length <= 400) requestHeaders.set(THEME_DRAFT_HEADER, draft);
   const forwardedFor = incoming.get('x-forwarded-for');
   if (forwardedFor) requestHeaders.set('x-forwarded-for', forwardedFor);
 

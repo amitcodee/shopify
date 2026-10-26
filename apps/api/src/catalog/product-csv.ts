@@ -23,17 +23,21 @@ import {
 import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { TenantDb } from '../database/database.module.js';
+import { MediaUrls } from '../storage/storage.module.js';
 import { PlanLimitError } from '../platform/plans.service.js';
 import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
 import { ProductsService } from './products.service.js';
 
 const MAX_CSV_BYTES = 4 * 1024 * 1024;
+/** Image Src downloads per import (each can take seconds); later ones are reported, not fetched. */
+const MAX_CSV_IMAGE_IMPORTS = 100;
 
 @Injectable()
 export class ProductCsvService {
   constructor(
     private readonly tenantDb: TenantDb,
     private readonly products: ProductsService,
+    private readonly media: MediaUrls,
   ) {}
 
   async export(store: StoreContext): Promise<{ filename: string; csv: string }> {
@@ -44,6 +48,7 @@ export class ProductCsvService {
         include: {
           options: { orderBy: { position: 'asc' } },
           variants: { orderBy: { position: 'asc' } },
+          images: { orderBy: { position: 'asc' } },
         },
       }),
     );
@@ -60,6 +65,7 @@ export class ProductCsvService {
           seoTitle: p.seoTitle,
           seoDescription: p.seoDescription,
           options: p.options.map((o) => ({ name: o.name, values: o.values })),
+          images: p.images.map((i) => ({ url: this.media.url(i.storageKey), alt: i.alt })),
           variants: p.variants.map((v) => ({
             options: v.options,
             sku: v.sku,
@@ -72,6 +78,9 @@ export class ProductCsvService {
             trackInventory: v.trackInventory,
             allowBackorder: v.allowBackorder,
             inventoryQuantity: v.inventoryQuantity,
+            costPerItem: v.costPerItem,
+            countryOfOrigin: v.countryOfOrigin,
+            hsCode: v.hsCode,
           })),
         })),
         store.currency,
@@ -83,6 +92,8 @@ export class ProductCsvService {
   /**
    * Creates the products in a CSV. Each product is validated and created on its own (same rules,
    * quotas and audit trail as the product editor); existing handles are skipped, never changed.
+   * Image Src URLs are then downloaded through the same SSRF-guarded importer as the editor's
+   * "add from URL"; an image that fails is reported but keeps its product.
    */
   async import(
     store: StoreContext,
@@ -98,6 +109,7 @@ export class ProductCsvService {
     }
     const parsed = csvRowsToProducts(rows, store.currency);
     const result: ProductCsvImportResult = { created: [], skipped: [], errors: parsed.errors };
+    let imageBudget = MAX_CSV_IMAGE_IMPORTS;
     const badRows = new Set(parsed.errors.map((e) => e.row));
     const existing = new Set(
       (
@@ -133,6 +145,31 @@ export class ProductCsvService {
       try {
         const created = await this.products.create(store, input.data, actor, meta);
         result.created.push({ handle: created.handle, title: created.title });
+        for (const image of product.images) {
+          if (imageBudget-- <= 0) {
+            result.errors.push({
+              row: product.row,
+              message: `${product.handle}: image ${image.url} skipped (at most ${MAX_CSV_IMAGE_IMPORTS} images per import).`,
+            });
+            continue;
+          }
+          try {
+            await this.products.importImage(
+              store,
+              created.id,
+              { url: image.url, alt: image.alt.slice(0, 512) },
+              actor,
+              meta,
+              'csv',
+            );
+          } catch (error) {
+            if (!(error instanceof HttpException)) throw error;
+            result.errors.push({
+              row: product.row,
+              message: `${product.handle}: image ${image.url.slice(0, 200)} was not imported. ${error.message}`,
+            });
+          }
+        }
       } catch (error) {
         if (error instanceof PlanLimitError) {
           result.errors.push({ row: product.row, message: `${error.message} Import stopped.` });

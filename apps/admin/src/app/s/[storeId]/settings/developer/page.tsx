@@ -105,7 +105,7 @@ export default async function DeveloperSettings({
         {hooks.length > 0 ? (
           <div className="space-y-4">
             {hooks.map((h, i) => (
-              <div key={h.id} className="rounded-md border border-slate-200 p-3">
+              <div key={h.id} className="rounded-lg border border-slate-200 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span className="font-mono text-sm">{h.topic}</span>{' '}

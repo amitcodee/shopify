@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Dispute as DisputeDto } from '@repo/contracts';
+import { type Dispute as DisputeDto, minorToDecimalString, toCsv } from '@repo/contracts';
 import type {
   cancelOrderInputSchema,
   fulfillInputSchema,
@@ -72,6 +72,21 @@ export function toListItem(
   };
 }
 
+function listWhere(storeId: string, query: OrderListQuery): Prisma.OrderWhereInput {
+  const where: Prisma.OrderWhereInput = { storeId };
+  if (query.status) where.status = query.status;
+  if (query.financialStatus) where.financialStatus = query.financialStatus;
+  if (query.fulfillmentStatus) where.fulfillmentStatus = query.fulfillmentStatus;
+  if (query.q) {
+    const asNumber = Number(query.q.replace(/^#/, ''));
+    where.OR = [
+      { email: { contains: query.q, mode: 'insensitive' } },
+      ...(Number.isInteger(asNumber) && asNumber > 0 ? [{ number: asNumber }] : []),
+    ];
+  }
+  return where;
+}
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -85,17 +100,7 @@ export class OrdersService {
   ) {}
 
   async list(storeId: string, query: OrderListQuery): Promise<Paginated<OrderListItem>> {
-    const where: Prisma.OrderWhereInput = { storeId };
-    if (query.status) where.status = query.status;
-    if (query.financialStatus) where.financialStatus = query.financialStatus;
-    if (query.fulfillmentStatus) where.fulfillmentStatus = query.fulfillmentStatus;
-    if (query.q) {
-      const asNumber = Number(query.q.replace(/^#/, ''));
-      where.OR = [
-        { email: { contains: query.q, mode: 'insensitive' } },
-        ...(Number.isInteger(asNumber) && asNumber > 0 ? [{ number: asNumber }] : []),
-      ];
-    }
+    const where = listWhere(storeId, query);
     const [rows, total] = await this.tenantDb.run(storeId, (tx) =>
       Promise.all([
         tx.order.findMany({
@@ -109,6 +114,86 @@ export class OrdersService {
       ]),
     );
     return { items: rows.map(toListItem), page: query.page, pageSize: query.pageSize, total };
+  }
+
+  /**
+   * Orders matching the list filters as CSV, one row per order (bookkeeping, spreadsheets).
+   * Audited: it exports customer names and addresses.
+   */
+  exportCsv(storeId: string, query: OrderListQuery, actor: AuthUser, meta: RequestMeta) {
+    return this.tenantDb.run(storeId, async (tx) => {
+      const orders = await tx.order.findMany({
+        where: listWhere(storeId, query),
+        include: { lines: true, customer: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 50_000,
+      });
+      await this.audit.record(tx, {
+        storeId,
+        actorUserId: actor.id,
+        action: 'orders.exported',
+        entityType: 'order',
+        entityId: null,
+        data: { count: orders.length },
+        meta,
+      });
+      const money = (amount: number, currency: string) => minorToDecimalString(amount, currency);
+      return {
+        filename: `orders-${new Date().toISOString().slice(0, 10)}.csv`,
+        csv: toCsv([
+          [
+            'Order',
+            'Date',
+            'Email',
+            'Customer',
+            'Status',
+            'Payment status',
+            'Fulfillment status',
+            'Currency',
+            'Subtotal',
+            'Discount',
+            'Shipping',
+            'Tax',
+            'Total',
+            'Discount code',
+            'Items',
+            'Ship to',
+            'City',
+            'Postal code',
+            'Country',
+          ],
+          ...orders.map((o) => {
+            const a = o.shippingAddress as Partial<Record<string, string>>;
+            return [
+              `#${o.number}`,
+              o.createdAt.toISOString(),
+              o.email,
+              o.customer?.name ?? a.name ?? '',
+              o.status,
+              o.financialStatus,
+              o.fulfillmentStatus,
+              o.currency,
+              money(o.subtotal, o.currency),
+              money(o.discountTotal, o.currency),
+              money(o.shippingTotal, o.currency),
+              money(o.taxTotal, o.currency),
+              money(o.total, o.currency),
+              o.discountCode ?? '',
+              o.lines
+                .map(
+                  (l) =>
+                    `${l.quantity} × ${l.title}${l.variantTitle !== 'Default' ? ` (${l.variantTitle})` : ''}`,
+                )
+                .join('; '),
+              a.name ?? '',
+              a.city ?? '',
+              a.postalCode ?? '',
+              a.country ?? '',
+            ];
+          }),
+        ]),
+      };
+    });
   }
 
   async get(storeId: string, orderId: string): Promise<OrderDetail> {

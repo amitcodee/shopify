@@ -13,7 +13,7 @@ export default async function ImportProductsPage({
   return (
     <>
       <PageHeader title="Import products" back={{ href: base, label: 'Products' }} />
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card
           title="Upload CSV"
           description="New products are created; products whose handle already exists are skipped, never changed."
@@ -28,7 +28,7 @@ export default async function ImportProductsPage({
             </p>
             <p>
               Tip:{' '}
-              <a href={`${base}/export`} className="text-brand-600 hover:underline" download>
+              <a href={`${base}/export`} className="text-indigo-600 hover:underline" download>
                 export your products
               </a>{' '}
               to get a file in the right format.

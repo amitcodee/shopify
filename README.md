@@ -47,7 +47,7 @@ After a reboot: `.\scripts\dev-db.ps1 start`.
 | `pnpm e2e`          | Builds, then Playwright browser tests (admin, storefront, checkout, accounts, settings, platform, 2FA, CSP)             |
 | `pnpm format:check` | Prettier                                                                                                                |
 
-Current status: **106 API tests, 19 contract tests, 11 browser tests — all passing.**
+Current status: **199 API tests, 39 contract tests, 30 browser tests — all passing.**
 
 ## Documentation
 

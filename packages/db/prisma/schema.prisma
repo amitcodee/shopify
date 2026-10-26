@@ -104,6 +104,11 @@ model Store {
   /// Storefront theme preset and validated settings (see @repo/contracts themeSettingsSchema).
   themePreset                 String      @default("minimal")
   themeSettings               Json        @default("{}")
+  /// Unpublished theme being edited in the theme editor ({preset, settings}); null when none.
+  themeDraft                  Json?
+  themeDraftUpdatedAt         DateTime?
+  /// Installed storefront apps and their settings (see @repo/contracts storeAppsSchema).
+  apps                        Json        @default("{}")
   /// Hours after an unpaid checkout before the shopper gets a recovery email; null turns it off.
   abandonedCheckoutDelayHours Int?        @default(10)
   /// Pre-launch password page: visitors need the password (encrypted, viewable by staff).
@@ -220,6 +225,7 @@ model Product {
   isGiftCard     Boolean       @default(false)
   seoTitle       String?
   seoDescription String?
+  /// Visible on the storefront from this time on (when ACTIVE); a future time means scheduled.
   publishedAt    DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -229,6 +235,7 @@ model Product {
   variants    ProductVariant[]
   images      ProductImage[]
   collections CollectionProduct[]
+  metafields  ProductMetafield[]
 
   @@unique([storeId, id])
   @@unique([storeId, handle])
@@ -262,8 +269,16 @@ model ProductVariant {
   /// Minor units in the store currency.
   price             Int
   compareAtPrice    Int?
+  /// What the merchant pays per unit (minor units). Admin only: never sent to shoppers.
+  costPerItem       Int?
   weightGrams       Int      @default(0)
   requiresShipping  Boolean  @default(true)
+  /// ISO 3166-1 alpha-2 country of origin (customs).
+  countryOfOrigin   String?
+  /// Harmonized System code, 6-10 digits (customs).
+  hsCode            String?
+  /// Image shown when this variant is selected (an image of the same product).
+  imageId           String?  @db.Uuid
   taxable           Boolean  @default(true)
   trackInventory    Boolean  @default(true)
   allowBackorder    Boolean  @default(false)
@@ -273,6 +288,8 @@ model ProductVariant {
   updatedAt         DateTime @updatedAt
 
   product     Product               @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
+  /// The migration adds a trigger requiring the image to belong to the same product.
+  image       ProductImage?         @relation(fields: [imageId], references: [id], onDelete: SetNull)
   adjustments InventoryAdjustment[]
   cartLines   CartLine[]
   levels      InventoryLevel[]
@@ -280,6 +297,7 @@ model ProductVariant {
   @@unique([storeId, id])
   @@unique([storeId, sku])
   @@index([productId])
+  @@index([imageId])
 }
 
 enum InventoryReason {
@@ -316,19 +334,54 @@ model InventoryAdjustment {
 }
 
 model ProductImage {
-  id         String   @id @default(uuid(7)) @db.Uuid
-  storeId    String   @db.Uuid
-  productId  String   @db.Uuid
-  storageKey String
-  alt        String   @default("")
-  width      Int
-  height     Int
-  position   Int      @default(0)
-  createdAt  DateTime @default(now())
+  id              String   @id @default(uuid(7)) @db.Uuid
+  storeId         String   @db.Uuid
+  productId       String   @db.Uuid
+  /// Full-size WebP; renditions live next to it as `<key without .webp>_w<width>.webp`.
+  storageKey      String
+  alt             String   @default("")
+  width           Int
+  height          Int
+  /// Widths of the stored WebP renditions (empty for images uploaded before renditions).
+  renditionWidths Int[]    @default([])
+  position        Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  product  Product          @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
+  variants ProductVariant[]
+
+  @@index([productId, position])
+}
+
+enum MetafieldType {
+  single_line_text
+  multi_line_text
+  number_integer
+  number_decimal
+  boolean
+  url
+  date
+}
+
+/// Typed custom field on a product (Shopify "metafield"). The value is stored as a validated string.
+model ProductMetafield {
+  id               String        @id @default(uuid(7)) @db.Uuid
+  storeId          String        @db.Uuid
+  productId        String        @db.Uuid
+  namespace        String        @default("custom")
+  key              String
+  type             MetafieldType
+  value            String
+  /// Shown to shoppers as a product spec.
+  showOnStorefront Boolean       @default(false)
+  position         Int           @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   product Product @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
 
-  @@index([productId, position])
+  @@unique([productId, namespace, key])
+  @@index([storeId, productId])
 }
 
 model Collection {

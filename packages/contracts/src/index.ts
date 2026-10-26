@@ -28,3 +28,6 @@ export * from './developer.js';
 export * from './segments.js';
 export * from './returns.js';
 export * from './currencies.js';
+export * from './themes.js';
+export * from './apps.js';
+export * from './theme-editor.js';

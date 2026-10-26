@@ -1,21 +1,19 @@
-import { Global, Inject, Injectable, Module } from '@nestjs/common';
+import { Global, Injectable, Inject, Module } from '@nestjs/common';
 import { ENV, type Env } from '../config/env.js';
 import { ImageProcessor } from './image-processor.js';
 import { MediaController } from './media.controller.js';
 import { LocalDiskStorage, OBJECT_STORAGE } from './storage.js';
 
-/** Builds public URLs for stored objects (served by MediaController, or a CDN in front of it). */
 @Injectable()
 export class MediaUrls {
   private readonly base: string;
 
   constructor(@Inject(ENV) env: Env) {
-    const origin = env.PUBLIC_API_URL ?? `http://localhost:${env.API_PORT}`;
-    this.base = `${origin.replace(/\/$/, '')}/api/v1/media/`;
+    this.base = env.PUBLIC_API_URL ?? `http://localhost:${env.API_PORT}`;
   }
 
   url(key: string): string {
-    return this.base + key;
+    return `${this.base}/api/v1/media/${key}`;
   }
 }
 

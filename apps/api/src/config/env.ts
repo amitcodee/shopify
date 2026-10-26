@@ -39,6 +39,7 @@ const SECRET_KEYS = [
   'RAZORPAY_KEY_SECRET',
   'RAZORPAY_WEBHOOK_SECRET',
   'POSTMARK_SERVER_TOKEN',
+  'ANTHROPIC_API_KEY',
 ] as const;
 
 const envSchema = z
@@ -64,6 +65,10 @@ const envSchema = z
     /** Email adapter: the local mailbox folder (development) or Postmark (production). */
     EMAIL_TRANSPORT: z.enum(['mailbox', 'postmark']).default('mailbox'),
     POSTMARK_SERVER_TOKEN: z.string().min(10).optional(),
+    /** Enables the theme editor's AI design assistant (Claude). Unset: the assistant is off. */
+    ANTHROPIC_API_KEY: z.string().min(10).optional(),
+    /** Claude model for the AI design assistant. */
+    THEME_AI_MODEL: z.string().min(1).default('claude-opus-5-5'),
     /** Shared HMAC secret proving storefront requests come from our storefront server. */
     STOREFRONT_SHARED_SECRET: z.string().min(32),
     /** Root domain whose subdomains are stores (port ignored), e.g. "localhost" or "myshops.example". */

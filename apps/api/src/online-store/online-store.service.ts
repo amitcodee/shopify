@@ -20,6 +20,7 @@ import { AuditService } from '../audit/audit.service.js';
 import { uniqueHandle } from '../catalog/handles.js';
 import type { AuthUser, RequestMeta } from '../common/request.js';
 import { TenantDb } from '../database/database.module.js';
+import { liveProductWhere } from '../catalog/product-visibility.js';
 
 type PageInput = z.output<typeof pageInputSchema>;
 
@@ -302,7 +303,7 @@ export class OnlineStoreService {
         select: { handle: true },
       }),
       tx.product.findMany({
-        where: { storeId, status: 'ACTIVE', handle: { in: handles('product') } },
+        where: { storeId, ...liveProductWhere(), handle: { in: handles('product') } },
         select: { handle: true },
       }),
       tx.page.findMany({

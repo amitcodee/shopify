@@ -4,7 +4,7 @@ import { api } from '@/lib/api';
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-slate-200/90 bg-white p-5 shadow-card">
       <p className="text-sm text-slate-500">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-slate-900">{value}</p>
     </div>
@@ -26,7 +26,7 @@ export default async function PlatformOverviewPage() {
         <Stat label="Paid orders (30d)" value={o.paidOrders30d} />
         <Stat label="Stores accepting payments" value={o.storesAcceptingPayments} />
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card title="Stores by plan">
           <Table head={['Plan', 'Stores']}>
             {o.planBreakdown.map((p) => (

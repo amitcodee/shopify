@@ -21,7 +21,7 @@ export function CurrencySwitcher({
         name="code"
         defaultValue={current}
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
-        className="h-10 cursor-pointer rounded-full border-0 bg-zinc-100 pr-7 pl-3 text-sm font-medium text-zinc-700 hover:bg-zinc-200"
+        className="rounded-md border border-zinc-300 px-2 py-1 text-sm"
       >
         {currencies.map((c) => (
           <option key={c} value={c}>

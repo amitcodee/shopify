@@ -3,6 +3,8 @@ import { ENV, type Env } from '../config/env.js';
 import { PaymentsModule } from '../payments/payments.module.js';
 import { StorefrontModule } from '../storefront/storefront.module.js';
 import { CommerceSettingsController, CommerceSettingsService } from './commerce-settings.js';
+import { AnthropicThemeAiClient, THEME_AI_CLIENT } from './theme-ai.js';
+import { ThemeEditorController, ThemeEditorService } from './theme-editor.js';
 import {
   DNS_VERIFIER,
   DomainsController,
@@ -13,10 +15,19 @@ import {
 
 @Module({
   imports: [StorefrontModule, PaymentsModule],
-  controllers: [DomainsController, CommerceSettingsController],
+  controllers: [DomainsController, CommerceSettingsController, ThemeEditorController],
   providers: [
     DomainsService,
     CommerceSettingsService,
+    ThemeEditorService,
+    {
+      provide: THEME_AI_CLIENT,
+      inject: [ENV],
+      useFactory: (env: Env) =>
+        env.ANTHROPIC_API_KEY
+          ? new AnthropicThemeAiClient(env.ANTHROPIC_API_KEY, env.THEME_AI_MODEL)
+          : null,
+    },
     {
       provide: DNS_VERIFIER,
       inject: [ENV],

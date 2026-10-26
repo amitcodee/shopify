@@ -36,20 +36,38 @@ export default async function DiscountsPage({ params }: { params: Promise<{ stor
   return (
     <>
       <PageHeader title="Discounts" description="Codes customers enter at checkout." />
-      <div className="space-y-6">
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         {discounts.length === 0 ? (
-          <EmptyState title="No discount codes yet" />
+          <EmptyState
+            icon="discounts"
+            title="No discount codes yet"
+            description="Create a code to offer a percentage, a fixed amount or free shipping."
+          />
         ) : (
-          <Table head={['Code', 'Discount', 'Conditions', 'Used', 'Status', '']}>
+          <Table
+            head={[
+              'Code',
+              'Discount',
+              'Conditions',
+              'Used',
+              'Status',
+              <span key="a" className="sr-only">
+                Actions
+              </span>,
+            ]}
+            numeric={[3]}
+          >
             {discounts.map((d) => {
               const s = status(d);
               return (
                 <tr key={d.id}>
                   <Td>
-                    <span className="font-mono font-medium">{d.code}</span>
+                    <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[13px] font-medium text-slate-900 ring-1 ring-slate-200 ring-inset">
+                      {d.code}
+                    </span>
                   </Td>
-                  <Td>{describe(d)}</Td>
-                  <Td>
+                  <Td className="whitespace-nowrap">{describe(d)}</Td>
+                  <Td className="text-slate-500">
                     {[
                       d.minSubtotal !== null ? `Min ${money(d.minSubtotal)}` : null,
                       d.endsAt ? `Ends ${formatDateTime(d.endsAt)}` : null,
@@ -57,7 +75,7 @@ export default async function DiscountsPage({ params }: { params: Promise<{ stor
                       .filter(Boolean)
                       .join(' · ') || '—'}
                   </Td>
-                  <Td>
+                  <Td numeric>
                     {d.usedCount}
                     {d.usageLimit !== null ? ` / ${d.usageLimit}` : ''}
                   </Td>
@@ -65,14 +83,20 @@ export default async function DiscountsPage({ params }: { params: Promise<{ stor
                     <Badge tone={s.tone}>{s.label}</Badge>
                   </Td>
                   <Td>
-                    <div className="flex gap-3">
+                    <div className="flex justify-end gap-3">
                       <form action={toggleDiscountAction.bind(null, storeId, d.id, !d.active)}>
-                        <button type="submit" className="text-xs text-brand-600 hover:underline">
+                        <button
+                          type="submit"
+                          className="text-xs font-medium text-indigo-600 hover:underline"
+                        >
                           {d.active ? 'Deactivate' : 'Activate'}
                         </button>
                       </form>
                       <form action={deleteDiscountAction.bind(null, storeId, d.id)}>
-                        <button type="submit" className="text-xs text-red-600 hover:underline">
+                        <button
+                          type="submit"
+                          className="text-xs font-medium text-red-600 hover:underline"
+                        >
                           Delete
                         </button>
                       </form>
@@ -83,10 +107,10 @@ export default async function DiscountsPage({ params }: { params: Promise<{ stor
             })}
           </Table>
         )}
-        <Card title="Create discount code">
+        <Card title="Create discount code" description="Customers enter it at checkout.">
           <ActionForm
             action={createDiscountAction.bind(null, storeId, store.currency)}
-            className="grid max-w-2xl gap-3 sm:grid-cols-3"
+            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1"
           >
             <Field name="code" label="Code" required placeholder="SUMMER20" />
             <SelectField
@@ -108,10 +132,9 @@ export default async function DiscountsPage({ params }: { params: Promise<{ stor
             />
             <Field name="minSubtotal" label="Minimum order (optional)" inputMode="decimal" />
             <Field name="usageLimit" label="Usage limit (optional)" inputMode="numeric" />
-            <div />
             <Field name="startsAt" label="Starts (optional)" type="datetime-local" />
             <Field name="endsAt" label="Ends (optional)" type="datetime-local" />
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-2 xl:col-span-1">
               <SubmitButton>Create discount</SubmitButton>
             </div>
           </ActionForm>

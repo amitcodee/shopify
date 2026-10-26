@@ -8,6 +8,7 @@ import { OutboxService } from '../outbox/outbox.service.js';
 import { abandonedCheckoutEmail } from '../outbox/templates.js';
 import { CartService } from '../storefront/cart.service.js';
 import type { ShopContext } from '../storefront/store-resolver.js';
+import { liveProductWhere } from '../catalog/product-visibility.js';
 
 /** Unpaid orders cancelled by the payment timeout are the store's abandoned checkouts. */
 const ABANDONED = { status: 'CANCELLED', cancelReason: 'payment_timeout' } as const;
@@ -85,7 +86,7 @@ export class CheckoutRecoveryService {
       where: {
         storeId,
         id: { in: order.lines.flatMap((l) => (l.variantId ? [l.variantId] : [])) },
-        product: { status: 'ACTIVE' },
+        product: liveProductWhere(),
       },
     });
     if (later || buyable === 0) return false;

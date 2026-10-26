@@ -7,7 +7,7 @@ import { changePlanAction } from './actions';
 
 function Meter({ label, used, max }: { label: string; used: number; max: number | null }) {
   const pct = max === null ? 0 : Math.min(100, Math.round((used / Math.max(1, max)) * 100));
-  const tone = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-brand-600';
+  const tone = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-indigo-600';
   return (
     <div>
       <div className="flex justify-between text-sm">
@@ -87,13 +87,13 @@ export default async function BillingPage({
         </div>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {billing.plans.map((p) => {
           const current = p.id === billing.plan.id;
           return (
             <section
               key={p.id}
-              className={`rounded-lg border bg-white p-5 shadow-sm ${current ? 'border-brand-500 ring-1 ring-brand-500' : 'border-slate-200'}`}
+              className={`rounded-xl border bg-white p-5 shadow-card ${current ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-200'}`}
             >
               <h3 className="text-lg font-semibold">{p.name}</h3>
               <p className="mt-1 text-2xl font-bold">

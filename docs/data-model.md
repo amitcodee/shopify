@@ -27,21 +27,22 @@ Conventions: UUID primary keys; `store_id uuid not null` on every tenant table (
 
 ## Catalog & inventory
 
-| Entity                        | Key fields                                                                                                                                                      |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Product`                     | store_id, id, title, handle (unique per store), description_html (sanitized), status (`DRAFT`/`ACTIVE`/`ARCHIVED`), vendor, product_type, tags[], search_vector |
-| `ProductOption`               | store_id, product_id, name, position, values[]                                                                                                                  |
-| `ProductVariant`              | store_id, id, product_id, sku (unique per store), option_values json, price, compare_at_price, weight_grams, requires_shipping, taxable                         |
-| `ProductImage` / `MediaAsset` | store_id, product_id?, storage_key, alt, width, height, position                                                                                                |
-| `Collection`                  | store_id, id, title, handle, type (`MANUAL`/`SMART`), rules json                                                                                                |
-| `CollectionProduct`           | store_id, collection_id, product_id, position                                                                                                                   |
-| `Page`                        | store_id, id, title, handle (unique per store), body (plain text), published                                                                                    |
-| `BlogPost`                    | store_id, id, title, handle (unique per store), excerpt, body (plain text), author, tags[], published_at (null = draft, future = scheduled)                     |
-| `StorePolicy`                 | store_id + kind (`REFUND`/`PRIVACY`/`TERMS`/`SHIPPING`/`CONTACT`), body                                                                                         |
-| `Menu`                        | store_id + handle (`main`/`footer`), items json (typed links validated on write and read)                                                                       |
-| `Location`                    | store_id, id, name, address, priority (lower ships first), is_default (one per store), active                                                                   |
-| `InventoryLevel`              | store_id, variant_id, location_id, available — `ProductVariant.inventory_quantity` is their sum, kept in step in the same transaction                           |
-| `InventoryAdjustment`         | store_id, variant_id, location_id, delta, quantity_after (variant total), reason (incl. `TRANSFER`), reference, actor — append-only                             |
+| Entity                        | Key fields                                                                                                                                                                                                                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Product`                     | store_id, id, title, handle (unique per store), description_html (sanitized), status (`DRAFT`/`ACTIVE`/`ARCHIVED`), vendor, product_type, tags[], search_vector, published_at (live from then when ACTIVE; future = scheduled)                                                                                |
+| `ProductOption`               | store_id, product_id, name, position, values[]                                                                                                                                                                                                                                                                |
+| `ProductVariant`              | store_id, id, product_id, sku (unique per store), option_values json, price, compare_at_price, cost_per_item (admin only), weight_grams, requires_shipping, country_of_origin (ISO alpha-2), hs_code (6-10 digits), taxable, image_id (image of the same product; set null when it is deleted)                |
+| `ProductImage` / `MediaAsset` | store_id, product_id?, storage_key (full-size WebP ≤ 5000 px), rendition_widths[] (WebP copies at `<key>_w<width>.webp`), alt (≤ 512), width, height, position — at most 50 per product                                                                                                                       |
+| `ProductMetafield`            | store_id, product_id, namespace (default `custom`), key (`[a-z0-9_]{1,40}`, unique per product + namespace), type (`single_line_text`/`multi_line_text`/`number_integer`/`number_decimal`/`boolean`/`url`/`date`), value (validated, canonical string), show_on_storefront, position — at most 30 per product |
+| `Collection`                  | store_id, id, title, handle, type (`MANUAL`/`SMART`), rules json                                                                                                                                                                                                                                              |
+| `CollectionProduct`           | store_id, collection_id, product_id, position                                                                                                                                                                                                                                                                 |
+| `Page`                        | store_id, id, title, handle (unique per store), body (plain text), published                                                                                                                                                                                                                                  |
+| `BlogPost`                    | store_id, id, title, handle (unique per store), excerpt, body (plain text), author, tags[], published_at (null = draft, future = scheduled)                                                                                                                                                                   |
+| `StorePolicy`                 | store_id + kind (`REFUND`/`PRIVACY`/`TERMS`/`SHIPPING`/`CONTACT`), body                                                                                                                                                                                                                                       |
+| `Menu`                        | store_id + handle (`main`/`footer`), items json (typed links validated on write and read)                                                                                                                                                                                                                     |
+| `Location`                    | store_id, id, name, address, priority (lower ships first), is_default (one per store), active                                                                                                                                                                                                                 |
+| `InventoryLevel`              | store_id, variant_id, location_id, available — `ProductVariant.inventory_quantity` is their sum, kept in step in the same transaction                                                                                                                                                                         |
+| `InventoryAdjustment`         | store_id, variant_id, location_id, delta, quantity_after (variant total), reason (incl. `TRANSFER`), reference, actor — append-only                                                                                                                                                                           |
 
 ## Customers, carts, orders
 
@@ -67,14 +68,14 @@ Conventions: UUID primary keys; `store_id uuid not null` on every tenant table (
 
 ## Commerce configuration
 
-| Entity                          | Key fields                                                                                                                                                |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ShippingZone` / `ShippingRate` | store_id, countries[], rate type (flat/weight/price), amount                                                                                              |
-| `TaxRate`                       | store_id, country, region, rate_bps, applies_to_shipping                                                                                                  |
-| `DiscountCode`                  | store_id, code (unique per store, case-insensitive), type (percent/fixed/free_shipping), value, min_subtotal, usage_limit, used_count, starts_at, ends_at |
-| `Theme` / `ThemeSetting`        | store_id, theme template, settings json (validated schema, no raw script)                                                                                 |
-| `NotificationTemplate`          | store_id, event, subject, body (safe templating)                                                                                                          |
-| `WebhookEvent` (inbound)        | provider, event_id (unique), processed_at — idempotent webhook processing                                                                                 |
-| `OutboxEvent`                   | reliable job/email dispatch                                                                                                                               |
+| Entity                          | Key fields                                                                                                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ShippingZone` / `ShippingRate` | store_id, countries[], rate type (flat/weight/price), amount                                                                                                  |
+| `TaxRate`                       | store_id, country, region, rate_bps, applies_to_shipping                                                                                                      |
+| `DiscountCode`                  | store_id, code (unique per store, case-insensitive), type (percent/fixed/free_shipping), value, min_subtotal, usage_limit, used_count, starts_at, ends_at     |
+| `Theme` / `ThemeSetting`        | `Store.themePreset` + `Store.themeSettings` json: layout, colors, fonts and style enums from one of 108 templates (ADR 0010; validated schema, no raw script) |
+| `NotificationTemplate`          | store_id, event, subject, body (safe templating)                                                                                                              |
+| `WebhookEvent` (inbound)        | provider, event_id (unique), processed_at — idempotent webhook processing                                                                                     |
+| `OutboxEvent`                   | reliable job/email dispatch                                                                                                                                   |
 
 The Prisma schema and migrations land in `packages/db` in Phase 2, starting with the Platform + Store & access groups only.

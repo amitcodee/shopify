@@ -14,9 +14,13 @@ export default async function SettingsLayout({
   const store = await getStore(storeId);
   return (
     <>
-      <PageHeader title="Settings" />
-      <SettingsTabs storeId={store.id} permissions={store.permissions} />
-      <div className="mt-6">{children}</div>
+      <PageHeader title="Settings" description="Manage how your store looks, sells and ships." />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[208px_minmax(0,1fr)] lg:gap-8">
+        <div className="lg:sticky lg:top-20 lg:self-start">
+          <SettingsTabs storeId={store.id} permissions={store.permissions} />
+        </div>
+        <div className="min-w-0">{children}</div>
+      </div>
     </>
   );
 }

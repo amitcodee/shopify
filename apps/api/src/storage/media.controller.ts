@@ -1,13 +1,11 @@
-import { Controller, Get, Inject, NotFoundException, Param, Res } from '@nestjs/common';
+import { Controller, Get, Inject, NotFoundException, Req, Res } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { Public } from '../auth/auth.guard.js';
-import { isValidKey, OBJECT_STORAGE, type ObjectStorage } from './storage.js';
+import { MEDIA_KEY, OBJECT_STORAGE, type ObjectStorage } from './storage.js';
 
-const CONTENT_TYPES: Record<string, string> = { webp: 'image/webp' };
-
-/** Serves stored media. Keys are unguessable UUIDs, so media is public like a CDN. */
+/** Serves uploaded media from the storage adapter (a CDN would front this in production). */
 @ApiExcludeController()
 @Public()
 @SkipThrottle()
@@ -16,22 +14,22 @@ export class MediaController {
   constructor(@Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage) {}
 
   @Get('*key')
-  async get(@Param('key') segments: string[] | string, @Res() res: Response): Promise<void> {
-    const key = Array.isArray(segments) ? segments.join('/') : segments;
-    const type = CONTENT_TYPES[key.slice(key.lastIndexOf('.') + 1)];
-    if (!type || !isValidKey(key)) throw new NotFoundException();
+  async get(@Req() req: Request, @Res() res: Response): Promise<void> {
+    const raw = (req.params as Record<string, string | string[]>).key;
+    const key = Array.isArray(raw) ? raw.join('/') : (raw ?? '');
+    if (!MEDIA_KEY.test(key)) throw new NotFoundException();
+
     const data = await this.storage.get(key);
     if (!data) throw new NotFoundException();
+
     res
       .status(200)
+      .type('image/webp')
       .set({
-        'Content-Type': type,
-        'Content-Length': String(data.length),
         'Cache-Control': 'public, max-age=31536000, immutable',
         'Content-Security-Policy': "default-src 'none'; sandbox",
-        // Storefronts on other origins embed these images.
         'Cross-Origin-Resource-Policy': 'cross-origin',
       })
-      .end(data);
+      .send(data);
   }
 }

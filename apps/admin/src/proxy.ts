@@ -9,9 +9,15 @@ const PUBLIC_PATHS = [
   '/forgot-password',
   '/reset-password',
   '/unlock',
+  // Static sample photos (template thumbnails, sign-in brand panel).
+  '/media',
 ];
 const isProd = process.env.NODE_ENV === 'production';
 const mediaOrigin = new URL(process.env.API_URL ?? 'http://localhost:4000').origin;
+/** Storefronts the theme editor frames for its live preview: any store subdomain. */
+const storefrontFrames = (process.env.STOREFRONT_PUBLIC_URL ?? 'http://{subdomain}.localhost:3200')
+  .replace('{subdomain}', '*')
+  .replace(/\/+$/, '');
 
 function secure(response: NextResponse, csp: string): NextResponse {
   response.headers.set('Content-Security-Policy', csp);
@@ -29,7 +35,12 @@ function secure(response: NextResponse, csp: string): NextResponse {
  */
 export function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
-  const csp = contentSecurityPolicy({ nonce, dev: !isProd, imageOrigins: [mediaOrigin] });
+  const csp = contentSecurityPolicy({
+    nonce,
+    dev: !isProd,
+    imageOrigins: [mediaOrigin],
+    frameOrigins: [storefrontFrames],
+  });
   const { pathname, search } = request.nextUrl;
 
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

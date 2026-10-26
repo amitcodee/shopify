@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { UnderlineTabs } from '@/components/ui';
 
 const TABS = [
   { label: 'Pages', path: '/pages' },
@@ -11,35 +11,20 @@ const TABS = [
   { label: 'Password', path: '/password' },
 ];
 
-const tabClass = (active: boolean) =>
-  `-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
-    active
-      ? 'border-brand-600 text-brand-700'
-      : 'border-transparent text-slate-600 hover:text-slate-900'
-  }`;
-
 export function OnlineStoreTabs({ storeId }: { storeId: string }) {
   const pathname = usePathname();
   const base = `/s/${storeId}/online-store`;
   return (
-    <nav aria-label="Online store" className="flex flex-wrap gap-1 border-b border-slate-200">
-      {TABS.map((tab) => {
-        const href = `${base}${tab.path}`;
-        const active = pathname.startsWith(href);
-        return (
-          <Link
-            key={tab.path}
-            href={href}
-            aria-current={active ? 'page' : undefined}
-            className={tabClass(active)}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-      <Link href={`/s/${storeId}/settings/theme`} className={tabClass(false)}>
-        Theme
-      </Link>
-    </nav>
+    <UnderlineTabs
+      label="Online store"
+      items={[
+        ...TABS.map((tab) => ({
+          label: tab.label,
+          href: `${base}${tab.path}`,
+          active: pathname.startsWith(`${base}${tab.path}`),
+        })),
+        { label: 'Theme', href: `/s/${storeId}/settings/theme`, active: false },
+      ]}
+    />
   );
 }

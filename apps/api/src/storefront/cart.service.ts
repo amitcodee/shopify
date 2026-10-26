@@ -3,6 +3,8 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import type { Cart as CartDto, CreatedCart } from '@repo/contracts';
 import type { Prisma, TenantTx } from '@repo/db';
 import { hashToken } from '../auth/session.service.js';
+import { imageRenditions } from '../catalog/product-mapper.js';
+import { isProductLive, liveProductWhere } from '../catalog/product-visibility.js';
 import { TenantDb } from '../database/database.module.js';
 import { MediaUrls } from '../storage/storage.module.js';
 import { isVariantAvailable } from './storefront-catalog.service.js';
@@ -16,12 +18,18 @@ const cartInclude = {
     include: {
       variant: {
         include: {
+          image: { select: { storageKey: true, renditionWidths: true } },
           product: {
             select: {
               title: true,
               handle: true,
               status: true,
-              images: { orderBy: { position: 'asc' }, take: 1, select: { storageKey: true } },
+              publishedAt: true,
+              images: {
+                orderBy: { position: 'asc' },
+                take: 1,
+                select: { storageKey: true, renditionWidths: true },
+              },
             },
           },
         },
@@ -84,7 +92,7 @@ export class CartService {
         where: {
           storeId: shop.id,
           id: { in: lines.map((l) => l.variantId) },
-          product: { status: 'ACTIVE' },
+          product: liveProductWhere(),
         },
       });
       const byId = new Map(variants.map((v) => [v.id, v]));
@@ -120,7 +128,7 @@ export class CartService {
     return this.tenantDb.run(shop.id, async (tx) => {
       const cart = await this.load(tx, shop, token);
       const variant = await tx.productVariant.findFirst({
-        where: { id: variantId, storeId: shop.id, product: { status: 'ACTIVE' } },
+        where: { id: variantId, storeId: shop.id, product: liveProductWhere() },
       });
       if (!variant) throw new NotFoundException('This product is not available.');
 
@@ -174,7 +182,8 @@ export class CartService {
     const lines = cart.lines.map((line) => {
       const { variant } = line;
       const max = maxOrderable(variant);
-      const active = variant.product.status === 'ACTIVE';
+      // Unpublished, archived and still-scheduled products cannot be bought.
+      const active = isProductLive(variant.product);
       const available =
         active && isVariantAvailable(variant) && (max === null || line.quantity <= max);
       if (!active) {
@@ -186,7 +195,7 @@ export class CartService {
             : `Only ${max} of ${variant.product.title} (${variant.title}) left in stock.`,
         );
       }
-      const image = variant.product.images[0];
+      const image = variant.image ?? variant.product.images[0];
       return {
         id: line.id,
         variantId: variant.id,
@@ -194,6 +203,7 @@ export class CartService {
         productHandle: variant.product.handle,
         variantTitle: variant.title,
         imageUrl: image ? this.media.url(image.storageKey) : null,
+        imageRenditions: image ? imageRenditions(image, this.media) : [],
         unitPrice: shopPrice(shop, variant.price),
         quantity: line.quantity,
         lineTotal: shopPrice(shop, variant.price) * line.quantity,

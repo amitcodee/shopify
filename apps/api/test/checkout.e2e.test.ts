@@ -130,6 +130,39 @@ describe('Checkout, payments & orders', () => {
     });
   });
 
+  it('exports orders matching the list filters as CSV and audits the export', async () => {
+    const { sf, variantId, merchant, admin } = await setup();
+    const paid = await checkout(sf, await cartWith(sf, variantId, 2)).expect(201);
+    await pay(sf, paid.body.paymentUrl);
+    await checkout(sf, await cartWith(sf, variantId, 1)).expect(201);
+
+    const all = await ctx.http().get(`${admin}/orders/export`).set(merchant.auth).expect(200);
+    expect(all.body.filename).toMatch(/^orders-\d{4}-\d{2}-\d{2}\.csv$/);
+    const rows = (all.body.csv as string).trim().split(/\r?\n/);
+    expect(rows[0]).toContain('Order,Date,Email,Customer,Status,Payment status');
+    expect(rows).toHaveLength(3);
+    expect(rows[2]).toContain('#1001');
+    expect(rows[2]).toContain('PAID');
+    expect(rows[2]).toContain('50.00');
+    expect(rows[2]).toContain('2 × Lamp');
+    expect(rows[2]).toContain('GB');
+
+    const unpaid = await ctx
+      .http()
+      .get(`${admin}/orders/export`)
+      .query({ status: 'PENDING_PAYMENT' })
+      .set(merchant.auth)
+      .expect(200);
+    const unpaidRows = (unpaid.body.csv as string).trim().split(/\r?\n/);
+    expect(unpaidRows).toHaveLength(2);
+    expect(unpaidRows[1]).toContain('#1002');
+
+    const audit = await ctx.platform.auditLog.findMany({
+      where: { storeId: merchant.store.id, action: 'orders.exported' },
+    });
+    expect(audit).toHaveLength(2);
+  });
+
   it('is idempotent: retrying with the same key returns the same payment and no new order', async () => {
     const { sf, variantId, merchant } = await setup();
     const cart = await cartWith(sf, variantId, 1);

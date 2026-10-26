@@ -28,8 +28,8 @@ export function TextField({
 }) {
   const id = useId();
   return (
-    <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium text-zinc-800">
+    <div>
+      <label htmlFor={id} className="field-label">
         {label}
       </label>
       <input
@@ -40,9 +40,9 @@ export function TextField({
         className="field"
         {...rest}
       />
-      {hint && !error ? <p className="text-xs text-zinc-500">{hint}</p> : null}
+      {hint && !error ? <p className="mt-1.5 text-xs text-zinc-500">{hint}</p> : null}
       {error ? (
-        <p id={`${id}-err`} className="text-xs text-red-700">
+        <p id={`${id}-err`} className="mt-1.5 text-xs text-red-700">
           {error}
         </p>
       ) : null}
@@ -62,7 +62,7 @@ export function Submit({
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-full bg-brand shadow-sm px-4 py-3 text-sm font-semibold text-brand-contrast hover:opacity-90 disabled:opacity-50"
+      className="btn btn-strong min-h-12 w-full px-4 py-3 text-sm"
     >
       {pending ? pendingLabel : children}
     </button>
@@ -74,7 +74,7 @@ export function Notice({ result }: { result: FormResult }) {
     return (
       <p
         role="alert"
-        className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+        className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800"
       >
         {result.error}
       </p>
@@ -84,7 +84,7 @@ export function Notice({ result }: { result: FormResult }) {
     return (
       <p
         role="status"
-        className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+        className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
       >
         {result.success}
       </p>

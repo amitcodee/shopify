@@ -11,7 +11,7 @@ export default async function ResetPasswordPage({
   const { token } = await params;
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+      <h1 className="text-[22px] leading-8 font-semibold tracking-tight text-slate-900">
         Choose a new password
       </h1>
       <p className="mt-1 text-sm text-slate-500">
@@ -27,7 +27,7 @@ export default async function ResetPasswordPage({
           minLength={12}
           hint="At least 12 characters."
         />
-        <SubmitButton>Save new password</SubmitButton>
+        <SubmitButton fullWidth>Save new password</SubmitButton>
       </ActionForm>
     </>
   );

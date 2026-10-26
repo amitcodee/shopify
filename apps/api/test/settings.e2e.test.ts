@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { findThemeTemplate, themeSettingsSchema } from '@repo/contracts';
 import {
   createTestApp,
   merchantWithStore,
@@ -422,7 +423,17 @@ describe('Shipping, taxes, discounts, domains, themes', () => {
       },
     };
     await ctx.http().put(`${admin}/theme`).set(merchant.auth).send(theme).expect(200);
-    expect((await sf('get', '/shop').expect(200)).body.theme).toEqual(theme);
+    // Fields left out take their defaults.
+    expect((await sf('get', '/shop').expect(200)).body.theme).toEqual({
+      preset: 'bold',
+      settings: { ...themeSettingsSchema.parse({}), ...theme.settings },
+    });
+
+    // Every catalog template is a theme the API accepts as-is.
+    const template = findThemeTemplate('books-noir')!;
+    const applied = { preset: template.preset, settings: template.settings };
+    await ctx.http().put(`${admin}/theme`).set(merchant.auth).send(applied).expect(200);
+    expect((await sf('get', '/shop').expect(200)).body.theme).toEqual(applied);
 
     for (const bad of [
       { ...theme, preset: 'custom' },
@@ -431,6 +442,8 @@ describe('Shipping, taxes, discounts, domains, themes', () => {
         settings: { ...theme.settings, brandColor: 'red; background:url(javascript:alert(1))' },
       },
       { ...theme, settings: { ...theme.settings, css: 'body{}' } },
+      { ...theme, settings: { ...theme.settings, gridColumns: 9 } },
+      { ...theme, settings: { ...theme.settings, cardStyle: 'url(x)' } },
     ]) {
       await ctx.http().put(`${admin}/theme`).set(merchant.auth).send(bad).expect(400);
     }

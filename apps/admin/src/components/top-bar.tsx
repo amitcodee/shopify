@@ -1,76 +1,72 @@
 import type { CurrentUser } from '@repo/contracts';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { logoutAction } from '@/app/(auth)/actions';
-import { Icon, LogoMark } from './icons';
+import { Icon } from './icons';
+import { LogoMark } from './logo';
 
-function initials(user: CurrentUser): string {
-  const source = user.name?.trim() || user.email;
-  const parts = source.split(/[\s@._-]+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
+function initialOf(text: string): string {
+  return (text.trim()[0] ?? '?').toUpperCase();
 }
 
-/**
- * Sticky top bar. Inside the app shell the sidebar already shows the logo, so `inShell` hides
- * it on desktop and keeps it on small screens where the sidebar is not rendered.
- */
-export function TopBar({
-  user,
-  children,
-  inShell = false,
-}: {
-  user: CurrentUser;
-  children?: React.ReactNode;
-  inShell?: boolean;
-}) {
+/** The signed-in user: avatar + email (to account security), plus Sign out. */
+export function UserMenu({ user }: { user: CurrentUser }) {
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-slate-200/80 bg-white/80 px-4 backdrop-blur-md sm:px-6">
-      <div className="flex min-w-0 items-center gap-3">
+    <div className="flex items-center gap-1 text-sm">
+      {user.platformRole === 'SUPER_ADMIN' ? (
         <Link
-          href="/stores"
-          className={`flex items-center gap-2.5 text-sm font-semibold tracking-tight text-slate-900 ${inShell ? 'md:hidden' : ''}`}
+          href="/platform"
+          className="mr-1 hidden rounded-md px-2 py-1 font-medium text-slate-600 hover:bg-slate-900/5 hover:text-slate-900 sm:inline"
         >
-          <LogoMark className="size-7" />
-          <span className={inShell ? 'sr-only' : 'hidden sm:inline'}>Commerce Platform</span>
+          Platform admin
         </Link>
-        {children ? (
-          <div className="flex min-w-0 items-center gap-2 text-sm [&>span:first-child]:text-slate-300">
-            {children}
-          </div>
-        ) : null}
-      </div>
-      <div className="flex shrink-0 items-center gap-1 text-sm">
-        {user.platformRole === 'SUPER_ADMIN' ? (
+      ) : null}
+      <Link
+        href="/account/security"
+        className="flex min-w-0 items-center gap-2 rounded-lg py-1 pr-2 pl-1 text-slate-600 hover:bg-slate-900/5 hover:text-slate-900"
+      >
+        <span
+          aria-hidden
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-xs font-semibold text-white"
+        >
+          {initialOf(user.name || user.email)}
+        </span>
+        <span className="hidden max-w-[220px] truncate lg:inline">{user.email}</span>
+        <span className="sr-only lg:hidden">{user.email}</span>
+      </Link>
+      <form action={logoutAction}>
+        <button
+          type="submit"
+          className="flex h-8 items-center gap-1.5 rounded-lg px-2 font-medium text-slate-600 hover:bg-slate-900/5 hover:text-slate-900"
+        >
+          <Icon name="logout" className="h-4 w-4" />
+          <span className="sr-only sm:not-sr-only">Sign out</span>
+        </button>
+      </form>
+    </div>
+  );
+}
+
+/** The bar across signed-in pages that live outside a store (store picker, account, etc.). */
+export function TopBar({ user, children }: { user: CurrentUser; children?: ReactNode }) {
+  return (
+    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/75">
+      <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
           <Link
-            href="/platform"
-            className="mr-1 hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium text-slate-600 hover:bg-slate-900/5 hover:text-slate-900 sm:inline-flex"
+            href="/stores"
+            className="flex items-center gap-2 rounded-lg text-sm font-semibold tracking-tight text-slate-900"
           >
-            <Icon name="shield" className="size-4" />
-            Platform admin
+            <LogoMark className="h-7 w-7" />
+            <span className="sr-only sm:not-sr-only">Commerce Platform</span>
           </Link>
-        ) : null}
-        <Link
-          href="/account/security"
-          title="Account security"
-          className="flex items-center gap-2.5 rounded-full py-1 pr-1 pl-1 hover:bg-slate-900/5 sm:pr-3"
-        >
-          <span
-            aria-hidden
-            className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-xs font-semibold text-white"
-          >
-            {initials(user)}
-          </span>
-          <span className="hidden max-w-48 truncate text-slate-600 lg:inline">{user.email}</span>
-          <span className="sr-only lg:hidden">{user.email}</span>
-        </Link>
-        <form action={logoutAction}>
-          <button
-            type="submit"
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium text-slate-600 hover:bg-slate-900/5 hover:text-slate-900"
-          >
-            <Icon name="logout" className="size-4" />
-            <span className="max-sm:sr-only">Sign out</span>
-          </button>
-        </form>
+          {children ? (
+            <div className="flex min-w-0 items-center gap-2 [&>span:first-child]:text-slate-300">
+              {children}
+            </div>
+          ) : null}
+        </div>
+        <UserMenu user={user} />
       </div>
     </header>
   );

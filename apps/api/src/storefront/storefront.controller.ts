@@ -16,6 +16,8 @@ import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import {
   addToCartInputSchema,
   blogListQuerySchema,
+  type NewsletterSignup,
+  newsletterSignupSchema,
   type Paginated,
   type StorefrontBlogPost,
   type Cart,
@@ -26,6 +28,7 @@ import {
   type ProductCardPage,
   type Shop,
   STOREFRONT_HEADERS,
+  THEME_DRAFT_HEADER,
   type StorefrontCollection,
   type StorefrontPage,
   type StorefrontSitemap,
@@ -46,6 +49,7 @@ import { BlogService } from '../online-store/blog.service.js';
 import { OnlineStoreService } from '../online-store/online-store.service.js';
 import { CartService } from './cart.service.js';
 import { StorefrontCatalogService } from './storefront-catalog.service.js';
+import { ThemePreviewService } from './theme-preview.js';
 import {
   AllowLockedStore,
   CartToken,
@@ -68,12 +72,17 @@ export class StorefrontController {
     private readonly carts: CartService,
     private readonly onlineStore: OnlineStoreService,
     private readonly blog: BlogService,
+    private readonly preview: ThemePreviewService,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
   @Get('shop')
   @AllowLockedStore()
-  shop(@CurrentShop() shop: ShopContext, @Req() req: Request): Promise<Shop> {
+  async shop(@CurrentShop() shop: ShopContext, @Req() req: Request): Promise<Shop> {
+    // The theme editor's preview frame sends a signed token: show the draft, even when locked.
+    const token = req.headers[THEME_DRAFT_HEADER];
+    const draft = await this.preview.draftFor(shop.id, Array.isArray(token) ? token[0] : token);
+    if (draft) return this.catalog.shop({ ...shop, theme: draft }, false);
     return this.catalog.shop(
       shop,
       !hasStorefrontAccess(req, shop, this.env.STOREFRONT_SHARED_SECRET),
@@ -92,6 +101,17 @@ export class StorefrontController {
     body: z.output<typeof storefrontPasswordInputSchema>,
   ): Promise<{ accessToken: string }> {
     return this.catalog.unlock(shop, body.password);
+  }
+
+  @Post('newsletter')
+  @HttpCode(204)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiZodBody(newsletterSignupSchema)
+  async newsletter(
+    @CurrentShop() shop: ShopContext,
+    @Body(new ZodPipe(newsletterSignupSchema)) body: NewsletterSignup,
+  ): Promise<void> {
+    await this.catalog.subscribe(shop, body.email);
   }
 
   @Get('sitemap')
