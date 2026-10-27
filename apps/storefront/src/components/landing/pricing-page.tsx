@@ -37,7 +37,7 @@ const price = (cents: number) => (cents === 0 ? 'Free' : usd(cents));
 
 /** Features with no plan limits: every plan gets them. */
 const INCLUDED = [
-  'Online store with 108 templates',
+  'Online store with 168 templates',
   'Custom domains with automatic HTTPS',
   'Multi-currency selling',
   'Discount codes and gift cards',

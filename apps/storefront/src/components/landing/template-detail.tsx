@@ -8,12 +8,12 @@ import {
   CtaBand,
   display,
   Eyebrow,
-  focusRing,
   lead,
   paper,
   SectionHeading,
   textLink,
 } from './page-parts';
+import { TemplateCard } from './template-card';
 import { TemplateThumb } from './template-thumb';
 import { demoStoreUrl, signupUrl } from './urls';
 
@@ -28,15 +28,22 @@ const FONT_NAMES: Record<string, string> = {
   condensed: 'Condensed sans-serif',
 };
 
+/** The homepage hero each design style draws (see the storefront's `Hero`). */
 const LAYOUTS: Record<string, string> = {
-  minimal: 'Minimal — headline on the page, products first',
+  minimal: 'Minimal — one large photo, headline in the corner',
   bold: 'Bold — a full-color hero block',
-  classic: 'Classic — centered hero panel',
+  classic: 'Classic — centered headline over a photo strip',
   split: 'Split — headline beside a featured image',
   fullbleed: 'Full bleed — edge-to-edge hero image',
-  editorial: 'Editorial — centered, magazine-style',
-  catalog: 'Catalog — collections and a dense grid',
+  editorial: 'Editorial — magazine-style cover',
+  catalog: 'Catalog — a banner beside collection tiles',
   banner: 'Banner — a gradient banner hero',
+  noir: 'Noir — a dimmed, centered full-width photo',
+  bento: 'Bento — a feature card beside pastel collection tiles',
+  market: 'Market — a deal banner, offer panels and a tall photo tile',
+  fresh: 'Fresh — a curved color band with category cards',
+  poster: 'Poster — oversized type above a photo strip',
+  luxe: 'Luxe — a wide soft-faded photo and round collection chips',
 };
 
 const words = {
@@ -92,20 +99,16 @@ function Row({
             See all <Arrow />
           </a>
         </div>
-        <ul className="mt-10 grid grid-cols-2 gap-x-4 gap-y-8 sm:gap-6 lg:grid-cols-4">
+        <ul className="mt-10 grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
           {items.map((t) => (
             <li key={t.id}>
-              <a href={`/templates/${t.id}`} className={`group block rounded-xl ${focusRing}`}>
-                <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/10 transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_20px_40px_-20px_rgb(15_23_42/0.45)]">
-                  <TemplateThumb template={t} tiles={3} scale={7} className="h-44 sm:h-56" />
-                </div>
-                <p className="mt-3 text-sm font-semibold text-navy-900 group-hover:text-azure-700 sm:text-base">
-                  {t.name}
-                </p>
-                <p className="text-xs text-slate-500 sm:text-sm">
-                  {t.industryLabel} · {t.styleLabel}
-                </p>
-              </a>
+              <TemplateCard
+                template={t}
+                size="sm"
+                headingLevel="h3"
+                demoStoreUrl={demoStoreUrl}
+                signupUrl={signupUrl}
+              />
             </li>
           ))}
         </ul>
@@ -131,7 +134,7 @@ export function TemplateDetail({ template }: { template: ThemeTemplate }) {
     ['Text', s.textColor],
   ];
   const tokens: [string, string][] = [
-    ['Homepage layout', LAYOUTS[template.preset] ?? template.preset],
+    ['Homepage layout', LAYOUTS[template.style] ?? template.styleLabel],
     ['Body font', FONT_NAMES[s.font] ?? s.font],
     [
       'Heading font',

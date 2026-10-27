@@ -33,7 +33,7 @@ interface NavCard {
 const WHY_US: NavCard[] = [
   {
     title: 'Templates for every industry',
-    body: '108 designs for 12 industries. Pick one when you sign up and open your store the same day.',
+    body: '168 designs for 12 industries. Pick one when you sign up and open your store the same day.',
     href: '/templates',
     icon: 'rocket',
     photo: 'boutique-interior',

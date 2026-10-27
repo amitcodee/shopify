@@ -186,7 +186,7 @@ body {
 
 /*
  * Design styles (data-style, from the template the theme came from). Tokens set colors, shapes
- * and layout; the style sets the typographic voice so the nine looks differ in more than color.
+ * and layout; the style sets the typographic voice so the looks differ in more than color.
  */
 [data-style='minimal'] {
   --display-tracking: -0.035em;
@@ -284,6 +284,64 @@ body {
 [data-style='noir'][data-heading-case='uppercase'] {
   --display-tracking: 0.06em;
   --title-tracking: 0.12em;
+}
+[data-style='bento'] {
+  --display-weight: 700;
+  --display-tracking: -0.035em;
+  --display-leading: 1.02;
+  --title-weight: 700;
+  --card-weight: 600;
+  --price-weight: 700;
+}
+[data-style='market'] {
+  --store-page-width: 90rem;
+  --display-weight: 800;
+  --display-tracking: -0.03em;
+  --display-leading: 1;
+  --title-weight: 800;
+  --card-size: 0.8125rem;
+  --card-weight: 500;
+  --price-weight: 800;
+  --eyebrow-tracking: 0.1em;
+  --btn-weight: 700;
+}
+[data-style='fresh'] {
+  --display-weight: 800;
+  --display-tracking: -0.025em;
+  --display-leading: 1.02;
+  --title-weight: 750;
+  --card-weight: 600;
+  --price-weight: 700;
+  --btn-weight: 700;
+}
+[data-style='poster'] {
+  --display-weight: 800;
+  --display-tracking: -0.01em;
+  --title-weight: 800;
+  --title-tracking: 0.01em;
+  --card-size: 0.8125rem;
+  --card-weight: 700;
+  --card-case: uppercase;
+  --card-tracking: 0.06em;
+  --price-weight: 600;
+  --btn-case: uppercase;
+  --btn-tracking: 0.12em;
+  --btn-weight: 800;
+}
+[data-style='luxe'] {
+  --display-weight: 400;
+  --display-tracking: -0.02em;
+  --display-leading: 1.05;
+  --title-weight: 400;
+  --title-tracking: -0.015em;
+  --card-font: var(--store-heading-font);
+  --card-size: 1rem;
+  --card-weight: 400;
+  --price-weight: 400;
+  --eyebrow-tracking: 0.22em;
+  --btn-case: uppercase;
+  --btn-tracking: 0.16em;
+  --btn-weight: 500;
 }
 
 @layer components {
@@ -701,8 +759,19 @@ html:has(body[data-theme]) {
   --logo-case: uppercase;
   --logo-tracking: 0.22em;
 }
-[data-style='catalog'] {
+[data-style='catalog'],
+[data-style='market'],
+[data-style='fresh'] {
   --logo-weight: 800;
+}
+[data-style='poster'] {
+  --logo-weight: 800;
+  --logo-case: uppercase;
+  --logo-tracking: 0.02em;
+}
+[data-style='luxe'] {
+  --logo-weight: 400;
+  --logo-tracking: 0.04em;
 }
 @media (max-width: 767px) {
   [data-style='noir'] {

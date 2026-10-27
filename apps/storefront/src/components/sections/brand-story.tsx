@@ -27,7 +27,7 @@ export function BrandStory({
     .map((p) => p.trim())
     .filter(Boolean);
   const editorial = style === 'editorial';
-  const panel = style === 'bold' || style === 'banner';
+  const panel = style === 'bold' || style === 'banner' || style === 'fresh' || style === 'bento';
   return (
     <section
       aria-labelledby={title ? 'story-heading' : undefined}

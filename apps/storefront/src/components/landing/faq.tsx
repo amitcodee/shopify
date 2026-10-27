@@ -9,7 +9,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'Do I need to know how to code?',
-    a: 'No. Pick one of 108 templates, then change colors, fonts, layout and wording from your admin. Templates are settings rather than code, so switching design never breaks your store.',
+    a: 'No. Pick one of 168 templates, then change colors, fonts, layout and wording from your admin. Templates are settings rather than code, so switching design never breaks your store.',
   },
   {
     q: 'Can I switch templates later?',

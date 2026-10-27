@@ -31,10 +31,10 @@ test('a template picked at sign-up starts the store; merchant applies another an
   // Template store: filter, then apply a dark template.
   await merchant.goto(`${ADMIN_URL}/s/${storeId}/settings/theme`);
   await expect(merchant.getByText('Velvet').first()).toBeVisible();
-  await expect(merchant.getByText('108 templates')).toBeVisible();
+  await expect(merchant.getByText('168 templates')).toBeVisible();
   await merchant.getByRole('button', { name: 'Pet supplies' }).click();
   await merchant.getByLabel('Search templates').fill('moon');
-  await expect(merchant.getByText('Showing 1 of 108 templates')).toBeVisible();
+  await expect(merchant.getByText('Showing 1 of 168 templates')).toBeVisible();
   await expect(merchant.getByRole('link', { name: 'Preview Moonpaw' })).toHaveAttribute(
     'href',
     /\?theme_preview=pets-noir$/,

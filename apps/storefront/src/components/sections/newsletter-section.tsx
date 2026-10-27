@@ -23,7 +23,7 @@ export function NewsletterSection({
     </h2>
   );
 
-  if (style === 'bold' || style === 'banner') {
+  if (style === 'bold' || style === 'banner' || style === 'fresh' || style === 'bento') {
     return (
       <section
         aria-labelledby="newsletter-heading"
@@ -45,7 +45,7 @@ export function NewsletterSection({
     );
   }
 
-  if (style === 'editorial' || style === 'catalog') {
+  if (style === 'editorial' || style === 'catalog' || style === 'market') {
     return (
       <section
         aria-labelledby="newsletter-heading"

@@ -157,7 +157,7 @@ export const GUIDES: Guide[] = [
   {
     slug: 'apply-a-template',
     title: 'Apply a template and customize it',
-    summary: 'Choose from 108 templates, then adjust colors, fonts and layout.',
+    summary: 'Choose from 168 templates, then adjust colors, fonts and layout.',
     icon: 'layout',
     category: 'Selling',
     intro:

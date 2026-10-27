@@ -392,6 +392,314 @@ export function Hero(props: HeroProps) {
         </section>
       );
 
+    case 'bento': {
+      const side = tiles.slice(0, 2);
+      return (
+        <section
+          className={`store-section grid gap-3 sm:gap-4 ${side.length === 2 ? 'lg:grid-cols-[1.65fr_1fr]' : ''}`}
+        >
+          <div className="grid overflow-hidden rounded-[2rem] bg-[color-mix(in_oklab,var(--store-accent)_14%,var(--store-bg))] md:grid-cols-[1.05fr_1fr]">
+            <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-12">
+              <p className="eyebrow text-accent">{shopName}</p>
+              <h1 className="t-display mt-4 text-4xl text-brand break-words sm:text-5xl lg:text-6xl">
+                {title}
+              </h1>
+              <p className="mt-5 max-w-sm text-base leading-relaxed text-zinc-600 sm:text-lg">
+                {subtitle}
+              </p>
+              <div>
+                <Cta label={cta} />
+              </div>
+            </div>
+            <div className="relative order-first m-3 aspect-[4/3] overflow-hidden rounded-[1.5rem] bg-surface md:order-none md:aspect-auto md:min-h-[26rem]">
+              {image ? <Photo image={image} sizes={HALF} /> : <Wash />}
+            </div>
+          </div>
+          {side.length === 2 ? (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-1">
+              {side.map((tile, i) => (
+                <Link
+                  key={tile.href}
+                  href={tile.href}
+                  className={`group relative flex min-h-[10rem] overflow-hidden rounded-[2rem] p-5 sm:min-h-[12rem] sm:p-7 ${
+                    i === 0
+                      ? 'bg-[color-mix(in_oklab,var(--store-brand)_10%,var(--store-bg))]'
+                      : 'bg-surface'
+                  }`}
+                >
+                  {tile.image ? (
+                    <span className="absolute inset-y-3 right-3 hidden w-[44%] overflow-hidden rounded-[1.4rem] bg-[var(--store-bg)] sm:block">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={tile.image}
+                        srcSet={tile.imageSrcSet}
+                        sizes={tile.imageSrcSet ? '(min-width: 1024px) 15vw, 25vw' : undefined}
+                        alt=""
+                        className="media-zoom absolute inset-0 h-full w-full object-cover"
+                      />
+                    </span>
+                  ) : null}
+                  <span className="relative flex flex-col justify-between sm:max-w-[52%]">
+                    <span>
+                      <span className="eyebrow text-zinc-500">Collection</span>
+                      <span className="t-title mt-2 block text-xl text-brand break-words sm:text-2xl">
+                        {tile.label}
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="mt-5 grid size-10 place-items-center rounded-full bg-[var(--store-bg)] text-ink shadow-sm transition group-hover:translate-x-1"
+                    >
+                      →
+                    </span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      );
+    }
+
+    case 'market': {
+      const side = tiles.slice(0, 2);
+      const tall = extras[0];
+      return (
+        <section className="store-section grid gap-3 md:grid-cols-2 lg:grid-cols-[1.6fr_1fr_0.85fr]">
+          <div className="relative flex min-h-[22rem] overflow-hidden rounded-lg bg-brand text-brand-contrast md:col-span-2 lg:col-span-1 lg:row-span-2 lg:min-h-[32rem]">
+            {image ? (
+              <>
+                <Photo image={image} className="left-[35%] w-[65%]" sizes={HALF} />
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--store-brand)] from-35% via-[color-mix(in_oklab,var(--store-brand)_55%,transparent)] via-55% to-transparent" />
+              </>
+            ) : (
+              <Wash />
+            )}
+            <div className="relative flex max-w-md flex-col justify-center p-6 sm:p-10">
+              <span className="inline-flex w-fit rounded-sm bg-accent px-2.5 py-1 text-xs font-bold tracking-wide text-accent-contrast uppercase">
+                {shopName}
+              </span>
+              <h1 className="t-display mt-5 text-4xl break-words sm:text-5xl lg:text-6xl">
+                {title}
+              </h1>
+              <p className="mt-4 max-w-sm text-base leading-relaxed opacity-90">{subtitle}</p>
+              <div>
+                <Cta label={cta} variant="btn-on-brand" className="mt-7" />
+              </div>
+            </div>
+          </div>
+          {side.map((tile, i) => (
+            <Link
+              key={tile.href}
+              href={tile.href}
+              className={`group relative flex min-h-[11rem] overflow-hidden rounded-lg p-5 lg:col-start-2 ${
+                i === 0 ? 'bg-accent text-accent-contrast' : 'bg-ink text-[var(--store-bg)]'
+              }`}
+            >
+              {tile.image ? (
+                <span className="absolute right-0 bottom-0 h-[78%] w-[52%] overflow-hidden rounded-tl-lg">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={tile.image}
+                    srcSet={tile.imageSrcSet}
+                    sizes={tile.imageSrcSet ? '(min-width: 1024px) 14vw, 25vw' : undefined}
+                    alt=""
+                    className="media-zoom absolute inset-0 h-full w-full object-cover"
+                  />
+                </span>
+              ) : null}
+              <span className="relative max-w-[48%]">
+                <span className="t-title block text-xl break-words">{tile.label}</span>
+                <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold underline underline-offset-4">
+                  Shop now
+                </span>
+              </span>
+            </Link>
+          ))}
+          {tall ? (
+            <Link
+              href="/collections/all"
+              className="group relative hidden min-h-[22rem] overflow-hidden rounded-lg bg-surface lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:flex"
+            >
+              <Photo
+                image={{ ...tall, alt: '' }}
+                eager={false}
+                sizes="22vw"
+                className="media-zoom"
+              />
+              <span className="relative mt-auto m-3 flex w-[calc(100%-1.5rem)] items-center justify-between rounded-md bg-[var(--store-bg)] px-4 py-3 text-sm font-semibold text-ink">
+                Shop everything
+                <span aria-hidden="true" className="transition group-hover:translate-x-1">
+                  →
+                </span>
+              </span>
+            </Link>
+          ) : null}
+        </section>
+      );
+    }
+
+    case 'fresh': {
+      const cards = tiles.slice(0, 4);
+      return (
+        <section className="store-section">
+          <div className="relative overflow-hidden rounded-[2rem] bg-brand text-brand-contrast [clip-path:ellipse(150%_100%_at_50%_0%)]">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-[radial-gradient(currentColor_1px,transparent_1.5px)] [background-size:22px_22px] opacity-[0.08]"
+            />
+            <div
+              className={`relative grid items-center gap-10 px-6 pt-10 sm:px-12 sm:pt-14 md:grid-cols-[1.1fr_1fr] lg:px-16 ${
+                cards.length > 0 ? 'pb-24 sm:pb-28' : 'pb-16 sm:pb-20'
+              }`}
+            >
+              <div>
+                <h1 className="t-display text-[2.6rem] break-words sm:text-6xl lg:text-[4.5rem]">
+                  {title}
+                </h1>
+                <p className="mt-5 max-w-md text-lg leading-relaxed opacity-85">{subtitle}</p>
+                <Cta label={cta} variant="btn-accent" />
+              </div>
+              {image ? (
+                <div className="relative mx-auto w-full max-w-[24rem] md:max-w-[26rem]">
+                  <div
+                    aria-hidden="true"
+                    className="absolute -inset-[5%] rounded-full border-2 border-dashed border-current opacity-25"
+                  />
+                  <div className="relative aspect-square overflow-hidden rounded-full bg-accent shadow-[0_30px_60px_-24px_rgb(0_0_0/0.55)]">
+                    <Photo image={image} sizes="(min-width: 768px) 26rem, 90vw" />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+          {cards.length > 0 ? (
+            <ul className="relative z-10 -mt-14 grid grid-cols-2 gap-3 px-3 sm:px-8 md:grid-cols-4 lg:px-12">
+              {cards.map((tile) => (
+                <li key={tile.href}>
+                  <Link
+                    href={tile.href}
+                    className="group flex h-full items-center justify-between gap-3 rounded-2xl bg-[var(--store-bg)] p-3 shadow-[0_18px_40px_-22px_rgb(0_0_0/0.4)] ring-1 ring-[color-mix(in_oklab,var(--store-text)_8%,transparent)] sm:p-4"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold break-words text-ink sm:text-base">
+                        {tile.label}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-zinc-500">Shop now →</span>
+                    </span>
+                    {tile.image ? (
+                      <span className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-surface sm:size-14">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={tile.image}
+                          srcSet={tile.imageSrcSet}
+                          sizes={tile.imageSrcSet ? '56px' : undefined}
+                          alt=""
+                          className="media-zoom absolute inset-0 h-full w-full object-cover"
+                        />
+                      </span>
+                    ) : null}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      );
+    }
+
+    case 'poster': {
+      const strip = image ? [image, ...extras.map((e) => ({ ...e, alt: '' }))].slice(0, 3) : [];
+      return (
+        <section className="store-section">
+          <h1 className="t-display text-[clamp(3rem,11vw,9.5rem)] leading-[0.86] text-brand break-words">
+            {title}
+          </h1>
+          <div className="mt-7 flex flex-col gap-5 border-t-4 border-accent pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="max-w-lg text-lg leading-relaxed text-zinc-600">{subtitle}</p>
+            <Cta label={cta} className="self-start sm:self-auto" />
+          </div>
+          {strip.length > 0 ? (
+            <div
+              className={`mt-8 grid gap-2 sm:gap-3 ${strip.length === 3 ? 'grid-cols-[1fr_1.5fr_1fr]' : ''}`}
+            >
+              {strip.map((photo, i) => (
+                <div
+                  key={photo.src}
+                  className={`relative overflow-hidden bg-surface ${
+                    strip.length === 3 ? 'aspect-[3/4] sm:aspect-[4/5]' : 'aspect-[21/9]'
+                  } ${i === 1 && strip.length === 3 ? 'aspect-auto sm:aspect-auto' : ''}`}
+                >
+                  <Photo
+                    image={photo}
+                    eager={i === 0}
+                    sizes={strip.length === 3 ? '(min-width: 640px) 40vw, 33vw' : '100vw'}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      );
+    }
+
+    case 'luxe': {
+      const chips = tiles.slice(0, 6);
+      return (
+        <section className="store-section">
+          <div className="relative flex min-h-[28rem] overflow-hidden rounded-md bg-surface sm:min-h-[36rem]">
+            {image ? <Photo image={image} /> : <Wash className="opacity-50" />}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--store-bg)_0%,color-mix(in_oklab,var(--store-bg)_80%,transparent)_40%,transparent_75%)]" />
+            <div className="absolute inset-0 bg-[color-mix(in_oklab,var(--store-bg)_40%,transparent)] md:hidden" />
+            <div className="relative flex max-w-xl flex-col justify-center px-6 py-12 sm:px-12 lg:px-16">
+              <p className="eyebrow text-zinc-600">{shopName}</p>
+              <h1 className="t-display mt-5 text-[2.6rem] text-brand break-words sm:text-6xl">
+                {title}
+              </h1>
+              <p className="mt-5 max-w-md text-base leading-relaxed text-zinc-700 sm:text-lg">
+                {subtitle}
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
+                <Cta label={cta} className="" />
+                <Link
+                  href="/collections"
+                  className="text-sm font-semibold text-ink underline underline-offset-4"
+                >
+                  Browse collections
+                </Link>
+              </div>
+            </div>
+          </div>
+          {chips.length >= 2 ? (
+            <ul className="mt-8 flex gap-6 overflow-x-auto pb-2 sm:justify-center sm:gap-10">
+              {chips.map((tile) => (
+                <li key={tile.href} className="shrink-0">
+                  <Link
+                    href={tile.href}
+                    className="group flex w-24 flex-col items-center gap-3 text-center"
+                  >
+                    <span className="relative block size-20 overflow-hidden rounded-full bg-surface ring-1 ring-[color-mix(in_oklab,var(--store-text)_10%,transparent)]">
+                      {tile.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={tile.image}
+                          srcSet={tile.imageSrcSet}
+                          sizes={tile.imageSrcSet ? '80px' : undefined}
+                          alt=""
+                          className="media-zoom absolute inset-0 h-full w-full object-cover"
+                        />
+                      ) : null}
+                    </span>
+                    <span className="text-sm font-medium break-words text-ink">{tile.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      );
+    }
+
     default:
       // Minimal: one large photo with the headline set into its lower corner.
       return image ? (
