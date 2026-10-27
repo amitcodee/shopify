@@ -7,6 +7,7 @@ import { createPrismaClient, setTenant } from '@repo/db';
 import { PasswordService } from './auth/password.service.js';
 import { PlansService } from './platform/plans.service.js';
 import { seedCatalog } from './seed-catalog.js';
+import { seedMerchandising } from './seed-merchandising.js';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 if (process.env.NODE_ENV === 'production') throw new Error('Refusing to seed in production.');
@@ -78,6 +79,7 @@ async function main(): Promise<void> {
 
   await new PlansService(db).subscriptionFor(store.id);
   await seedCatalog(db, store.id);
+  await seedMerchandising(db, store.id);
   // Sandbox payouts account so the demo store can take (simulated) payments right away.
   const gateways = process.env.PAYMENT_PROVIDERS ?? process.env.PAYMENT_PROVIDER ?? 'mock';
   if (

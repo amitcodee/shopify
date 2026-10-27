@@ -1,9 +1,10 @@
+import type { Supplier } from '@repo/contracts';
 import { notFound } from 'next/navigation';
 import { Icon } from '@/components/icons';
 import { Card, PageHeader } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
-import { saveProductAction } from '../actions';
+import { saveProductAction, searchVariantsAction } from '../actions';
 import { ProductEditor } from '../product-editor';
 
 export const metadata = { title: 'Add product · Merchant Admin' };
@@ -15,6 +16,9 @@ export default async function NewProductPage({ params }: { params: Promise<{ sto
   const facets = await api<{ vendors: string[]; productTypes: string[] }>(
     `/admin/stores/${storeId}/products/facets`,
   ).catch(() => ({ vendors: [], productTypes: [] }));
+  const suppliers = await api<Supplier[]>(`/admin/stores/${storeId}/suppliers`).catch(
+    () => [] as Supplier[],
+  );
   return (
     <>
       <PageHeader
@@ -27,6 +31,8 @@ export default async function NewProductPage({ params }: { params: Promise<{ sto
         canWrite
         suggestions={facets}
         action={saveProductAction.bind(null, storeId, null)}
+        suppliers={suppliers}
+        searchVariants={searchVariantsAction.bind(null, storeId)}
         media={
           <Card title="Media">
             <div className="flex items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50/60 px-4 py-5">

@@ -6,6 +6,7 @@ import {
   type MetafieldType,
   minorToDecimalString,
   normalizeMetafieldValue,
+  type OptionStyle,
   parseMoney,
   type Product,
   type ProductImage,
@@ -26,12 +27,28 @@ import { Icon } from '@/components/icons';
 import { Alert, Badge, buttonClass, Card, formatDateTime, inputClass } from '@/components/ui';
 import { useCountryOptions, useHydrated } from '@/lib/countries';
 import type { FormState } from '@/lib/form';
-import type { ActionResult } from './actions';
+import type { ActionResult, VariantPick } from './actions';
 import { imageSrc } from './images';
+import {
+  BundleContentsCard,
+  type BulkField,
+  type ComponentRow,
+  customizationPayload,
+  customizationRows,
+  type CustomizationRow,
+  CustomizationsCard,
+  OPTION_STYLES,
+  skuPart,
+  SwatchEditor,
+  VariantBulkEdit,
+} from './product-editor-extras';
 
 interface OptionRow {
   name: string;
   values: string;
+  style: OptionStyle;
+  /** Swatch colour by value (kept when values are renamed or reordered). */
+  swatches: Record<string, string>;
 }
 
 interface VariantRow {
@@ -136,6 +153,8 @@ export function ProductEditor({
   aside,
   suggestions,
   setVariantImage,
+  suppliers = [],
+  searchVariants,
 }: {
   product: Product | null;
   currency: string;
@@ -148,6 +167,10 @@ export function ProductEditor({
   /** Existing vendors and product types, offered as suggestions. */
   suggestions?: { vendors: string[]; productTypes: string[] };
   setVariantImage?: (variantId: string, imageId: string | null) => Promise<ActionResult>;
+  /** The store's suppliers, for the supplier picker. */
+  suppliers?: { id: string; name: string; active: boolean }[];
+  /** Finds variants to put in a bundle. */
+  searchVariants?: (query: string) => Promise<VariantPick[]>;
 }) {
   const [state, formAction, saving] = useActionState(action, undefined);
   const [clientError, setClientError] = useState<string | null>(null);
@@ -167,10 +190,37 @@ export function ProductEditor({
   const [seoTitle, setSeoTitle] = useState(product?.seoTitle ?? '');
   const [seoDescription, setSeoDescription] = useState(product?.seoDescription ?? '');
   const [isGiftCard, setIsGiftCard] = useState(product?.isGiftCard ?? false);
+  const [isBundle, setIsBundle] = useState(product?.isBundle ?? false);
+  const [supplierId, setSupplierId] = useState(product?.supplierId ?? '');
   /** null = untouched (keep the stored publish time); '' = publish now; otherwise local time. */
   const [publishAt, setPublishAt] = useState<string | null>(null);
   const [options, setOptions] = useState<OptionRow[]>(
-    product?.options.map((o) => ({ name: o.name, values: o.values.join(', ') })) ?? [],
+    product?.options.map((o) => ({
+      name: o.name,
+      values: o.values.join(', '),
+      style: o.style,
+      swatches: Object.fromEntries(o.values.map((v, i) => [v, o.swatches[i] ?? ''])),
+    })) ?? [],
+  );
+  const [components, setComponents] = useState<Record<string, ComponentRow[]>>(() =>
+    Object.fromEntries(
+      (product?.variants ?? []).map((v) => [
+        v.options.join(SEP),
+        v.components.map((c) => ({
+          variantId: c.variantId,
+          productTitle: c.productTitle,
+          variantTitle: c.variantTitle,
+          sku: c.sku,
+          price: c.price,
+          inventoryQuantity: c.inventoryQuantity,
+          trackInventory: c.trackInventory,
+          quantity: c.quantity,
+        })),
+      ]),
+    ),
+  );
+  const [customizations, setCustomizations] = useState<CustomizationRow[]>(() =>
+    customizationRows(product?.customizations ?? [], currency),
   );
   const [variants, setVariants] = useState<Record<string, VariantRow>>(() => {
     const map: Record<string, VariantRow> = {};
@@ -211,11 +261,70 @@ export function ProductEditor({
   const parsedOptions = useMemo(
     () =>
       options
-        .map((o) => ({ name: o.name.trim(), values: splitList(o.values) }))
+        .map((o) => {
+          const values = splitList(o.values);
+          const swatches = values.map((v) => o.swatches[v] ?? '');
+          return {
+            name: o.name.trim(),
+            values,
+            style: o.style,
+            // Colours are only sent for swatch options (and dropped when none is set).
+            swatches: o.style === 'swatches' && swatches.some(Boolean) ? swatches : [],
+          };
+        })
         .filter((o) => o.name && o.values.length > 0),
     [options],
   );
   const combos = useMemo(() => combinations(parsedOptions), [parsedOptions]);
+  const customizationInput = useMemo(
+    () => customizationPayload(customizations, currency),
+    [customizations, currency],
+  );
+
+  function applyBulk(
+    target: { position: number; value: string } | null,
+    field: BulkField,
+    value: string,
+  ) {
+    if (
+      field === 'inventoryQuantity'
+        ? !/^\d*$/.test(value)
+        : value && parseMoney(value, currency) === null
+    ) {
+      setClientError(
+        field === 'inventoryQuantity'
+          ? 'Enter a whole number of units.'
+          : 'Enter an amount such as 19.99.',
+      );
+      return;
+    }
+    setClientError(null);
+    setVariants((prev) => {
+      const next = { ...prev };
+      for (const combo of combos) {
+        if (target && combo[target.position] !== target.value) continue;
+        const key = combo.join(SEP);
+        const row = next[key] ?? emptyVariant();
+        if (field === 'inventoryQuantity' && row.id) continue; // Saved stock changes on Inventory.
+        next[key] = { ...row, [field]: field === 'inventoryQuantity' ? value || '0' : value };
+      }
+      return next;
+    });
+  }
+
+  function generateSkus(prefix: string) {
+    setVariants((prev) => {
+      const next = { ...prev };
+      for (const combo of combos) {
+        const key = combo.join(SEP);
+        next[key] = {
+          ...(next[key] ?? emptyVariant()),
+          sku: [prefix, ...combo.map(skuPart)].join('-').slice(0, 64),
+        };
+      }
+      return next;
+    });
+  }
   const rowFor = (combo: string[]) => variants[combo.join(SEP)] ?? emptyVariant();
   const updateRow = (combo: string[], patch: Partial<VariantRow>) =>
     setVariants((prev) => ({ ...prev, [combo.join(SEP)]: { ...rowFor(combo), ...patch } }));
@@ -251,7 +360,10 @@ export function ProductEditor({
       tags: splitList(tags),
       seoTitle,
       seoDescription,
-      isGiftCard,
+      isGiftCard: isBundle ? false : isGiftCard,
+      isBundle,
+      supplierId: supplierId || null,
+      customizations: 'value' in customizationInput ? customizationInput.value : [],
       // Untouched: keep whatever is stored. Cleared: publish now (drops a schedule).
       publishAt:
         publishAt === null || status !== 'ACTIVE'
@@ -277,7 +389,14 @@ export function ProductEditor({
           taxable: row.taxable,
           trackInventory: row.trackInventory,
           allowBackorder: row.allowBackorder,
-          inventoryQuantity: row.id ? undefined : Number.parseInt(row.inventoryQuantity || '0', 10),
+          inventoryQuantity:
+            row.id || isBundle ? undefined : Number.parseInt(row.inventoryQuantity || '0', 10),
+          ...(isBundle && {
+            components: (components[combo.join(SEP)] ?? []).map((c) => ({
+              variantId: c.variantId,
+              quantity: c.quantity,
+            })),
+          }),
         };
       }),
       // Replaces all custom fields; a new product without any sends nothing.
@@ -306,6 +425,10 @@ export function ProductEditor({
     seoTitle,
     seoDescription,
     isGiftCard,
+    isBundle,
+    supplierId,
+    customizationInput,
+    components,
     publishAt,
     parsedOptions,
     combos,
@@ -334,6 +457,12 @@ export function ProductEditor({
       error = 'HS codes have 6 to 10 digits (for example 6205.20).';
     else if (metafieldErrors.some((e) => e.key || e.value))
       error = 'Fix the highlighted custom fields.';
+    else if ('error' in customizationInput) error = customizationInput.error;
+    else if (isBundle && combos.some((combo) => !components[combo.join(SEP)]?.length))
+      error =
+        combos.length > 1
+          ? 'Add at least one item to every bundle variant.'
+          : 'Add at least one item to the bundle.';
     else if (status === 'ACTIVE' && publishAt && Number.isNaN(new Date(publishAt).getTime()))
       error = 'Enter a valid publish date.';
     setClientError(error);
@@ -418,7 +547,12 @@ export function ProductEditor({
                   <button
                     type="button"
                     className={buttonClass('secondary', 'sm')}
-                    onClick={() => setOptions((o) => [...o, { name: '', values: '' }])}
+                    onClick={() =>
+                      setOptions((o) => [
+                        ...o,
+                        { name: '', values: '', style: 'buttons', swatches: {} },
+                      ])
+                    }
                   >
                     <Icon name="plus" className="-ml-0.5 h-4 w-4" strokeWidth={2} />
                     Add option
@@ -435,7 +569,7 @@ export function ProductEditor({
                   {options.map((option, index) => (
                     <div
                       key={index}
-                      className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3 sm:grid-cols-[1fr_2fr_auto] sm:items-end"
+                      className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3 sm:grid-cols-[1fr_2fr_9.5rem_auto] sm:items-end"
                     >
                       <div className="space-y-1">
                         <label htmlFor={`opt-name-${index}`} className={label}>
@@ -471,6 +605,29 @@ export function ProductEditor({
                           }
                         />
                       </div>
+                      <div className="space-y-1">
+                        <label htmlFor={`opt-style-${index}`} className={label}>
+                          Shown as
+                        </label>
+                        <select
+                          id={`opt-style-${index}`}
+                          className={input}
+                          value={option.style}
+                          onChange={(e) =>
+                            setOptions((o) =>
+                              o.map((x, i) =>
+                                i === index ? { ...x, style: e.target.value as OptionStyle } : x,
+                              ),
+                            )
+                          }
+                        >
+                          {OPTION_STYLES.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       <button
                         type="button"
                         className={`${buttonClass('ghost')} text-red-600 hover:text-red-700`}
@@ -478,6 +635,24 @@ export function ProductEditor({
                       >
                         Remove
                       </button>
+                      {option.style === 'swatches' ? (
+                        <div className="sm:col-span-4">
+                          <SwatchEditor
+                            optionName={option.name || `Option ${index + 1}`}
+                            values={splitList(option.values)}
+                            swatches={option.swatches}
+                            onChange={(value, color) =>
+                              setOptions((o) =>
+                                o.map((x, i) =>
+                                  i === index
+                                    ? { ...x, swatches: { ...x.swatches, [value]: color } }
+                                    : x,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -489,11 +664,23 @@ export function ProductEditor({
               description={
                 <>
                   Prices in {currency}. Cost per item is private: customers never see it.
-                  {product ? ' Stock for existing variants is changed on the Inventory page.' : ''}
+                  {isBundle
+                    ? ' Bundle stock comes from the items in it.'
+                    : product
+                      ? ' Stock for existing variants is changed on the Inventory page.'
+                      : ''}
                 </>
               }
               flush
             >
+              {combos.length > 1 ? (
+                <VariantBulkEdit
+                  options={parsedOptions}
+                  allowStock={!isBundle && combos.some((combo) => !rowFor(combo).id)}
+                  onApply={applyBulk}
+                  onGenerateSkus={generateSkus}
+                />
+              ) : null}
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm [&_td]:py-2 [&_td]:pr-3 [&_td:first-child]:pl-5 [&_td:last-child]:pr-5">
                   <thead>
@@ -510,7 +697,7 @@ export function ProductEditor({
                       <th>Profit</th>
                       <th>SKU</th>
                       <th>Stock</th>
-                      <th>Track</th>
+                      {isBundle ? null : <th>Track</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -599,7 +786,18 @@ export function ProductEditor({
                             />
                           </td>
                           <td>
-                            {row.id ? (
+                            {isBundle ? (
+                              <span
+                                className="text-slate-700 tabular-nums"
+                                title="Complete bundles the items in stock make"
+                              >
+                                {saved
+                                  ? saved.trackInventory
+                                    ? saved.inventoryQuantity
+                                    : '—'
+                                  : 'From items'}
+                              </span>
+                            ) : row.id ? (
                               <span className="text-slate-700 tabular-nums">
                                 {row.trackInventory ? row.inventoryQuantity : '—'}
                               </span>
@@ -619,17 +817,19 @@ export function ProductEditor({
                               />
                             )}
                           </td>
-                          <td>
-                            <input
-                              type="checkbox"
-                              aria-label={`Track inventory for ${name}`}
-                              checked={row.trackInventory}
-                              onChange={(e) =>
-                                updateRow(combo, { trackInventory: e.target.checked })
-                              }
-                              className="h-4 w-4 rounded border-slate-300"
-                            />
-                          </td>
+                          {isBundle ? null : (
+                            <td>
+                              <input
+                                type="checkbox"
+                                aria-label={`Track inventory for ${name}`}
+                                checked={row.trackInventory}
+                                onChange={(e) =>
+                                  updateRow(combo, { trackInventory: e.target.checked })
+                                }
+                                className="h-4 w-4 rounded border-slate-300"
+                              />
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -637,6 +837,27 @@ export function ProductEditor({
                 </table>
               </div>
             </Card>
+
+            {isBundle && searchVariants ? (
+              <BundleContentsCard
+                currency={currency}
+                disabled={!canWrite}
+                search={searchVariants}
+                variants={combos.map((combo) => ({
+                  key: combo.join(SEP),
+                  name: combo.length ? combo.join(' / ') : 'Default',
+                  price: parseMoney(rowFor(combo).price, currency),
+                  rows: components[combo.join(SEP)] ?? [],
+                }))}
+                onChange={(key, rows) => setComponents((prev) => ({ ...prev, [key]: rows }))}
+              />
+            ) : null}
+
+            <CustomizationsCard
+              rows={customizations}
+              currency={currency}
+              onChange={setCustomizations}
+            />
 
             <Card
               title="Shipping and customs"
@@ -922,21 +1143,80 @@ export function ProductEditor({
                     Comma separated. Tags power automated collections and search.
                   </p>
                 </div>
-                <label className="flex items-start gap-2 border-t border-slate-100 pt-4 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={isGiftCard}
-                    onChange={(e) => setIsGiftCard(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-slate-300"
-                  />
-                  <span>
-                    Sell as a gift card
-                    <span className="block text-xs leading-5 text-slate-500">
-                      Each variant is a denomination. Paid orders email the buyer a code; no
-                      shipping, tax or stock tracking.
+                <div className="space-y-1">
+                  <label htmlFor="p-supplier" className={label}>
+                    Supplier
+                  </label>
+                  <select
+                    id="p-supplier"
+                    className={input}
+                    value={supplierId}
+                    disabled={isBundle}
+                    onChange={(e) => setSupplierId(e.target.value)}
+                  >
+                    <option value="">None</option>
+                    {suppliers
+                      .filter((s) => s.active || s.id === supplierId)
+                      .map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                          {s.active ? '' : ' (inactive)'}
+                        </option>
+                      ))}
+                  </select>
+                  <p className={hint}>
+                    {isBundle
+                      ? 'Bundles are restocked through the products in them.'
+                      : 'Used to suggest reorders and fill purchase orders.'}
+                  </p>
+                </div>
+                {product ? (
+                  isBundle ? (
+                    <p className="flex items-start gap-2 border-t border-slate-100 pt-4 text-sm text-slate-700">
+                      <Icon name="layers" className="mt-0.5 h-4 w-4 text-indigo-600" />
+                      <span>
+                        Bundle
+                        <span className="block text-xs leading-5 text-slate-500">
+                          Sold as a set of other products; their stock limits how many sell.
+                        </span>
+                      </span>
+                    </p>
+                  ) : null
+                ) : (
+                  <label className="flex items-start gap-2 border-t border-slate-100 pt-4 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={isBundle}
+                      disabled={isGiftCard}
+                      onChange={(e) => setIsBundle(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                    />
+                    <span>
+                      Sell as a bundle
+                      <span className="block text-xs leading-5 text-slate-500">
+                        A combo of other products, such as a gift set. Each sale takes stock from
+                        the items in it. This cannot be changed later.
+                      </span>
                     </span>
-                  </span>
-                </label>
+                  </label>
+                )}
+                {isBundle ? null : (
+                  <label className="flex items-start gap-2 border-t border-slate-100 pt-4 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={isGiftCard}
+                      onChange={(e) => setIsGiftCard(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                    />
+                    <span>
+                      Sell as a gift card
+                      <span className="block text-xs leading-5 text-slate-500">
+                        Each variant is a denomination. Paid orders email the buyer a code; no
+                        shipping, tax or stock tracking.
+                      </span>
+                    </span>
+                  </label>
+                )}
               </div>
             </Card>
           </fieldset>

@@ -1,4 +1,4 @@
-import type { Collection, Paginated, ProductListItem } from '@repo/contracts';
+import type { Collection, Paginated, ProductListItem, Supplier } from '@repo/contracts';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import {
@@ -43,6 +43,7 @@ type Params = {
   productType?: string;
   tag?: string;
   collectionId?: string;
+  supplierId?: string;
   sort?: string;
   page?: string;
 };
@@ -58,11 +59,11 @@ export default async function ProductsPage({
 }) {
   const { storeId } = await params;
   const sp = await searchParams;
-  const { q, status, vendor, productType, tag, collectionId, page } = sp;
+  const { q, status, vendor, productType, tag, collectionId, supplierId, page } = sp;
   const sort = SORTS.some((s) => s.value === sp.sort) ? sp.sort! : 'updated-desc';
   const [sortKey, direction] = sort.split('-');
   const store = await getStore(storeId);
-  const [products, facets, collections] = await Promise.all([
+  const [products, facets, collections, supplier] = await Promise.all([
     api<Paginated<ProductListItem>>(`/admin/stores/${storeId}/products`, {
       query: {
         q,
@@ -71,6 +72,7 @@ export default async function ProductsPage({
         productType,
         tag,
         collectionId,
+        supplierId,
         sort: sortKey,
         direction,
         page: Number(page) || 1,
@@ -80,6 +82,9 @@ export default async function ProductsPage({
       `/admin/stores/${storeId}/products/facets`,
     ).catch(() => ({ vendors: [], productTypes: [], tags: [] })),
     api<Collection[]>(`/admin/stores/${storeId}/collections`).catch(() => [] as Collection[]),
+    supplierId
+      ? api<Supplier>(`/admin/stores/${storeId}/suppliers/${supplierId}`).catch(() => null)
+      : null,
   ]);
   const base = `/s/${storeId}/products`;
   const canWrite = store.permissions.includes('products:write');
@@ -91,6 +96,7 @@ export default async function ProductsPage({
     productType,
     tag,
     collectionId,
+    supplierId,
     sort: sort === 'updated-desc' ? undefined : sort,
   };
   const hrefFor = (overrides: Partial<Params>) => {
@@ -118,6 +124,12 @@ export default async function ProductsPage({
       ? {
           label: `Collection: ${collectionTitle ?? 'Unknown'}`,
           href: hrefFor({ collectionId: undefined, page: undefined }),
+        }
+      : null,
+    supplierId
+      ? {
+          label: `Supplier: ${supplier?.name ?? 'Unknown'}`,
+          href: hrefFor({ supplierId: undefined, page: undefined }),
         }
       : null,
   ].filter((c) => c !== null);

@@ -9,6 +9,7 @@ import type {
   StorefrontProductQuery,
   StorefrontSitemap,
 } from '@repo/contracts';
+import { parseCustomizations } from '@repo/contracts';
 import { Prisma, type TenantTx } from '@repo/db';
 import { decryptSecret } from '../common/crypto.js';
 import { ENV, type Env } from '../config/env.js';
@@ -268,7 +269,23 @@ export class StorefrontCatalogService {
         where: { storeId: shop.id, handle, ...liveProductWhere() },
         include: {
           options: { orderBy: { position: 'asc' } },
-          variants: { orderBy: { position: 'asc' } },
+          variants: {
+            orderBy: { position: 'asc' },
+            include: {
+              components: {
+                orderBy: { position: 'asc' },
+                include: {
+                  component: {
+                    select: {
+                      title: true,
+                      price: true,
+                      product: { select: { title: true, handle: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
           images: { orderBy: { position: 'asc' } },
           metafields: { where: { showOnStorefront: true }, orderBy: { position: 'asc' } },
         },
@@ -286,7 +303,13 @@ export class StorefrontCatalogService {
       isGiftCard: product.isGiftCard,
       seoTitle: product.seoTitle,
       seoDescription: product.seoDescription,
-      options: product.options.map((o) => ({ name: o.name, values: o.values })),
+      isBundle: product.isBundle,
+      options: product.options.map((o) => ({
+        name: o.name,
+        values: o.values,
+        style: o.style === 'dropdown' || o.style === 'swatches' ? o.style : 'buttons',
+        swatches: o.swatches,
+      })),
       // Field by field: cost, customs data and stock counts stay admin-only.
       variants: product.variants.map((v) => ({
         id: v.id,
@@ -297,6 +320,23 @@ export class StorefrontCatalogService {
         available: isVariantAvailable(v),
         sku: v.sku,
         imageId: v.imageId,
+        ...(product.isBundle && {
+          components: v.components.map((c) => ({
+            productTitle: c.component.product.title,
+            productHandle: c.component.product.handle,
+            variantTitle: c.component.title,
+            quantity: c.quantity,
+          })),
+          componentsPrice: shopPrice(
+            shop,
+            v.components.reduce((sum, c) => sum + c.component.price * c.quantity, 0),
+          ),
+        }),
+      })),
+      customizations: parseCustomizations(product.customizations).map((field) => ({
+        ...field,
+        price: shopPrice(shop, field.price),
+        choices: field.choices.map((c) => ({ ...c, price: shopPrice(shop, c.price) })),
       })),
       images: product.images.map((i) => ({
         id: i.id,

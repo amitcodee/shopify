@@ -35,6 +35,12 @@ export default async function StoreLayout({
       permission: 'products:read',
     },
     {
+      label: 'Purchase orders',
+      icon: 'truck',
+      href: `${base}/purchase-orders`,
+      permission: 'products:read',
+    },
+    {
       label: 'Collections',
       icon: 'collections',
       href: `${base}/collections`,

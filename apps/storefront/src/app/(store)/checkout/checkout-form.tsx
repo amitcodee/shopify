@@ -298,6 +298,11 @@ export function CheckoutForm({
                   {line.variantTitle !== 'Default' ? `${line.variantTitle} · ` : ''}Qty{' '}
                   {line.quantity}
                 </span>
+                {line.properties?.length ? (
+                  <span className="block text-xs text-zinc-500">
+                    {line.properties.map((p) => `${p.label}: ${p.value}`).join(' · ')}
+                  </span>
+                ) : null}
               </span>
               <span className="tabular-nums">{money(line.lineTotal)}</span>
             </li>

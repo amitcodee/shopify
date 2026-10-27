@@ -1,5 +1,11 @@
 import { z } from 'zod';
 import { storeAppsSchema } from './apps.js';
+import {
+  customizationSchema,
+  customizationSelectionSchema,
+  linePropertySchema,
+} from './customizations.js';
+import { optionStyleSchema } from './products.js';
 import { themeInputSchema } from './settings.js';
 import { policyKindSchema, resolvedLinkSchema } from './online-store.js';
 
@@ -98,6 +104,19 @@ export const storefrontVariantSchema = z.object({
   sku: z.string().nullable(),
   /** Image to show when this variant is selected (an `images[].id`), or null. */
   imageId: z.uuid().nullable().optional(),
+  /** Bundles: what is inside ("2 × Ceramic mug — White"). */
+  components: z
+    .array(
+      z.object({
+        productTitle: z.string(),
+        productHandle: z.string(),
+        variantTitle: z.string(),
+        quantity: z.number().int(),
+      }),
+    )
+    .optional(),
+  /** Bundles: what the items cost on their own (to show the saving), or null. */
+  componentsPrice: z.number().int().nullable().optional(),
 });
 export type StorefrontVariant = z.infer<typeof storefrontVariantSchema>;
 
@@ -112,8 +131,19 @@ export const storefrontProductSchema = z.object({
   seoTitle: z.string().nullable(),
   seoDescription: z.string().nullable(),
   isGiftCard: z.boolean(),
-  options: z.array(z.object({ name: z.string(), values: z.array(z.string()) })),
+  isBundle: z.boolean().optional(),
+  options: z.array(
+    z.object({
+      name: z.string(),
+      values: z.array(z.string()),
+      style: optionStyleSchema.optional(),
+      /** "#rrggbb" per value (same order) for swatches, or empty. */
+      swatches: z.array(z.string()).optional(),
+    }),
+  ),
   variants: z.array(storefrontVariantSchema),
+  /** Inputs the shopper fills in (engraving, gift wrap, ...). Prices in the shopper's currency. */
+  customizations: z.array(customizationSchema).optional(),
   images: z.array(
     z.object({
       id: z.uuid().optional(),
@@ -150,6 +180,8 @@ export type StorefrontCollection = z.infer<typeof storefrontCollectionSchema>;
 export const addToCartInputSchema = z.strictObject({
   variantId: z.uuid(),
   quantity: z.number().int().min(1).max(99).default(1),
+  /** Answers to the product's customizations; lines with different answers stay separate. */
+  customization: customizationSelectionSchema,
 });
 
 export const updateCartLineInputSchema = z.strictObject({
@@ -171,6 +203,8 @@ export const cartLineSchema = z.object({
   available: z.boolean(),
   /** Largest quantity that can be ordered right now (null = unlimited). */
   maxQuantity: z.number().int().nullable(),
+  /** Customizations on this line; their prices are included in unitPrice. */
+  properties: z.array(linePropertySchema).optional(),
 });
 export type CartLine = z.infer<typeof cartLineSchema>;
 

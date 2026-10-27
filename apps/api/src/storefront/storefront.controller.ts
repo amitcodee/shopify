@@ -195,7 +195,7 @@ export class StorefrontController {
     @CartToken() token: string | null,
     @Body(new ZodPipe(addToCartInputSchema)) body: z.output<typeof addToCartInputSchema>,
   ): Promise<Cart> {
-    return this.carts.addLine(shop, token, body.variantId, body.quantity);
+    return this.carts.addLine(shop, token, body.variantId, body.quantity, body.customization);
   }
 
   @Patch('cart/lines/:lineId')

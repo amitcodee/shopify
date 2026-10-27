@@ -3,10 +3,12 @@ import type { OrderLine, Prisma, PrismaClient, TenantTx } from '@repo/db';
 import { DiscountRules } from '../commerce/commerce-rules.js';
 import { PLATFORM_DB, TenantDb } from '../database/database.module.js';
 import { allocate, changeLevel, defaultLocation } from '../catalog/inventory-levels.js';
+import { refreshBundlesContaining } from '../catalog/bundles.js';
+import { type BundleSnapshot, parseBundleSnapshot } from './line-extras.js';
 import { GiftCardLedger } from '../gift-cards/gift-card-ledger.js';
 import { WebhookEmitter } from '../webhooks/webhooks.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
-import { formatMoney } from '@repo/contracts';
+import { formatMoney, parseLineProperties } from '@repo/contracts';
 import {
   disputeEmail,
   giftCardIssuedEmail,
@@ -78,41 +80,114 @@ export class OrderLifecycle {
     return counter.number;
   }
 
-  /** Atomic conditional decrements: concurrent checkouts can never oversell. */
+  /**
+   * Takes stock for an order's lines with atomic conditional decrements, so concurrent
+   * checkouts can never oversell. A bundle line takes its components' stock instead (recorded
+   * on the line so restocks return it); bundles sharing those components are then recomputed.
+   */
   async reserveStock(
     tx: TenantTx,
     storeId: string,
     orderId: string,
-    lines: { variantId: string | null; title: string; quantity: number; trackInventory: boolean }[],
+    lines: Pick<OrderLine, 'id' | 'variantId' | 'title' | 'quantity' | 'stockReserved'>[],
   ): Promise<void> {
-    for (const line of lines) {
-      if (!line.trackInventory || !line.variantId) continue;
-      const rows = await tx.$queryRaw<{ inventoryQuantity: number }[]>`
-        UPDATE "ProductVariant"
-        SET "inventoryQuantity" = "inventoryQuantity" - ${line.quantity}, "updatedAt" = now()
-        WHERE id = ${line.variantId}::uuid AND "storeId" = ${storeId}::uuid
-          AND ("inventoryQuantity" >= ${line.quantity} OR "allowBackorder")
-        RETURNING "inventoryQuantity"`;
-      const row = rows[0];
-      if (!row)
-        throw new ConflictException(`${line.title} just sold out. Please review your cart.`);
-      const locationId = await allocate(tx, storeId, line.variantId, line.quantity);
-      await tx.orderLine.updateMany({
-        where: { orderId, storeId, variantId: line.variantId },
-        data: { locationId },
-      });
-      await tx.inventoryAdjustment.create({
-        data: {
+    const reserved = lines.filter((l) => l.stockReserved && l.variantId);
+    const parts = await tx.bundleComponent.findMany({
+      where: { storeId, bundleVariantId: { in: reserved.map((l) => l.variantId!) } },
+      orderBy: { componentVariantId: 'asc' },
+      include: {
+        component: {
+          select: {
+            title: true,
+            sku: true,
+            trackInventory: true,
+            product: { select: { title: true } },
+          },
+        },
+      },
+    });
+    const byBundle = new Map<string, typeof parts>();
+    for (const part of parts) {
+      byBundle.set(part.bundleVariantId, [...(byBundle.get(part.bundleVariantId) ?? []), part]);
+    }
+    const touched = new Set<string>();
+    for (const line of reserved) {
+      const variantId = line.variantId!;
+      const components = byBundle.get(variantId);
+      if (!components) {
+        const locationId = await this.takeStock(
+          tx,
           storeId,
-          variantId: line.variantId,
-          delta: -line.quantity,
-          quantityAfter: row.inventoryQuantity,
-          reason: 'ORDER',
-          referenceId: orderId,
+          orderId,
+          variantId,
+          line.quantity,
+          line.title,
+        );
+        await tx.orderLine.update({ where: { id: line.id }, data: { locationId } });
+        touched.add(variantId);
+        continue;
+      }
+      const snapshot: BundleSnapshot[] = [];
+      for (const part of components) {
+        if (!part.component.trackInventory) continue;
+        const locationId = await this.takeStock(
+          tx,
+          storeId,
+          orderId,
+          part.componentVariantId,
+          part.quantity * line.quantity,
+          line.title,
+        );
+        touched.add(part.componentVariantId);
+        snapshot.push({
+          variantId: part.componentVariantId,
+          title: `${part.component.product.title}${part.component.title === 'Default' ? '' : ` — ${part.component.title}`}`,
+          sku: part.component.sku,
+          quantity: part.quantity,
           locationId,
+        });
+      }
+      await tx.orderLine.update({
+        where: { id: line.id },
+        data: {
+          components: snapshot as unknown as Prisma.InputJsonValue,
+          locationId: snapshot[0]?.locationId ?? null,
         },
       });
     }
+    await refreshBundlesContaining(tx, storeId, touched);
+  }
+
+  /** One conditional decrement plus its location allocation and ledger entry. */
+  private async takeStock(
+    tx: TenantTx,
+    storeId: string,
+    orderId: string,
+    variantId: string,
+    quantity: number,
+    title: string,
+  ): Promise<string> {
+    const rows = await tx.$queryRaw<{ inventoryQuantity: number }[]>`
+      UPDATE "ProductVariant"
+      SET "inventoryQuantity" = "inventoryQuantity" - ${quantity}, "updatedAt" = now()
+      WHERE id = ${variantId}::uuid AND "storeId" = ${storeId}::uuid
+        AND ("inventoryQuantity" >= ${quantity} OR "allowBackorder")
+      RETURNING "inventoryQuantity"`;
+    const row = rows[0];
+    if (!row) throw new ConflictException(`${title} just sold out. Please review your cart.`);
+    const locationId = await allocate(tx, storeId, variantId, quantity);
+    await tx.inventoryAdjustment.create({
+      data: {
+        storeId,
+        variantId,
+        delta: -quantity,
+        quantityAfter: row.inventoryQuantity,
+        reason: 'ORDER',
+        referenceId: orderId,
+        locationId,
+      },
+    });
+    return locationId;
   }
 
   /** Returns reserved/sold units to stock for the given lines (quantities default to the rest). */
@@ -125,38 +200,73 @@ export class OrderLifecycle {
     actorUserId: string | null,
     orderId: string,
   ): Promise<void> {
+    const touched = new Set<string>();
     for (const line of lines) {
       if (!line.stockReserved || !line.variantId) continue;
       const remaining = line.quantity - line.restockedQuantity;
       const qty = Math.min(remaining, quantities ? (quantities.get(line.id) ?? 0) : remaining);
       if (qty <= 0) continue;
-      const updated = await tx.$queryRaw<{ inventoryQuantity: number }[]>`
-        UPDATE "ProductVariant" SET "inventoryQuantity" = "inventoryQuantity" + ${qty}, "updatedAt" = now()
-        WHERE id = ${line.variantId}::uuid AND "storeId" = ${storeId}::uuid AND "trackInventory"
-        RETURNING "inventoryQuantity"`;
-      const row = updated[0];
-      if (row) {
-        // Back to where it was taken from (or the default location for older orders).
-        const locationId = line.locationId ?? (await defaultLocation(tx, storeId)).id;
-        await changeLevel(tx, storeId, line.variantId, locationId, qty);
-        await tx.inventoryAdjustment.create({
-          data: {
-            storeId,
-            variantId: line.variantId,
-            delta: qty,
-            quantityAfter: row.inventoryQuantity,
-            reason,
-            actorUserId,
-            referenceId: orderId,
-            locationId,
-          },
-        });
+      const components = parseBundleSnapshot(line.components);
+      const returns =
+        components.length > 0
+          ? components.map((c) => ({
+              variantId: c.variantId,
+              qty: qty * c.quantity,
+              locationId: c.locationId,
+            }))
+          : [{ variantId: line.variantId, qty, locationId: line.locationId }];
+      for (const item of returns) {
+        await this.putBack(
+          tx,
+          storeId,
+          item.variantId,
+          item.qty,
+          item.locationId,
+          reason,
+          actorUserId,
+          orderId,
+        );
+        touched.add(item.variantId);
       }
       await tx.orderLine.update({
         where: { id: line.id },
         data: { restockedQuantity: { increment: qty } },
       });
     }
+    await refreshBundlesContaining(tx, storeId, touched);
+  }
+
+  private async putBack(
+    tx: TenantTx,
+    storeId: string,
+    variantId: string,
+    qty: number,
+    lineLocationId: string | null,
+    reason: 'ORDER_CANCELLED' | 'RETURN',
+    actorUserId: string | null,
+    orderId: string,
+  ): Promise<void> {
+    const updated = await tx.$queryRaw<{ inventoryQuantity: number }[]>`
+      UPDATE "ProductVariant" SET "inventoryQuantity" = "inventoryQuantity" + ${qty}, "updatedAt" = now()
+      WHERE id = ${variantId}::uuid AND "storeId" = ${storeId}::uuid AND "trackInventory"
+      RETURNING "inventoryQuantity"`;
+    const row = updated[0];
+    if (!row) return;
+    // Back to where it was taken from (or the default location for older orders).
+    const locationId = lineLocationId ?? (await defaultLocation(tx, storeId)).id;
+    await changeLevel(tx, storeId, variantId, locationId, qty);
+    await tx.inventoryAdjustment.create({
+      data: {
+        storeId,
+        variantId,
+        delta: qty,
+        quantityAfter: row.inventoryQuantity,
+        reason,
+        actorUserId,
+        referenceId: orderId,
+        locationId,
+      },
+    });
   }
 
   /** Cancels an order inside the caller's transaction (idempotent). */
@@ -521,6 +631,7 @@ export class OrderLifecycle {
         variantTitle: l.variantTitle,
         quantity: l.quantity,
         total: l.unitPrice * l.quantity - l.discountTotal,
+        properties: parseLineProperties(l.properties),
       })),
       statusUrl,
     };

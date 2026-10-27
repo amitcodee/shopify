@@ -19,6 +19,7 @@ import type { inventoryAdjustInputSchema, inventoryListQuerySchema } from '@repo
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser, RequestMeta } from '../common/request.js';
 import { TenantDb } from '../database/database.module.js';
+import { refreshBundlesContaining } from './bundles.js';
 import { changeLevel, defaultLocation } from './inventory-levels.js';
 
 type AdjustInput = z.output<typeof inventoryAdjustInputSchema>;
@@ -40,6 +41,8 @@ function toItem(
     productTitle: v.product.title,
     variantTitle: v.title,
     sku: v.sku,
+    price: v.price,
+    costPerItem: v.costPerItem,
     trackInventory: v.trackInventory,
     allowBackorder: v.allowBackorder,
     inventoryQuantity: v.inventoryQuantity,
@@ -55,7 +58,8 @@ export class InventoryService {
   ) {}
 
   async list(storeId: string, query: ListQuery): Promise<Paginated<InventoryItem>> {
-    const where: Prisma.ProductVariantWhereInput = { storeId };
+    // Bundles hold no stock of their own (see bundles.ts).
+    const where: Prisma.ProductVariantWhereInput = { storeId, product: { isBundle: false } };
     if (query.lowStock === 'true') {
       where.trackInventory = true;
       where.inventoryQuantity = { lte: LOW_STOCK_THRESHOLD };
@@ -134,6 +138,7 @@ export class InventoryService {
           data: { delta, quantityAfter, reason: input.reason, location: location.name },
           meta,
         });
+        await refreshBundlesContaining(tx, storeId, [variantId]);
       }
       return toItem(
         await tx.productVariant.findUniqueOrThrow({
@@ -334,7 +339,15 @@ export class InventoryService {
     const locked = await tx.$queryRaw<{ id: string }[]>`
       SELECT id FROM "ProductVariant" WHERE id = ${variantId}::uuid AND "storeId" = ${storeId}::uuid FOR UPDATE`;
     if (locked.length === 0) throw new NotFoundException('Variant not found.');
-    const variant = await tx.productVariant.findUniqueOrThrow({ where: { id: variantId } });
+    const variant = await tx.productVariant.findUniqueOrThrow({
+      where: { id: variantId },
+      include: { product: { select: { isBundle: true } } },
+    });
+    if (variant.product.isBundle) {
+      throw new BadRequestException(
+        "A bundle's stock comes from the products in it. Adjust their stock instead.",
+      );
+    }
     if (!variant.trackInventory) {
       throw new BadRequestException('Inventory is not tracked for this variant.');
     }

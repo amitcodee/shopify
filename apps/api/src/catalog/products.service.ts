@@ -34,9 +34,25 @@ import { RemoteFetchError, UnsafeUrlError } from '../webhooks/safe-http.js';
 import { WebhookEmitter } from '../webhooks/webhooks.service.js';
 import { RemoteImageFetcher } from './image-fetcher.js';
 import { changeLevel, defaultLocation } from './inventory-levels.js';
+import { bundlesContaining, refreshBundleVariants, setBundleComponents } from './bundles.js';
 
 type VariantInput = ProductInputParsed['variants'][number];
 type BulkInput = z.output<typeof productBulkInputSchema>;
+
+/** Stored customizations: kept ids stay (carts refer to them), new fields get one. */
+function customizationsData(input: NonNullable<ProductInputParsed['customizations']>) {
+  return input.map((field) => ({ ...field, id: field.id ?? randomUUID() }));
+}
+
+function optionsData(options: ProductInputParsed['options']) {
+  return options.map((o, position) => ({
+    name: o.name,
+    values: o.values,
+    style: o.style,
+    swatches: o.swatches,
+    position,
+  }));
+}
 
 function variantData(v: VariantInput, position: number) {
   return {
@@ -113,6 +129,9 @@ export class ProductsService {
         filters.push(Prisma.sql`lower(p."productType") = lower(${query.productType})`);
       }
       if (query.tag) filters.push(Prisma.sql`p.tags @> ARRAY[${query.tag}]::text[]`);
+      if (query.supplierId) {
+        filters.push(Prisma.sql`p."supplierId" = ${query.supplierId}::uuid`);
+      }
       if (query.collectionId) {
         const collection = await tx.collection.findFirst({
           where: { id: query.collectionId, storeId },
@@ -171,6 +190,7 @@ export class ProductsService {
             take: 1,
             select: { storageKey: true, renditionWidths: true },
           },
+          supplier: { select: { name: true } },
         },
       });
       const byId = new Map(products.map((p) => [p.id, p]));
@@ -194,6 +214,8 @@ export class ProductsService {
           vendor: p.vendor,
           productType: p.productType,
           tags: p.tags,
+          isBundle: p.isBundle,
+          supplierName: p.supplier?.name ?? null,
           variantCount: p.variants.length,
           totalInventory: p.variants
             .filter((v) => v.trackInventory)
@@ -262,6 +284,7 @@ export class ProductsService {
     const product = await this.withConflicts(() =>
       this.tenantDb.run(store.id, async (tx) => {
         await this.limits.assertCanCreateProduct(tx, store.id);
+        if (input.supplierId) await this.assertSupplier(tx, store.id, input.supplierId);
         const handle = await uniqueHandle(input.handle, input.title, async (h) =>
           Boolean(await tx.product.findFirst({ where: { storeId: store.id, handle: h } })),
         );
@@ -279,20 +302,31 @@ export class ProductsService {
             seoTitle: input.seoTitle ?? null,
             seoDescription: input.seoDescription ?? null,
             isGiftCard: input.isGiftCard,
+            isBundle: input.isBundle,
+            supplierId: input.supplierId ?? null,
+            customizations: customizationsData(input.customizations ?? []),
             publishedAt: publishedAtFor(input.status, input.publishAt, null),
-            options: {
-              create: input.options.map((o, position) => ({
-                name: o.name,
-                values: o.values,
-                position,
-              })),
-            },
+            options: { create: optionsData(input.options) },
           },
         });
 
+        const variantIds: string[] = [];
         for (const [position, v] of input.variants.entries()) {
-          await this.createVariant(tx, store.id, created.id, v, position, actor);
+          const id = await this.createVariant(
+            tx,
+            store.id,
+            created.id,
+            v,
+            position,
+            actor,
+            input.isBundle,
+          );
+          variantIds.push(id);
+          if (input.isBundle) {
+            await setBundleComponents(tx, store.id, created.id, id, v.components ?? []);
+          }
         }
+        if (input.isBundle) await refreshBundleVariants(tx, store.id, variantIds);
         if (input.metafields) await this.replaceMetafields(tx, store.id, created.id, input);
 
         await this.audit.record(tx, {
@@ -332,6 +366,24 @@ export class ProductsService {
           include: { variants: { select: { id: true } }, images: { select: { id: true } } },
         });
         if (!existing) throw new NotFoundException('Product not found.');
+        if (input.isBundle !== existing.isBundle) {
+          throw new BadRequestException(
+            existing.isBundle
+              ? 'A bundle cannot become a regular product. Create a new product instead.'
+              : 'A product with its own stock cannot become a bundle. Create a new bundle instead.',
+          );
+        }
+        if (input.supplierId) await this.assertSupplier(tx, store.id, input.supplierId);
+        const usedInBundles = await bundlesContaining(
+          tx,
+          store.id,
+          existing.variants.map((v) => v.id),
+        );
+        if (input.isGiftCard && usedInBundles.length > 0) {
+          throw new BadRequestException(
+            'This product is part of a bundle, so it cannot become a gift card.',
+          );
+        }
 
         const imageIds = new Set(existing.images.map((i) => i.id));
         if (input.variants.some((v) => v.imageId && !imageIds.has(v.imageId))) {
@@ -360,19 +412,17 @@ export class ProductsService {
             seoDescription: input.seoDescription ?? null,
             isGiftCard: input.isGiftCard,
             publishedAt,
+            ...(input.supplierId !== undefined && { supplierId: input.supplierId }),
+            ...(input.customizations && {
+              customizations: customizationsData(input.customizations),
+            }),
           },
         });
 
         await tx.productOption.deleteMany({ where: { productId, storeId: store.id } });
         if (input.options.length > 0) {
           await tx.productOption.createMany({
-            data: input.options.map((o, position) => ({
-              storeId: store.id,
-              productId,
-              name: o.name,
-              values: o.values,
-              position,
-            })),
+            data: optionsData(input.options).map((o) => ({ ...o, storeId: store.id, productId })),
           });
         }
 
@@ -385,13 +435,30 @@ export class ProductsService {
         await tx.productVariant.deleteMany({
           where: { productId, storeId: store.id, id: { notIn: [...keepIds] } },
         });
+        const variantIds: string[] = [];
         for (const [position, v] of input.variants.entries()) {
           if (v.id) {
             await tx.productVariant.update({ where: { id: v.id }, data: variantData(v, position) });
+            variantIds.push(v.id);
           } else {
-            await this.createVariant(tx, store.id, productId, v, position, actor);
+            variantIds.push(
+              await this.createVariant(tx, store.id, productId, v, position, actor, input.isBundle),
+            );
+          }
+          if (input.isBundle) {
+            await setBundleComponents(
+              tx,
+              store.id,
+              productId,
+              variantIds.at(-1)!,
+              v.components ?? [],
+            );
           }
         }
+        // Bundles derive their stock; bundles containing this product follow its stock settings
+        // (and lose items whose variant was deleted).
+        if (input.isBundle) await refreshBundleVariants(tx, store.id, variantIds);
+        else await refreshBundleVariants(tx, store.id, usedInBundles);
         if (input.metafields) await this.replaceMetafields(tx, store.id, productId, input);
 
         await this.audit.record(tx, {
@@ -423,10 +490,20 @@ export class ProductsService {
     const keys = await this.tenantDb.run(store.id, async (tx) => {
       const product = await tx.product.findFirst({
         where: { id: productId, storeId: store.id },
-        include: { images: { select: { storageKey: true, renditionWidths: true } } },
+        include: {
+          images: { select: { storageKey: true, renditionWidths: true } },
+          variants: { select: { id: true } },
+        },
       });
       if (!product) throw new NotFoundException('Product not found.');
+      const bundles = await bundlesContaining(
+        tx,
+        store.id,
+        product.variants.map((v) => v.id),
+      );
       await tx.product.delete({ where: { id: productId } });
+      // Bundles that held this product lose the item (and can no longer be sold without it).
+      await refreshBundleVariants(tx, store.id, bundles);
       await this.audit.record(tx, {
         storeId: store.id,
         actorUserId: actor.id,
@@ -458,8 +535,19 @@ export class ProductsService {
     const keys = await this.tenantDb.run(store.id, async (tx) => {
       const products = await tx.product.findMany({
         where: { storeId: store.id, id: { in: input.productIds } },
-        include: { images: { select: { storageKey: true, renditionWidths: true } } },
+        include: {
+          images: { select: { storageKey: true, renditionWidths: true } },
+          variants: { select: { id: true } },
+        },
       });
+      const affectedBundles =
+        input.action === 'delete'
+          ? await bundlesContaining(
+              tx,
+              store.id,
+              products.flatMap((p) => p.variants.map((v) => v.id)),
+            )
+          : [];
       if (products.length !== input.productIds.length) {
         throw new BadRequestException('Some of the selected products do not exist.');
       }
@@ -522,6 +610,7 @@ export class ProductsService {
         });
         await this.webhooks.emitProduct(tx, store.id, 'products/updated', product.id);
       }
+      await refreshBundleVariants(tx, store.id, affectedBundles);
       return removed;
     });
     await this.deleteFiles(keys);
@@ -716,11 +805,14 @@ export class ProductsService {
     v: VariantInput,
     position: number,
     actor: AuthUser,
-  ): Promise<void> {
-    const initial = v.trackInventory ? (v.inventoryQuantity ?? 0) : 0;
+    isBundle = false,
+  ): Promise<string> {
+    // A bundle's stock comes from its components (see bundles.ts), never from its own levels.
+    const initial = v.trackInventory && !isBundle ? (v.inventoryQuantity ?? 0) : 0;
     const variant = await tx.productVariant.create({
       data: { storeId, productId, ...variantData(v, position), inventoryQuantity: initial },
     });
+    if (isBundle) return variant.id;
     if (v.trackInventory) {
       const location = await defaultLocation(tx, storeId);
       await changeLevel(tx, storeId, variant.id, location.id, initial);
@@ -738,6 +830,13 @@ export class ProductsService {
         });
       }
     }
+    return variant.id;
+  }
+
+  /** Clear error for an unknown supplier (a trigger also enforces the same store). */
+  private async assertSupplier(tx: TenantTx, storeId: string, supplierId: string): Promise<void> {
+    const supplier = await tx.supplier.findFirst({ where: { id: supplierId, storeId } });
+    if (!supplier) throw new BadRequestException('Choose an existing supplier.');
   }
 
   /** Replace semantics: the input list becomes the product's metafields, in its order. */

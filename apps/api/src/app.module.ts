@@ -4,6 +4,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuditModule } from './audit/audit.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CatalogModule } from './catalog/catalog.module.js';
+import { PurchasingModule } from './purchasing/purchasing.module.js';
 import { CommerceModule } from './commerce/commerce.module.js';
 import { PostgresThrottlerStorage } from './common/postgres-throttler.storage.js';
 import { ProblemDetailsFilter } from './common/problem-details.filter.js';
@@ -54,6 +55,7 @@ export class AppModule {
         HealthModule,
         StoresModule,
         CatalogModule,
+        PurchasingModule,
         StaffModule,
         StorefrontModule,
         CommerceModule,

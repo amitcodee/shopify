@@ -21,6 +21,7 @@ import type { z } from 'zod';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { TenantDb } from '../database/database.module.js';
+import { lineExtras } from './line-extras.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import {
   orderCancelledEmail,
@@ -542,6 +543,7 @@ export class OrdersService {
         total: l.unitPrice * l.quantity - l.discountTotal,
         restockedQuantity: l.restockedQuantity,
         restockable: l.stockReserved ? l.quantity - l.restockedQuantity : 0,
+        ...lineExtras(l),
       })),
       payments: order.payments.map((p) => ({
         id: p.id,

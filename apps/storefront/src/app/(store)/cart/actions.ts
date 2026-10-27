@@ -28,12 +28,18 @@ export async function addToCartAction(
 ): Promise<CartActionState> {
   const variantId = String(formData.get('variantId') ?? '');
   const quantity = Math.max(1, Math.min(99, Number(formData.get('quantity') ?? 1) || 1));
+  // Personalisation fields are named `custom-<customization id>` (ticked checkboxes send "true").
+  const customization = [...formData.entries()].flatMap(([key, value]) =>
+    key.startsWith('custom-') && typeof value === 'string'
+      ? [{ id: key.slice('custom-'.length), value: value.slice(0, 500) }]
+      : [],
+  );
   try {
     const token = await ensureCartToken();
     await sf<Cart>('/cart/lines', {
       method: 'POST',
       cartToken: token,
-      body: { variantId, quantity },
+      body: { variantId, quantity, customization },
     });
   } catch (error) {
     if (error instanceof StorefrontApiError) return { error: error.message };

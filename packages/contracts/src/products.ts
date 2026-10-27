@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { paginated } from './common.js';
+import { customizationSchema, customizationsInputSchema } from './customizations.js';
 
 export const handleSchema = z
   .string()
@@ -33,16 +34,38 @@ const optionalText = (max: number) =>
     .nullable()
     .optional();
 
-export const productOptionInputSchema = z.strictObject({
-  name: z.string().trim().min(1).max(50),
-  values: z
-    .array(z.string().trim().min(1).max(50))
-    .min(1)
-    .max(50)
-    .refine((values) => new Set(values.map((v) => v.toLowerCase())).size === values.length, {
-      message: 'Option values must be unique',
-    }),
-});
+/** How shoppers pick an option's value on the product page. */
+export const optionStyleSchema = z.enum(['buttons', 'dropdown', 'swatches']);
+export type OptionStyle = z.infer<typeof optionStyleSchema>;
+
+/** "#RGB" or "#RRGGBB" (normalized to lowercase "#rrggbb"), or "" for no swatch. */
+export const swatchColorSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^(#[0-9a-f]{3}|#[0-9a-f]{6})?$/, 'Use a colour like #1f6feb')
+  .transform((v) => (v.length === 4 ? `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}` : v));
+
+export const productOptionInputSchema = z
+  .strictObject({
+    name: z.string().trim().min(1).max(50),
+    values: z
+      .array(z.string().trim().min(1).max(50))
+      .min(1)
+      .max(50)
+      .refine((values) => new Set(values.map((v) => v.toLowerCase())).size === values.length, {
+        message: 'Option values must be unique',
+      }),
+    style: optionStyleSchema.default('buttons'),
+    /** One colour per value (same order), or empty. Shown when the style is "swatches". */
+    swatches: z.array(swatchColorSchema).max(50).default([]),
+  })
+  .refine((o) => o.swatches.length === 0 || o.swatches.length === o.values.length, {
+    path: ['swatches'],
+    message: 'Give one swatch colour per value',
+  })
+  // Swatches without any colour are dropped.
+  .transform((o) => ({ ...o, swatches: o.swatches.some(Boolean) ? o.swatches : [] }));
 
 /** ISO 3166-1 alpha-2 ("us" and "" are accepted and normalized to "US" / null). */
 const countryCodeSchema = z
@@ -73,6 +96,7 @@ const hsCodeSchema = z
 export const MAX_VARIANTS_PER_PRODUCT = 250;
 export const MAX_IMAGES_PER_PRODUCT = 50;
 export const MAX_METAFIELDS_PER_PRODUCT = 30;
+export const MAX_BUNDLE_COMPONENTS = 10;
 
 export const metafieldTypeSchema = z.enum([
   'single_line_text',
@@ -195,6 +219,22 @@ export const variantInputSchema = z.strictObject({
   allowBackorder: z.boolean().default(false),
   /** Starting stock for new variants; existing stock changes go through inventory adjustments. */
   inventoryQuantity: z.number().int().min(0).max(1_000_000).optional(),
+  /**
+   * Bundle products only: what one unit of this variant contains. Its stock, tracking and
+   * backorder settings are then derived from these variants.
+   */
+  components: z
+    .array(
+      z.strictObject({
+        variantId: z.uuid(),
+        quantity: z.number().int().min(1).max(100).default(1),
+      }),
+    )
+    .max(MAX_BUNDLE_COMPONENTS, `A bundle holds at most ${MAX_BUNDLE_COMPONENTS} items`)
+    .refine((items) => new Set(items.map((i) => i.variantId)).size === items.length, {
+      message: 'Each item can be in a bundle once',
+    })
+    .optional(),
 });
 export type VariantInput = z.infer<typeof variantInputSchema>;
 
@@ -214,6 +254,12 @@ export const productInputSchema = z
     seoTitle: optionalText(70),
     seoDescription: optionalText(320),
     isGiftCard: z.boolean().default(false),
+    /** A bundle (combo) of other variants; every variant then lists its components. */
+    isBundle: z.boolean().default(false),
+    /** Supplier the product is bought from (null for none; omitted keeps it). */
+    supplierId: z.uuid().nullable().optional(),
+    /** Shopper inputs. Replaces the product's customizations when present; omitted keeps them. */
+    customizations: customizationsInputSchema.optional(),
     options: z
       .array(productOptionInputSchema)
       .max(3)
@@ -281,6 +327,30 @@ export const productInputSchema = z
     if (new Set(skus).size !== skus.length) {
       ctx.addIssue({ code: 'custom', path: ['variants'], message: 'SKUs must be unique' });
     }
+    if (product.isBundle && product.isGiftCard) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['isBundle'],
+        message: 'A gift card cannot be a bundle',
+      });
+    }
+    product.variants.forEach((variant, index) => {
+      const count = variant.components?.length ?? 0;
+      if (product.isBundle && count === 0) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['variants', index, 'components'],
+          message: 'Add at least one product to this bundle',
+        });
+      }
+      if (!product.isBundle && count > 0) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['variants', index, 'components'],
+          message: 'Only bundles have components',
+        });
+      }
+    });
   })
   // Gift cards are delivered by email: never shipped, taxed (tax applies when they are spent)
   // or limited by stock.
@@ -329,6 +399,21 @@ export const productMetafieldSchema = z.object({
 });
 export type ProductMetafield = z.infer<typeof productMetafieldSchema>;
 
+export const bundleComponentSchema = z.object({
+  variantId: z.uuid(),
+  productId: z.uuid(),
+  productTitle: z.string(),
+  variantTitle: z.string(),
+  sku: z.string().nullable(),
+  /** Units in one bundle. */
+  quantity: z.number().int(),
+  /** The component's own price, for comparing with the bundle price. */
+  price: z.number().int(),
+  inventoryQuantity: z.number().int(),
+  trackInventory: z.boolean(),
+});
+export type BundleComponent = z.infer<typeof bundleComponentSchema>;
+
 export const variantSchema = z.object({
   id: z.uuid(),
   title: z.string(),
@@ -352,8 +437,18 @@ export const variantSchema = z.object({
   inventoryQuantity: z.number().int(),
   position: z.number().int(),
   imageId: z.uuid().nullable(),
+  /** Bundle variants: what one unit contains (empty otherwise). */
+  components: z.array(bundleComponentSchema),
 });
 export type Variant = z.infer<typeof variantSchema>;
+
+export const productOptionSchema = z.object({
+  name: z.string(),
+  values: z.array(z.string()),
+  style: optionStyleSchema,
+  swatches: z.array(z.string()),
+});
+export type ProductOption = z.infer<typeof productOptionSchema>;
 
 export const productSchema = z.object({
   id: z.uuid(),
@@ -367,7 +462,10 @@ export const productSchema = z.object({
   seoTitle: z.string().nullable(),
   seoDescription: z.string().nullable(),
   isGiftCard: z.boolean(),
-  options: z.array(z.object({ name: z.string(), values: z.array(z.string()) })),
+  isBundle: z.boolean(),
+  supplierId: z.uuid().nullable(),
+  customizations: z.array(customizationSchema),
+  options: z.array(productOptionSchema),
   variants: z.array(variantSchema),
   images: z.array(productImageSchema),
   collectionIds: z.array(z.uuid()),
@@ -389,6 +487,8 @@ export const productListItemSchema = z.object({
   vendor: z.string().nullable(),
   productType: z.string().nullable(),
   tags: z.array(z.string()),
+  isBundle: z.boolean(),
+  supplierName: z.string().nullable(),
   variantCount: z.number().int(),
   totalInventory: z.number().int(),
   minPrice: z.number().int(),
@@ -417,6 +517,7 @@ export const productListQuerySchema = z.strictObject({
   productType: z.preprocess(blankToUndefined, z.string().trim().max(100).optional()),
   tag: z.preprocess(blankToUndefined, z.string().trim().toLowerCase().max(40).optional()),
   collectionId: z.preprocess(blankToUndefined, z.uuid().optional()),
+  supplierId: z.preprocess(blankToUndefined, z.uuid().optional()),
   sort: productListSortSchema.default('updated'),
   /** Defaults: newest first for updated/created; A-Z or lowest first for the others. */
   direction: z.preprocess(blankToUndefined, z.enum(['asc', 'desc']).optional()),

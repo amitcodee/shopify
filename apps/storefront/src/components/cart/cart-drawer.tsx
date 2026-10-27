@@ -11,6 +11,7 @@ import { FreeShippingBar } from '@/components/apps/free-shipping-bar';
 import { CART_ADDED_EVENT, CART_OPEN_EVENT } from './cart-events';
 import { CartLineControls } from './line-controls';
 import { lineProblem } from './line-status';
+import { LineProperties } from './line-properties';
 
 /**
  * Slide-out cart from the right. It opens after an add to cart (`cart:added`) and when the
@@ -161,6 +162,11 @@ export function CartDrawer({
                             {line.variantTitle !== 'Default' ? (
                               <p className="mt-0.5 text-xs text-zinc-500">{line.variantTitle}</p>
                             ) : null}
+                            <LineProperties
+                              properties={line.properties}
+                              currency={currency}
+                              className="mt-0.5 space-y-0.5 text-xs text-zinc-500"
+                            />
                             <p className="mt-0.5 text-xs text-zinc-500">
                               {formatMoney(line.unitPrice, currency)}
                             </p>

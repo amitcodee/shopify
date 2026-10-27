@@ -1,4 +1,4 @@
-import type { Product } from '@repo/contracts';
+import type { Product, Supplier } from '@repo/contracts';
 import { notFound } from 'next/navigation';
 import { ActionForm, SubmitButton } from '@/components/form';
 import { Alert, Badge, Card, formatDateTime, PageHeader } from '@/components/ui';
@@ -11,6 +11,7 @@ import {
   importImageAction,
   reorderImagesAction,
   saveProductAction,
+  searchVariantsAction,
   setVariantImageAction,
   updateImageAltAction,
   uploadImagesAction,
@@ -41,6 +42,9 @@ export default async function ProductPage({
   const facets = await api<{ vendors: string[]; productTypes: string[] }>(
     `/admin/stores/${storeId}/products/facets`,
   ).catch(() => ({ vendors: [], productTypes: [] }));
+  const suppliers = await api<Supplier[]>(`/admin/stores/${storeId}/suppliers`).catch(
+    () => [] as Supplier[],
+  );
 
   return (
     <>
@@ -82,6 +86,8 @@ export default async function ProductPage({
         currency={store.currency}
         canWrite={canWrite}
         action={saveProductAction.bind(null, storeId, productId)}
+        suppliers={suppliers}
+        searchVariants={searchVariantsAction.bind(null, storeId)}
         suggestions={facets}
         setVariantImage={setVariantImageAction.bind(null, storeId, productId)}
         media={

@@ -142,6 +142,8 @@ model Store {
   blogPosts      BlogPost[]
   segments       CustomerSegment[]
   locations      Location[]
+  suppliers      Supplier[]
+  purchaseOrders PurchaseOrder[]
   webhooks       WebhookSubscription[]
   subscription   Subscription?
   paymentAccount PaymentAccount?
@@ -223,6 +225,12 @@ model Product {
   tags           String[]      @default([])
   /// Sold as a gift card: variants are denominations; each unit paid issues a card.
   isGiftCard     Boolean       @default(false)
+  /// A bundle (combo): each variant is made of other variants (BundleComponent) whose stock it uses.
+  isBundle       Boolean       @default(false)
+  /// Who the merchant buys this product from (purchase orders).
+  supplierId     String?       @db.Uuid
+  /// Shopper inputs such as engraving text or gift wrap (see @repo/contracts customizationSchema).
+  customizations Json          @default("[]")
   seoTitle       String?
   seoDescription String?
   /// Visible on the storefront from this time on (when ACTIVE); a future time means scheduled.
@@ -236,9 +244,11 @@ model Product {
   images      ProductImage[]
   collections CollectionProduct[]
   metafields  ProductMetafield[]
+  supplier    Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@unique([storeId, id])
   @@unique([storeId, handle])
+  @@index([supplierId])
   @@index([storeId, status, updatedAt])
   @@index([tags], type: Gin)
 }
@@ -250,6 +260,10 @@ model ProductOption {
   name      String
   position  Int
   values    String[]
+  /// How shoppers pick a value: "buttons", "dropdown" or "swatches".
+  style     String   @default("buttons")
+  /// Swatch colour per value ("#rrggbb" or ""), same order as values; empty when unused.
+  swatches  String[] @default([])
 
   product Product @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
 
@@ -287,17 +301,40 @@ model ProductVariant {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  product     Product               @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
+  product            Product               @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
   /// The migration adds a trigger requiring the image to belong to the same product.
-  image       ProductImage?         @relation(fields: [imageId], references: [id], onDelete: SetNull)
-  adjustments InventoryAdjustment[]
-  cartLines   CartLine[]
-  levels      InventoryLevel[]
+  image              ProductImage?         @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  adjustments        InventoryAdjustment[]
+  cartLines          CartLine[]
+  levels             InventoryLevel[]
+  /// Set on a bundle variant: what one unit of it contains.
+  components         BundleComponent[]     @relation("BundleVariant")
+  /// Bundles this variant is part of.
+  inBundles          BundleComponent[]     @relation("ComponentVariant")
+  purchaseOrderLines PurchaseOrderLine[]
 
   @@unique([storeId, id])
   @@unique([storeId, sku])
   @@index([productId])
   @@index([imageId])
+}
+
+/// One item of a bundle variant. A bundle's stock is derived from its components: its
+/// inventoryQuantity is the number of complete bundles they make (see catalog/bundles.ts).
+model BundleComponent {
+  id                 String @id @default(uuid(7)) @db.Uuid
+  storeId            String @db.Uuid
+  bundleVariantId    String @db.Uuid
+  componentVariantId String @db.Uuid
+  /// Units of the component in one bundle.
+  quantity           Int
+  position           Int    @default(0)
+
+  bundle    ProductVariant @relation("BundleVariant", fields: [storeId, bundleVariantId], references: [storeId, id], onDelete: Cascade)
+  component ProductVariant @relation("ComponentVariant", fields: [storeId, componentVariantId], references: [storeId, id], onDelete: Cascade)
+
+  @@unique([bundleVariantId, componentVariantId])
+  @@index([storeId, componentVariantId])
 }
 
 enum InventoryReason {
@@ -311,6 +348,8 @@ enum InventoryReason {
   RETURN
   /// Moved between locations (total unchanged).
   TRANSFER
+  /// Received against a purchase order.
+  PURCHASE_ORDER
 }
 
 /// Append-only ledger of stock movements.
@@ -508,18 +547,22 @@ model Cart {
 }
 
 model CartLine {
-  id        String   @id @default(uuid(7)) @db.Uuid
-  storeId   String   @db.Uuid
-  cartId    String   @db.Uuid
-  variantId String   @db.Uuid
-  quantity  Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(uuid(7)) @db.Uuid
+  storeId       String   @db.Uuid
+  cartId        String   @db.Uuid
+  variantId     String   @db.Uuid
+  quantity      Int
+  /// Shopper's customization choices: [{ id, value }] keyed by the product's customization ids.
+  customization Json     @default("[]")
+  /// Canonical form of `customization` ("" for none): the same choices share one line.
+  customKey     String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   cart    Cart           @relation(fields: [storeId, cartId], references: [storeId, id], onDelete: Cascade)
   variant ProductVariant @relation(fields: [storeId, variantId], references: [storeId, id], onDelete: Cascade)
 
-  @@unique([cartId, variantId])
+  @@unique([cartId, variantId, customKey])
   @@index([variantId])
 }
 
@@ -605,10 +648,12 @@ enum FulfillmentStatus {
 
 /// Per-store sequential order numbers (1001, 1002, ...).
 model OrderCounter {
-  storeId   String @id @db.Uuid
-  next      Int    @default(1001)
+  storeId           String @id @db.Uuid
+  next              Int    @default(1001)
   /// Next draft order number (draft #D1, #D2, ...).
-  nextDraft Int    @default(1)
+  nextDraft         Int    @default(1)
+  /// Next purchase order number (#PO1, #PO2, ...).
+  nextPurchaseOrder Int    @default(1)
 }
 
 enum DraftOrderStatus {
@@ -751,6 +796,10 @@ model OrderLine {
   /// Location the line's stock was taken from (where restocks go back to).
   locationId        String? @db.Uuid
   restockedQuantity Int     @default(0)
+  /// Shopper customizations as sold: [{ label, value, price }] (price is included in unitPrice).
+  properties        Json    @default("[]")
+  /// Bundle lines: the component stock taken, [{ variantId, quantity (per bundle), locationId }].
+  components        Json    @default("[]")
 
   order Order @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
 
@@ -1376,12 +1425,104 @@ model Location {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  store  Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  levels InventoryLevel[]
+  store          Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  levels         InventoryLevel[]
+  purchaseOrders PurchaseOrder[]
 
   @@unique([storeId, id])
   @@unique([storeId, name])
   @@index([storeId, priority])
+}
+
+/// Someone the merchant buys stock from.
+model Supplier {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  storeId      String   @db.Uuid
+  name         String
+  contactName  String   @default("")
+  email        String   @default("")
+  phone        String   @default("")
+  address      String   @default("")
+  website      String   @default("")
+  /// Typical days between ordering and receiving (prefills a purchase order's expected date).
+  leadTimeDays Int?
+  notes        String   @default("")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  store          Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+
+  @@unique([storeId, id])
+  @@unique([storeId, name])
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  /// Sent to the supplier; nothing received yet.
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+/// Stock ordered from a supplier, received into one location.
+model PurchaseOrder {
+  id                String              @id @default(uuid(7)) @db.Uuid
+  storeId           String              @db.Uuid
+  /// Shown as #PO<number>; sequential per store.
+  number            Int
+  supplierId        String              @db.Uuid
+  /// Where received stock goes.
+  locationId        String              @db.Uuid
+  status            PurchaseOrderStatus @default(DRAFT)
+  /// The supplier's own reference (invoice or order number).
+  supplierReference String              @default("")
+  expectedAt        DateTime?
+  /// Minor units in the store currency.
+  shippingCost      Int                 @default(0)
+  notes             String              @default("")
+  orderedAt         DateTime?
+  receivedAt        DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  store    Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  supplier Supplier            @relation(fields: [storeId, supplierId], references: [storeId, id], onDelete: Restrict)
+  location Location            @relation(fields: [storeId, locationId], references: [storeId, id], onDelete: Restrict)
+  lines    PurchaseOrderLine[]
+
+  @@unique([storeId, id])
+  @@unique([storeId, number])
+  @@index([storeId, status, createdAt])
+  @@index([storeId, supplierId])
+}
+
+model PurchaseOrderLine {
+  id               String  @id @default(uuid(7)) @db.Uuid
+  storeId          String  @db.Uuid
+  purchaseOrderId  String  @db.Uuid
+  /// Null once the variant is deleted (the snapshot below stays).
+  variantId        String? @db.Uuid
+  productTitle     String
+  variantTitle     String
+  sku              String?
+  /// The supplier's code for the item.
+  supplierSku      String  @default("")
+  quantity         Int
+  receivedQuantity Int     @default(0)
+  /// Minor units per unit in the store currency.
+  unitCost         Int
+  position         Int     @default(0)
+
+  purchaseOrder PurchaseOrder   @relation(fields: [storeId, purchaseOrderId], references: [storeId, id], onDelete: Cascade)
+  variant       ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([purchaseOrderId])
+  @@index([variantId])
 }
 
 /// Stock of one variant at one location. ProductVariant.inventoryQuantity is the sum over

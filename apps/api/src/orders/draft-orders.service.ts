@@ -512,17 +512,7 @@ export class DraftOrdersService {
       where: { id: order.id },
       data: { accessTokenHash: this.urls.orderAccessTokenHash(order.id) },
     });
-    await this.lifecycle.reserveStock(
-      tx,
-      storeId,
-      order.id,
-      lines.map((l) => ({
-        variantId: l.variantId,
-        title: l.title,
-        quantity: l.quantity,
-        trackInventory: l.variantId !== null && tracked.has(l.variantId),
-      })),
-    );
+    await this.lifecycle.reserveStock(tx, storeId, order.id, order.lines);
     await tx.draftOrder.update({ where: { id: draft.id }, data: { orderId: order.id } });
     await this.lifecycle.event(
       tx,

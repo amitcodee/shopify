@@ -95,6 +95,37 @@ export default async function OrderPage({
                     {l.variantTitle !== 'Default' ? (
                       <p className="text-xs text-slate-500">{l.variantTitle}</p>
                     ) : null}
+                    {l.properties.length > 0 ? (
+                      <dl className="mt-1 space-y-0.5 text-xs text-slate-600">
+                        {l.properties.map((p) => (
+                          <div key={p.label} className="flex gap-1">
+                            <dt className="text-slate-500">{p.label}:</dt>
+                            <dd className="font-medium [overflow-wrap:anywhere] whitespace-pre-line text-slate-800">
+                              {p.value}
+                              {p.price > 0 ? (
+                                <span className="font-normal text-slate-500">
+                                  {' '}
+                                  (+{money(p.price)})
+                                </span>
+                              ) : null}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : null}
+                    {l.components.length > 0 ? (
+                      <div className="mt-1 text-xs text-slate-600">
+                        <p className="text-slate-500">Bundle contains, per unit:</p>
+                        <ul className="list-disc pl-4">
+                          {l.components.map((c) => (
+                            <li key={`${c.title}-${c.sku}`}>
+                              {c.quantity} × {c.title}
+                              {c.sku ? <span className="text-slate-400"> · {c.sku}</span> : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                     {l.restockedQuantity > 0 ? (
                       <p className="text-xs text-slate-500">{l.restockedQuantity} restocked</p>
                     ) : null}

@@ -96,6 +96,11 @@ export function OrderView({ order }: { order: PublicOrder }) {
               <span>
                 {l.title}
                 {l.variantTitle !== 'Default' ? ` · ${l.variantTitle}` : ''} × {l.quantity}
+                {l.properties?.length ? (
+                  <span className="block text-sm text-zinc-500">
+                    {l.properties.map((p) => `${p.label}: ${p.value}`).join(' · ')}
+                  </span>
+                ) : null}
               </span>
               <span>{money(l.total)}</span>
             </li>

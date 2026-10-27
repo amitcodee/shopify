@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { paginated } from './common.js';
 import { returnSchema, returnStatusSchema } from './returns.js';
+import { linePropertySchema } from './customizations.js';
 
 export const orderStatusSchema = z.enum(['PENDING_PAYMENT', 'OPEN', 'CANCELLED']);
 export const financialStatusSchema = z.enum([
@@ -66,6 +67,12 @@ export const orderLineSchema = z.object({
   restockedQuantity: z.number().int(),
   /** How many units can still be returned to stock. */
   restockable: z.number().int(),
+  /** Shopper customizations (engraving text, gift wrap, ...); prices are in unitPrice. */
+  properties: z.array(linePropertySchema),
+  /** Bundle lines: the items packed per bundle. */
+  components: z.array(
+    z.object({ title: z.string(), sku: z.string().nullable(), quantity: z.number().int() }),
+  ),
 });
 
 export const disputeStatusSchema = z.enum(['NEEDS_RESPONSE', 'UNDER_REVIEW', 'WON', 'LOST']);
@@ -195,6 +202,7 @@ export const publicOrderSchema = z.object({
       quantity: z.number().int(),
       unitPrice: z.number().int(),
       total: z.number().int(),
+      properties: z.array(linePropertySchema).optional(),
       /** Units that can still be returned (not in a pending or completed return). */
       returnableQuantity: z.number().int(),
     }),

@@ -14,6 +14,7 @@ export const inventoryReasonSchema = z.enum([
   'ORDER',
   'ORDER_CANCELLED',
   'TRANSFER',
+  'PURCHASE_ORDER',
 ]);
 
 export const inventoryAdjustInputSchema = z
@@ -39,6 +40,10 @@ export const inventoryItemSchema = z.object({
   productTitle: z.string(),
   variantTitle: z.string(),
   sku: z.string().nullable(),
+  /** Selling price (minor units). */
+  price: z.number().int(),
+  /** What the merchant pays per unit (admin only), or null. */
+  costPerItem: z.number().int().nullable(),
   trackInventory: z.boolean(),
   allowBackorder: z.boolean(),
   /** Total across locations. */

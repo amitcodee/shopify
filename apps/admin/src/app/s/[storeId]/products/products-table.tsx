@@ -190,9 +190,16 @@ export function ProductsTable({
                   >
                     {p.title}
                   </Link>
-                  {p.vendor || p.productType ? (
+                  {p.isBundle ? (
+                    <span className="ml-2 align-middle">
+                      <Badge tone="indigo">Bundle</Badge>
+                    </span>
+                  ) : null}
+                  {p.vendor || p.productType || p.supplierName ? (
                     <p className="text-xs text-slate-500">
-                      {[p.vendor, p.productType].filter(Boolean).join(' · ')}
+                      {[p.vendor, p.productType, p.supplierName && `from ${p.supplierName}`]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </p>
                   ) : null}
                 </Td>

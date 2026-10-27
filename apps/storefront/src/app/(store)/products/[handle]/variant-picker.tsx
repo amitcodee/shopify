@@ -7,6 +7,12 @@ import { useFormStatus } from 'react-dom';
 import { addToCartAction } from '@/app/(store)/cart/actions';
 import { Accordion } from '@/components/product/accordion';
 import { ProductIcon } from '@/components/product/icons';
+import {
+  BundleContents,
+  customizationExtra,
+  CustomizationFields,
+  OptionPicker,
+} from '@/components/product/product-options';
 import { announceVariantImage, initialVariant } from '@/components/product/variant-image';
 import { percentOff } from '@/components/product-grid';
 import { srcSetFor } from '@/lib/images';
@@ -44,6 +50,9 @@ export function VariantPicker({
   const quantity = useRef<HTMLInputElement>(null);
   const buttonRow = useRef<HTMLDivElement>(null);
   const [sticky, setSticky] = useState(false);
+  const fields = product.customizations ?? [];
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const extra = customizationExtra(fields, answers);
 
   const variant = useMemo(
     () => product.variants.find((v) => v.options.every((value, i) => value === selected[i])),
@@ -111,7 +120,7 @@ export function VariantPicker({
           <span
             className={`price-now text-2xl tabular-nums sm:text-[1.75rem] ${off > 0 ? 'text-red-700' : ''}`}
           >
-            {variant ? formatMoney(variant.price, currency) : 'Unavailable'}
+            {variant ? formatMoney(variant.price + extra, currency) : 'Unavailable'}
           </span>
           {variant && off > 0 ? (
             <s className="text-lg text-zinc-500">
@@ -126,50 +135,31 @@ export function VariantPicker({
           ) : null}
         </div>
 
+        {extra > 0 && variant ? (
+          <p className="-mt-4 text-sm text-zinc-500">
+            Includes {formatMoney(extra, currency)} for personalisation.
+          </p>
+        ) : null}
+
         {product.options.map((option, index) => (
-          <fieldset key={option.name}>
-            <legend className="mb-3 text-[0.8125rem] font-semibold tracking-wide text-zinc-900 uppercase">
-              {option.name}
-              {selected[index] ? (
-                <span className="font-normal tracking-normal text-zinc-500 normal-case">{` · ${selected[index]}`}</span>
-              ) : null}
-            </legend>
-            <div className="flex flex-wrap gap-2">
-              {option.values.map((value) => {
-                const checked = selected[index] === value;
-                const available = purchasable(index, value);
-                const id = `opt-${index}-${value}`;
-                return (
-                  <label
-                    key={value}
-                    htmlFor={id}
-                    className={`flex h-11 min-w-12 cursor-pointer items-center justify-center rounded-md border px-4 text-sm transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent has-[:focus-visible]:ring-offset-2 ${
-                      checked
-                        ? available
-                          ? 'border-zinc-900 bg-zinc-900 text-white'
-                          : 'border-zinc-900 text-zinc-500 ring-1 ring-zinc-900'
-                        : available
-                          ? 'border-zinc-300 hover:border-zinc-900'
-                          : 'border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-500'
-                    }`}
-                  >
-                    <input
-                      id={id}
-                      type="radio"
-                      name={`option-${index}`}
-                      value={value}
-                      checked={checked}
-                      onChange={() => choose(index, value)}
-                      className="sr-only"
-                    />
-                    <span className={available ? '' : 'line-through decoration-1'}>{value}</span>
-                    {available ? null : <span className="sr-only">, sold out</span>}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
+          <OptionPicker
+            key={option.name}
+            option={option}
+            index={index}
+            selected={selected[index]}
+            purchasable={(value) => purchasable(index, value)}
+            onChoose={(value) => choose(index, value)}
+          />
         ))}
+
+        {variant ? <BundleContents variant={variant} currency={currency} /> : null}
+
+        <CustomizationFields
+          fields={fields}
+          values={answers}
+          currency={currency}
+          onChange={(id, value) => setAnswers((prev) => ({ ...prev, [id]: value }))}
+        />
 
         <input type="hidden" name="variantId" value={variant?.id ?? ''} />
         <div ref={buttonRow} className="flex items-end gap-3">
@@ -244,7 +234,7 @@ export function VariantPicker({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-zinc-900">{product.title}</p>
                 <p className="text-sm text-zinc-600">
-                  {variant ? formatMoney(variant.price, currency) : 'Unavailable'}
+                  {variant ? formatMoney(variant.price + extra, currency) : 'Unavailable'}
                 </p>
               </div>
               <AddButton disabled={!variant?.available} className="h-11 shrink-0 px-5 text-sm" />

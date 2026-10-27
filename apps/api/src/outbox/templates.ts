@@ -16,15 +16,31 @@ export interface OrderEmailData {
   orderNumber: number;
   currency: string;
   total: number;
-  lines: { title: string; variantTitle: string; quantity: number; total: number }[];
+  lines: {
+    title: string;
+    variantTitle: string;
+    quantity: number;
+    total: number;
+    /** Personalisation ("Engraving: For Sam"). */
+    properties?: { label: string; value: string }[];
+  }[];
   statusUrl?: string;
+}
+
+function propertyText(l: OrderEmailData['lines'][number]): string {
+  return (l.properties ?? []).map((p) => `${p.label}: ${p.value}`).join(', ');
 }
 
 function lineText(order: OrderEmailData): string {
   return order.lines
     .map(
       (l) =>
-        `- ${l.title}${l.variantTitle !== 'Default' ? ` (${l.variantTitle})` : ''} × ${l.quantity}: ${formatMoney(l.total, order.currency)}`,
+        `- ${l.title}${l.variantTitle !== 'Default' ? ` (${l.variantTitle})` : ''} × ${l.quantity}: ${formatMoney(l.total, order.currency)}${
+          propertyText(l)
+            ? `
+  ${propertyText(l)}`
+            : ''
+        }`,
     )
     .join('\n');
 }
@@ -33,7 +49,7 @@ function lineHtml(order: OrderEmailData): string {
   return `<ul>${order.lines
     .map(
       (l) =>
-        `<li>${escapeHtml(l.title)}${l.variantTitle !== 'Default' ? ` (${escapeHtml(l.variantTitle)})` : ''} × ${l.quantity} — ${escapeHtml(formatMoney(l.total, order.currency))}</li>`,
+        `<li>${escapeHtml(l.title)}${l.variantTitle !== 'Default' ? ` (${escapeHtml(l.variantTitle)})` : ''} × ${l.quantity} — ${escapeHtml(formatMoney(l.total, order.currency))}${propertyText(l) ? `<br><small>${escapeHtml(propertyText(l))}</small>` : ''}</li>`,
     )
     .join('')}</ul>`;
 }

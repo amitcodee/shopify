@@ -1,8 +1,9 @@
-import type {
-  ImageRendition,
-  Product as ProductDto,
-  ProductImage as ProductImageDto,
-  Variant,
+import {
+  type ImageRendition,
+  parseCustomizations,
+  type Product as ProductDto,
+  type ProductImage as ProductImageDto,
+  type Variant,
 } from '@repo/contracts';
 import type { Prisma } from '@repo/db';
 import { renditionKey } from '../storage/storage.js';
@@ -11,7 +12,28 @@ import { isProductScheduled } from './product-visibility.js';
 
 export const productDetailInclude = {
   options: { orderBy: { position: 'asc' } },
-  variants: { orderBy: { position: 'asc' } },
+  variants: {
+    orderBy: { position: 'asc' },
+    include: {
+      components: {
+        orderBy: { position: 'asc' },
+        include: {
+          component: {
+            select: {
+              id: true,
+              productId: true,
+              title: true,
+              sku: true,
+              price: true,
+              inventoryQuantity: true,
+              trackInventory: true,
+              product: { select: { title: true } },
+            },
+          },
+        },
+      },
+    },
+  },
   images: { orderBy: { position: 'asc' } },
   collections: { select: { collectionId: true } },
   metafields: { orderBy: { position: 'asc' } },
@@ -76,6 +98,17 @@ export function toVariantDto(v: ProductWithDetail['variants'][number]): Variant 
     inventoryQuantity: v.inventoryQuantity,
     position: v.position,
     imageId: v.imageId,
+    components: v.components.map((c) => ({
+      variantId: c.component.id,
+      productId: c.component.productId,
+      productTitle: c.component.product.title,
+      variantTitle: c.component.title,
+      sku: c.component.sku,
+      quantity: c.quantity,
+      price: c.component.price,
+      inventoryQuantity: c.component.inventoryQuantity,
+      trackInventory: c.component.trackInventory,
+    })),
   };
 }
 
@@ -92,7 +125,15 @@ export function toProductDto(p: ProductWithDetail, media: MediaUrls): ProductDto
     seoTitle: p.seoTitle,
     isGiftCard: p.isGiftCard,
     seoDescription: p.seoDescription,
-    options: p.options.map((o) => ({ name: o.name, values: o.values })),
+    isBundle: p.isBundle,
+    supplierId: p.supplierId,
+    customizations: parseCustomizations(p.customizations),
+    options: p.options.map((o) => ({
+      name: o.name,
+      values: o.values,
+      style: o.style === 'dropdown' || o.style === 'swatches' ? o.style : 'buttons',
+      swatches: o.swatches,
+    })),
     variants: p.variants.map(toVariantDto),
     images: p.images.map((img) => toImageDto(img, media)),
     collectionIds: p.collections.map((c) => c.collectionId),

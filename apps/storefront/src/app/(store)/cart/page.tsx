@@ -6,6 +6,7 @@ import { ArrowRightIcon, BagIcon } from '@/components/header/icons';
 import { srcSetFor } from '@/lib/images';
 import { FreeShippingBar } from '@/components/apps/free-shipping-bar';
 import { getCart, getShop } from '@/lib/shop';
+import { LineProperties } from '@/components/cart/line-properties';
 
 export const metadata = { title: 'Cart' };
 
@@ -118,6 +119,7 @@ export default async function CartPage({
                         {line.variantTitle !== 'Default' ? (
                           <p className="mt-1 text-sm text-zinc-500">{line.variantTitle}</p>
                         ) : null}
+                        <LineProperties properties={line.properties} currency={cart.currency} />
                         <p className="mt-1 text-sm text-zinc-500">
                           {formatMoney(line.unitPrice, cart.currency)} each
                         </p>

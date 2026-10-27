@@ -20,6 +20,8 @@ import {
   type MockPayment,
   type PublicOrder,
   type ShippingOption,
+  type LineProperty,
+  parseLineProperties,
 } from '@repo/contracts';
 import type { Prisma, TenantTx } from '@repo/db';
 import type { z } from 'zod';
@@ -38,7 +40,7 @@ import { StoreUrls } from '../orders/store-urls.js';
 import { applicationFee } from '../payments/connect-provider.js';
 import { PaymentAccountsService } from '../payments/payment-accounts.service.js';
 import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-provider.js';
-import { CartService } from '../storefront/cart.service.js';
+import { CartService, lineCustomization } from '../storefront/cart.service.js';
 import { type ShopContext, shopAmount, shopPrice } from '../storefront/store-resolver.js';
 import { hashToken } from '../auth/session.service.js';
 import { returnedQuantities, returnWindowOpen } from '../orders/return-rules.js';
@@ -73,6 +75,8 @@ interface Quote {
     trackInventory: boolean;
     isGiftCard: boolean;
     discountable: boolean;
+    /** Customizations as sold (prices in the shopper's currency, included in unitPrice). */
+    properties: LineProperty[];
   }[];
 }
 
@@ -277,6 +281,7 @@ export class CheckoutService {
               weightGrams: l.weightGrams,
               stockReserved: l.trackInventory,
               isGiftCard: l.isGiftCard,
+              properties: l.properties,
             })),
           },
         },
@@ -288,7 +293,7 @@ export class CheckoutService {
         data: { accessTokenHash: this.urls.orderAccessTokenHash(created.id) },
       });
 
-      await this.lifecycle.reserveStock(tx, shop.id, created.id, quote.lines);
+      await this.lifecycle.reserveStock(tx, shop.id, created.id, created.lines);
       const placed = input.giftCardCode
         ? await this.redeemGiftCard(tx, shop, created, input.giftCardCode, quote.amountDue)
         : created;
@@ -355,33 +360,38 @@ export class CheckoutService {
     input: CheckoutPreviewInput,
   ): Promise<Quote> {
     const available = cart.lines.filter((l) => l.available);
-    const variants = await tx.productVariant.findMany({
-      where: { storeId: shop.id, id: { in: available.map((l) => l.variantId) } },
-      include: { product: { select: { isGiftCard: true } } },
+    const rows = await tx.cartLine.findMany({
+      where: { storeId: shop.id, id: { in: available.map((l) => l.id) } },
+      include: {
+        variant: { include: { product: { select: { isGiftCard: true, customizations: true } } } },
+      },
     });
-    const byId = new Map(variants.map((v) => [v.id, v]));
+    const byId = new Map(rows.map((r) => [r.id, r]));
     const lines = available.flatMap((l) => {
-      const v = byId.get(l.variantId);
-      return v
-        ? [
-            {
-              variantId: v.id,
-              productId: v.productId,
-              title: l.productTitle,
-              variantTitle: l.variantTitle,
-              sku: v.sku,
-              unitPrice: shopPrice(shop, v.price),
-              basePrice: v.price,
-              quantity: l.quantity,
-              taxable: v.taxable,
-              requiresShipping: v.requiresShipping,
-              weightGrams: v.weightGrams,
-              trackInventory: v.trackInventory,
-              isGiftCard: v.product.isGiftCard,
-              discountable: !v.product.isGiftCard,
-            },
-          ]
-        : [];
+      const row = byId.get(l.id);
+      const custom = row ? lineCustomization(row) : null;
+      if (!row || !custom?.ok) return [];
+      const v = row.variant;
+      const basePrice = v.price + custom.extra;
+      return [
+        {
+          variantId: v.id,
+          productId: v.productId,
+          title: l.productTitle,
+          variantTitle: l.variantTitle,
+          sku: v.sku,
+          unitPrice: shopPrice(shop, basePrice),
+          basePrice,
+          quantity: l.quantity,
+          taxable: v.taxable,
+          requiresShipping: v.requiresShipping,
+          weightGrams: v.weightGrams,
+          trackInventory: v.trackInventory,
+          isGiftCard: v.product.isGiftCard,
+          discountable: !v.product.isGiftCard,
+          properties: custom.properties.map((p) => ({ ...p, price: shopPrice(shop, p.price) })),
+        },
+      ];
     });
 
     // Rate conditions and discount minimums are configured in the store currency.
@@ -611,6 +621,7 @@ export function toPublicOrder(
     quantity: l.quantity,
     unitPrice: l.unitPrice,
     total: l.unitPrice * l.quantity - l.discountTotal,
+    properties: parseLineProperties(l.properties),
     returnableQuantity: Math.max(0, l.quantity - (returned.get(l.id) ?? 0)),
   }));
   return {

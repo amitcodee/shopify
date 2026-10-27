@@ -1,6 +1,6 @@
 'use server';
 
-import type { Product } from '@repo/contracts';
+import type { InventoryItem, Product } from '@repo/contracts';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
@@ -264,6 +264,10 @@ export async function duplicateProductAction(
         seoTitle: p.seoTitle,
         seoDescription: p.seoDescription,
         isGiftCard: p.isGiftCard,
+        isBundle: p.isBundle,
+        supplierId: p.supplierId,
+        // New field ids: carts of the original refer to its own.
+        customizations: p.customizations.map(({ id: _id, ...field }) => field),
         options: p.options,
         variants: p.variants.map((v) => ({
           options: v.options,
@@ -278,6 +282,9 @@ export async function duplicateProductAction(
           taxable: v.taxable,
           trackInventory: v.trackInventory,
           allowBackorder: v.allowBackorder,
+          ...(p.isBundle && {
+            components: v.components.map((c) => ({ variantId: c.variantId, quantity: c.quantity })),
+          }),
         })),
         metafields: p.metafields.map((m) => ({
           namespace: m.namespace,
@@ -293,4 +300,37 @@ export async function duplicateProductAction(
   }
   revalidatePath(`/s/${storeId}/products`);
   redirect(`/s/${storeId}/products/${copy.id}?duplicated=1`);
+}
+
+/** A variant a bundle can contain (picked in the product editor). */
+export interface VariantPick {
+  variantId: string;
+  productId: string;
+  productTitle: string;
+  variantTitle: string;
+  sku: string | null;
+  price: number;
+  costPerItem: number | null;
+  inventoryQuantity: number;
+  trackInventory: boolean;
+}
+
+/** Searches the store's sellable variants by product title or SKU (bundles excluded). */
+export async function searchVariantsAction(storeId: string, query: string): Promise<VariantPick[]> {
+  const params = new URLSearchParams({ pageSize: '20' });
+  if (query.trim()) params.set('q', query.trim().slice(0, 100));
+  const page = await api<{ items: InventoryItem[] }>(
+    `/admin/stores/${storeId}/inventory?${params}`,
+  );
+  return page.items.map((i) => ({
+    variantId: i.variantId,
+    productId: i.productId,
+    productTitle: i.productTitle,
+    variantTitle: i.variantTitle,
+    sku: i.sku,
+    price: i.price,
+    costPerItem: i.costPerItem,
+    inventoryQuantity: i.inventoryQuantity,
+    trackInventory: i.trackInventory,
+  }));
 }
