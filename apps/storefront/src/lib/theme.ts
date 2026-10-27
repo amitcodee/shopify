@@ -87,6 +87,7 @@ export function themeAttributes(theme: Theme): Record<`data-${string}`, string |
     'data-radius': s.radius,
     'data-buttons': s.buttonStyle,
     'data-density': s.density,
+    'data-motion': s.motion,
     'data-ratio': s.imageRatio,
     'data-heading-case': s.headingCase,
     'data-dark': isDarkColor(s.backgroundColor) ? '' : undefined,

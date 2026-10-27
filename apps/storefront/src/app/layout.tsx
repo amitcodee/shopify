@@ -9,6 +9,7 @@ import { PlatformSite } from '@/components/platform-landing';
 import { requestHost } from '@/lib/api';
 import { StoreApps } from '@/components/apps/store-apps';
 import { EditorBridge } from '@/components/editor-bridge';
+import { ScrollReveal } from '@/components/landing/scroll-reveal';
 import { getCart, getShop, getThemePreview, isEditorPreview, isRootHost } from '@/lib/shop';
 import { themeAttributes, themeStyle } from '@/lib/theme';
 import { PasswordForm } from './(store)/password/password-form';
@@ -133,6 +134,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         ) : null}
         <StoreApps apps={shop.apps} />
         {editing ? <EditorBridge adminOrigin={adminOrigin} /> : null}
+        {shop.theme.settings.motion === 'lively' ? <ScrollReveal /> : null}
       </body>
     </html>
   );

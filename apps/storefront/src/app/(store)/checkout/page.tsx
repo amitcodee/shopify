@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { CheckoutPreview, CustomerAccount } from '@repo/contracts';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { CheckoutSteps } from '@/components/checkout-steps';
 import { sf, StorefrontApiError } from '@/lib/api';
 import { getCart, getCartToken, getCustomerToken, getShop } from '@/lib/shop';
 import { CheckoutForm } from './checkout-form';
@@ -35,6 +36,7 @@ export default async function CheckoutPage({
 
   return (
     <>
+      <CheckoutSteps current="details" />
       <div className="mb-10 border-b border-zinc-200 pb-6">
         <p className="eyebrow text-zinc-500">Secure checkout</p>
         <h1 className="page-title t-title mt-2">Checkout</h1>

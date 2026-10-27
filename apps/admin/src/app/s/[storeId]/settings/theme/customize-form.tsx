@@ -19,6 +19,7 @@ import {
   HEADER_OPTIONS,
   HEADING_CASE_OPTIONS,
   IMAGE_RATIO_OPTIONS,
+  MOTION_OPTIONS,
   PRESET_OPTIONS,
   RADIUS_OPTIONS,
 } from '@/lib/theme-options';
@@ -182,6 +183,13 @@ export function CustomizeForm({
               label="Corner radius"
               defaultValue={s.radius}
               options={RADIUS_OPTIONS}
+            />
+            <SelectField
+              name="motion"
+              label="Animations"
+              defaultValue={s.motion}
+              options={MOTION_OPTIONS}
+              hint="Respects visitors who turn animations off in their device settings."
             />
             <SelectField
               name="buttonStyle"

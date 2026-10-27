@@ -121,7 +121,7 @@ export function TemplateGallery({
 
       <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
         <ul
-          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
+          className="-mx-4 flex gap-2 overflow-x-auto [scrollbar-width:none] px-4 pb-2 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
           aria-label="Industries"
         >
           {[{ id: '', label: 'All' }, ...THEME_INDUSTRIES].map((i) => (

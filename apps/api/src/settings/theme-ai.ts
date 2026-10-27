@@ -6,6 +6,7 @@ import {
   THEME_CARD_STYLES,
   THEME_CART_STYLES,
   THEME_DENSITIES,
+  THEME_MOTIONS,
   THEME_FONTS,
   THEME_FOOTER_STYLES,
   THEME_HEADER_STYLES,
@@ -42,6 +43,7 @@ export const themeAiOutputSchema = z.object({
     imageRatio: z.enum(THEME_IMAGE_RATIOS).nullable(),
     gridColumns: z.number().int().nullable(),
     density: z.enum(THEME_DENSITIES).nullable(),
+    motion: z.enum(THEME_MOTIONS).nullable(),
     footerStyle: z.enum(THEME_FOOTER_STYLES).nullable(),
     cartStyle: z.enum(THEME_CART_STYLES).nullable(),
     stickyHeader: bool,
@@ -82,7 +84,7 @@ How the theme works:
 - Keep text readable: textColor on backgroundColor and on surfaceColor needs a contrast ratio of at least 4.5:1. For dark themes use a dark backgroundColor with a light textColor.
 - preset is the homepage layout: minimal, bold, classic, split, fullbleed, editorial, catalog, banner.
 - font and headingFont are system font families: system, serif, rounded, mono, slab, humanist, geometric, condensed.
-- radius: none, small, medium, large, pill. buttonStyle: solid, outline, soft. headerStyle: inline, centered, stacked. cardStyle: plain, bordered, shadow, overlay, framed. imageRatio: square, portrait, landscape. density: compact, comfortable, spacious. footerStyle: simple, columns, dark. headingCase: normal, uppercase. gridColumns: 2 to 5. cartStyle: drawer or page.
+- radius: none, small, medium, large, pill. buttonStyle: solid, outline, soft. headerStyle: inline, centered, stacked. cardStyle: plain, bordered, shadow, overlay, framed. imageRatio: square, portrait, landscape. density: compact, comfortable, spacious. motion (animations): off, subtle, lively. footerStyle: simple, columns, dark. headingCase: normal, uppercase. gridColumns: 2 to 5. cartStyle: drawer or page.
 - sectionOrder lists the homepage sections after the hero: trustBar, collections, featuredProducts, carousels, brandStory, blogPosts, newsletter. The show* flags hide or show them.
 - Text limits: heroTitle 80 characters, heroSubtitle 200, heroCta 30, featuredTitle 40, announcement 120, trust items 40, brandStoryTitle 80, brandStoryText 600, newsletterTitle 80, newsletterText 200.
 

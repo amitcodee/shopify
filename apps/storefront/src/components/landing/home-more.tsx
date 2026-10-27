@@ -85,7 +85,7 @@ export function ControlCenter() {
       />
       <div className={`${container} grid items-center gap-14 lg:grid-cols-[1fr_1.15fr]`}>
         <div>
-          <h2 className={headline}>
+          <h2 data-reveal className={headline}>
             Control everything
             <br />
             <Green dark>in one place</Green>
@@ -195,7 +195,7 @@ export function SellWorldwide() {
     <section id="worldwide" className={`scroll-mt-16 ${paper} ${section}`}>
       <div className={`${container} grid items-center gap-14 lg:grid-cols-[1fr_1.2fr]`}>
         <div>
-          <h2 className={`text-navy-900 ${headline}`}>
+          <h2 data-reveal className={`text-navy-900 ${headline}`}>
             Sell around <Green>the world</Green>
           </h2>
           <p className={`mt-6 max-w-lg text-slate-600 ${lead}`}>
@@ -325,7 +325,7 @@ export function TemplateShowcase() {
       className={`scroll-mt-16 overflow-hidden ${ink} py-20 text-white sm:py-24`}
     >
       <div className={`${container} flex flex-wrap items-end justify-between gap-6`}>
-        <h2 className={`max-w-2xl ${headline}`}>
+        <h2 data-reveal className={`max-w-2xl ${headline}`}>
           Stores you could open <Green dark>today</Green>
         </h2>
         <a href="/templates" className={`group ${buttonLight}`}>
@@ -392,7 +392,9 @@ export function HowItWorks() {
   return (
     <section id="how-it-works" className={`scroll-mt-16 bg-white ${section}`}>
       <div className={container}>
-        <h2 className={`max-w-2xl text-navy-900 ${headline}`}>Live in three steps</h2>
+        <h2 data-reveal className={`max-w-2xl text-navy-900 ${headline}`}>
+          Live in three steps
+        </h2>
         <ol className="mt-12 grid gap-5 lg:grid-cols-3">
           {steps.map((s, i) => (
             <li
@@ -454,7 +456,7 @@ export async function PricingTeaser() {
       <div className={container}>
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <h2 className={`text-navy-900 ${headline}`}>
+            <h2 data-reveal className={`text-navy-900 ${headline}`}>
               Simple pricing, <Green>every feature included</Green>
             </h2>
             <p className={`mt-5 max-w-2xl text-slate-600 ${lead}`}>

@@ -179,7 +179,7 @@ export function ProductGrid({
       ? `-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:overflow-visible sm:px-0 sm:pb-0 ${gap} [&::-webkit-scrollbar]:hidden`
       : `grid grid-cols-2 ${gap}`;
   return (
-    <ul className={`${list} ${columns}`}>
+    <ul data-reveal="stagger" className={`${list} ${columns}`}>
       {products.map((p, i) => (
         <li
           key={p.id}

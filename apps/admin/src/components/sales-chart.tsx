@@ -76,16 +76,17 @@ export function SalesChart({ days, currency }: { days: Day[]; currency: string }
             />
           ))}
           <div className="absolute inset-0 flex items-end gap-[2px] sm:gap-[3px]">
-            {days.map((d) => (
+            {days.map((d, i) => (
               <div
                 key={d.date}
                 title={`${shortDate(d.date)}: ${formatMoney(d.sales, currency)} · ${d.orders} order${d.orders === 1 ? '' : 's'}`}
                 className="group flex h-full min-w-0 flex-1 items-end rounded-t-[3px] hover:bg-slate-900/[0.035]"
               >
                 <div
-                  className="w-full rounded-t-[3px] bg-indigo-500 transition-colors group-hover:bg-indigo-600"
+                  className="chart-bar w-full rounded-t-[3px] bg-indigo-500 transition-colors group-hover:bg-indigo-600"
                   style={{
                     height: d.sales > 0 ? `max(2px, ${(d.sales / top) * 100}%)` : '0',
+                    animationDelay: `${Math.min(i * 12, 360)}ms`,
                   }}
                 />
               </div>

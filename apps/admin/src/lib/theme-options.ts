@@ -3,6 +3,7 @@ import {
   THEME_CARD_STYLES,
   THEME_CART_STYLES,
   THEME_DENSITIES,
+  THEME_MOTIONS,
   THEME_FONT_STACKS,
   THEME_FONTS,
   THEME_FOOTER_STYLES,
@@ -67,6 +68,12 @@ export const IMAGE_RATIO_OPTIONS = options(THEME_IMAGE_RATIOS, {
   square: 'Square',
   portrait: 'Portrait (3:4)',
   landscape: 'Landscape (4:3)',
+});
+
+export const MOTION_OPTIONS = options(THEME_MOTIONS, {
+  off: 'Off',
+  subtle: 'Subtle',
+  lively: 'Lively (sections animate in)',
 });
 
 export const DENSITY_OPTIONS = options(THEME_DENSITIES, {

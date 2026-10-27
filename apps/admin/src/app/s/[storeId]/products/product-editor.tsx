@@ -16,6 +16,7 @@ import {
   type FormEvent,
   type ReactNode,
   useActionState,
+  useEffect,
   useId,
   useMemo,
   useOptimistic,
@@ -27,7 +28,12 @@ import { Icon } from '@/components/icons';
 import { Alert, Badge, buttonClass, Card, formatDateTime, inputClass } from '@/components/ui';
 import { useCountryOptions, useHydrated } from '@/lib/countries';
 import type { FormState } from '@/lib/form';
+<<<<<<< HEAD
 import type { ActionResult, VariantPick } from './actions';
+=======
+import { toast } from '@/lib/toast';
+import type { ActionResult } from './actions';
+>>>>>>> 2a88f2fea32ba1bc9550d4a9daf10c53553e5ee0
 import { imageSrc } from './images';
 import {
   BundleContentsCard,
@@ -173,6 +179,9 @@ export function ProductEditor({
   searchVariants?: (query: string) => Promise<VariantPick[]>;
 }) {
   const [state, formAction, saving] = useActionState(action, undefined);
+  useEffect(() => {
+    if (state?.success) toast(state.success);
+  }, [state]);
   const [clientError, setClientError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const hydrated = useHydrated();
@@ -494,7 +503,6 @@ export function ProductEditor({
           ) : null}
         </Alert>
       ) : null}
-      {state?.success ? <Alert tone="success">{state.success}</Alert> : null}
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-6">

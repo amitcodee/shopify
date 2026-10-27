@@ -5,6 +5,7 @@ import { CurrencySwitcher } from '@/components/currency-switcher';
 import { CartLink } from './cart-link';
 import { AccountIcon, SearchIcon } from './icons';
 import { MobileMenu } from './mobile-menu';
+import { SearchBox } from './search-box';
 import { ShopMenu } from './shop-menu';
 import { StickyHeader } from './sticky-header';
 
@@ -92,13 +93,7 @@ export function StoreHeader({
             height="16"
             className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-zinc-500"
           />
-          <input
-            id="site-search"
-            name="q"
-            type="search"
-            placeholder="Search"
-            className="header-search h-10 w-full rounded-[var(--store-button-radius)] border border-transparent bg-zinc-100 py-2 pr-3 pl-9 text-sm placeholder:text-zinc-500"
-          />
+          <SearchBox className="header-search h-10 w-full rounded-[var(--store-button-radius)] border border-transparent bg-zinc-100 py-2 pr-3 pl-9 text-sm placeholder:text-zinc-500" />
         </form>
         <div
           className={`order-2 ml-auto flex shrink-0 items-center gap-0.5 md:ml-0 md:gap-1 ${c.actions}`}

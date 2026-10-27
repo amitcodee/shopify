@@ -6,6 +6,9 @@
  * sky = informational.
  */
 @theme {
+  /* Motion: shared easings (ease-out-soft, ease-spring utilities); durations on :root below. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --font-sans:
     'Inter', 'Inter var', 'Segoe UI Variable Text', 'Segoe UI', ui-sans-serif, system-ui,
     -apple-system, 'Helvetica Neue', Arial, sans-serif;
@@ -61,5 +64,85 @@
 
   input[type='file']::file-selector-button:hover {
     background: var(--color-slate-50);
+  }
+}
+
+/* Horizontally scrolling tab and chip strips: swipeable, without a visible scrollbar (Windows
+   draws one for even a pixel of overflow). Tables keep theirs. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Motion durations. */
+:root {
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 320ms;
+  --motion-slower: 500ms;
+}
+
+/* Sales chart bars grow up from the baseline on first render (src/components/sales-chart.tsx). */
+.chart-bar {
+  transform-origin: bottom;
+  animation: chart-bar-grow var(--motion-slower) var(--ease-out-soft) both;
+}
+@keyframes chart-bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+/* Honour reduced motion everywhere: animations and transitions finish instantly. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Loading placeholders (src/components/states.tsx). */
+.skeleton {
+  background: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.65) 50%, transparent 100%)
+    var(--color-slate-200) no-repeat;
+  background-size: 50% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  from {
+    background-position: -150% 0;
+  }
+  to {
+    background-position: 250% 0;
+  }
+}
+
+/* Toasts (src/components/toaster.tsx): rise in, slide out. */
+.toast {
+  animation: toast-in var(--motion-slow) var(--ease-out-soft) both;
+}
+.toast[data-leaving] {
+  animation: toast-out 180ms ease-in both;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+    scale: 0.97;
+  }
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    translate: 0 8px;
+    scale: 0.97;
   }
 }

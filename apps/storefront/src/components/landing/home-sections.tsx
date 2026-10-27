@@ -187,6 +187,7 @@ export function SwitchBanner() {
               Switch to us
             </p>
             <h2
+              data-reveal
               className={`mt-4 text-[1.75rem] leading-[1.12] font-medium tracking-[-0.02em] sm:text-4xl ${displayFace}`}
             >
               Moving from another platform? Bring your whole catalog.
@@ -643,7 +644,7 @@ export function PlatformSuite() {
   return (
     <section id="platform" className={`scroll-mt-16 ${paper} pt-20 pb-14 sm:pt-24 sm:pb-20`}>
       <div className={container}>
-        <h2 className={`max-w-4xl text-navy-900 ${headline}`}>
+        <h2 data-reveal className={`max-w-4xl text-navy-900 ${headline}`}>
           The all-in-one <Green>commerce platform</Green> you&rsquo;ve been looking for
         </h2>
         <p className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[0.9375rem] text-slate-600">
@@ -679,7 +680,7 @@ export function PlatformSuite() {
                 >
                   {panel.tab}
                 </h3>
-                <ul className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <ul data-reveal="stagger" className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {panel.cards.map((card) => (
                     <li key={card.title} className="flex">
                       <a
@@ -758,7 +759,7 @@ export function IndustriesTabs() {
   return (
     <section id="industries" className={`scroll-mt-16 bg-white ${section}`}>
       <div className={container}>
-        <h2 className={`max-w-3xl text-navy-900 ${headline}`}>
+        <h2 data-reveal className={`max-w-3xl text-navy-900 ${headline}`}>
           Made for every industry.
           <br />
           Ready for every store.
@@ -778,11 +779,12 @@ export function Statements() {
     <section className={`${paper} ${section}`}>
       <div className={container}>
         <h2
+          data-reveal
           className={`max-w-3xl text-[1.75rem] leading-tight font-medium tracking-[-0.02em] text-navy-900 sm:text-4xl ${displayFace}`}
         >
           Built carefully, so your store just works.
         </h2>
-        <div className="mt-10 grid gap-5 lg:grid-cols-[1.6fr_1fr]">
+        <div data-reveal="stagger" className="mt-10 grid gap-5 lg:grid-cols-[1.6fr_1fr]">
           <article className="flex flex-col rounded-xl bg-white p-7 ring-1 ring-slate-900/[0.06] sm:p-10">
             <p className="flex items-center justify-between text-sm font-medium text-slate-600">
               Checkout
@@ -886,12 +888,12 @@ export function Developers() {
         </ul>
       </div>
       <div className={`${container} ${section}`}>
-        <h2 className={headline}>
+        <h2 data-reveal className={headline}>
           Commerce Platform is built
           <br />
           <Green dark>&lt;for developers, too&gt;</Green>
         </h2>
-        <ul className="mt-12 grid gap-10 sm:grid-cols-3">
+        <ul data-reveal="stagger" className="mt-12 grid gap-10 sm:grid-cols-3">
           {tiles.map((t) => (
             <li key={t.title}>
               <Icon name={t.icon} className="size-6 text-white" />
@@ -976,7 +978,7 @@ export function GetStarted() {
         className={`${container} grid items-center gap-10 py-20 sm:py-24 lg:grid-cols-[1.2fr_1fr]`}
       >
         <div>
-          <h2 className={`text-navy-900 ${headline}`}>
+          <h2 data-reveal className={`text-navy-900 ${headline}`}>
             Start selling with
             <br />
             <Blue>Commerce Platform</Blue>
