@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon, type IconName } from './icons';
 import { Logo } from './logo';
+import { ThemeToggle } from './theme-toggle';
 import { Photo, type PhotoName } from './photos';
 import type { MarketingLinks } from './urls';
 
@@ -153,10 +154,10 @@ function resourceCards(links: MarketingLinks): NavCard[] {
 }
 
 const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-600';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg';
 const navFocus =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
-const panelLink = `rounded-md text-sm text-slate-600 hover:text-azure-700 ${focusRing}`;
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg';
+const panelLink = `rounded-md text-sm text-mk-muted hover:text-mk-accent ${focusRing}`;
 const summaryClass =
   'flex cursor-pointer list-none items-center justify-between py-4 text-lg font-semibold [&::-webkit-details-marker]:hidden';
 
@@ -272,8 +273,8 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
       aria-controls={`menu-${id}`}
       onClick={() => setOpen(open === id ? null : id)}
       onMouseEnter={() => setOpen(id)}
-      className={`flex items-center gap-1 rounded-md px-3 py-2 text-[0.9375rem] font-medium text-white transition hover:text-white/70 ${
-        open === id ? 'text-white/70' : ''
+      className={`flex items-center gap-1 rounded-md px-3 py-2 text-[0.9375rem] font-medium text-mk-fg transition hover:text-mk-fg/70 ${
+        open === id ? 'text-mk-fg/70' : ''
       } ${navFocus}`}
     >
       {label}
@@ -286,7 +287,7 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
       <a
         href={href}
         onMouseEnter={close}
-        className={`rounded-md px-3 py-2 text-[0.9375rem] font-medium text-white transition hover:text-white/70 ${navFocus}`}
+        className={`rounded-md px-3 py-2 text-[0.9375rem] font-medium text-mk-fg transition hover:text-mk-fg/70 ${navFocus}`}
       >
         {label}
       </a>
@@ -297,7 +298,7 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
     <div
       id={`menu-${id}`}
       hidden={open !== id}
-      className="absolute inset-x-0 top-full border-b border-slate-900/10 bg-white text-slate-900 shadow-[0_30px_60px_-30px_rgb(15_23_42/0.35)]"
+      className="absolute inset-x-0 top-full border-b border-mk-line bg-mk-elevated text-mk-fg shadow-[0_30px_60px_-30px_rgb(15_23_42/0.35)]"
     >
       <ul
         className={`mx-auto grid max-w-7xl gap-5 px-8 py-8 ${cards.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}
@@ -308,7 +309,7 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
               href={card.href}
               onClick={close}
               {...(card.external ? { target: '_blank', rel: 'noreferrer' } : {})}
-              className={`group flex h-full flex-col overflow-hidden rounded-xl bg-mist ring-1 ring-slate-900/[0.06] transition hover:bg-white hover:shadow-lg hover:ring-slate-900/10 ${focusRing}`}
+              className={`group flex h-full flex-col overflow-hidden rounded-xl bg-mk-subtle ring-1 ring-mk-line transition hover:bg-mk-surface-2 hover:shadow-lg hover:ring-mk-line ${focusRing}`}
             >
               {card.photo ? (
                 <span className="block aspect-[16/8] overflow-hidden">
@@ -321,16 +322,16 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
               ) : null}
               <span className="flex flex-1 flex-col p-6">
                 {card.photo ? null : (
-                  <span className="mb-4 flex size-10 items-center justify-center rounded-xl bg-white text-azure-600 shadow-sm ring-1 ring-slate-900/10">
+                  <span className="mb-4 flex size-10 items-center justify-center rounded-xl bg-mk-elevated text-mk-accent shadow-sm ring-1 ring-mk-line">
                     <Icon name={card.icon} />
                   </span>
                 )}
-                <span className="font-semibold text-navy-900">
+                <span className="font-semibold text-mk-fg">
                   {card.title}
                   {card.external ? <ExternalMark /> : null}
                 </span>
-                <span className="mt-1.5 text-sm leading-6 text-slate-600">{card.body}</span>
-                <span className="mt-auto pt-4 text-sm font-semibold text-azure-700">
+                <span className="mt-1.5 text-sm leading-6 text-mk-muted">{card.body}</span>
+                <span className="mt-auto pt-4 text-sm font-semibold text-mk-accent">
                   {card.external ? 'Open' : 'Learn more'} <span aria-hidden="true">→</span>
                 </span>
               </span>
@@ -342,10 +343,10 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
   );
 
   const drawerGroup = (title: string, items: NavLink[]) => (
-    <details key={title} className="group border-b border-slate-200">
+    <details key={title} className="group border-b border-mk-line">
       <summary className={summaryClass}>
         {title}
-        <span className="text-slate-400 group-open:rotate-180">
+        <span className="text-mk-dim group-open:rotate-180">
           <Chevron open={false} />
         </span>
       </summary>
@@ -354,7 +355,7 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
           <li key={item.label}>
             <LinkItem
               link={item}
-              className="text-slate-600 hover:text-azure-600"
+              className="text-mk-muted hover:text-mk-accent"
               onClick={() => setDrawer(false)}
             />
           </li>
@@ -371,13 +372,19 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
         onBlur={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) close();
         }}
-        className={`z-50 text-white transition-colors duration-300 ${
-          overlay ? 'fixed inset-x-0 top-0' : 'sticky top-0'
-        } ${!overlay || open ? 'bg-[#05090c]' : scrolled ? 'bg-[#05090c]/85 backdrop-blur-xl' : 'bg-transparent'}`}
+        className={`z-50 text-mk-fg transition-colors duration-300 ${
+          overlay ? 'fixed inset-x-0 top-0' : 'sticky top-0 border-b border-mk-line'
+        } ${
+          !overlay || open
+            ? 'bg-mk-bg'
+            : scrolled
+              ? 'bg-mk-bg/85 backdrop-blur-xl'
+              : 'mk-dark bg-transparent'
+        }`}
       >
         <div className="mx-auto flex h-[4.5rem] max-w-[90rem] items-center gap-3 px-4 sm:gap-6 sm:px-8 lg:px-[5.5rem]">
           <a href="/" className={`rounded-md ${navFocus}`} aria-label="Commerce Platform home">
-            <Logo tone="dark" />
+            <Logo />
           </a>
           <nav aria-label="Main" className="hidden lg:block">
             <ul className="flex items-center gap-1">
@@ -389,15 +396,16 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
             </ul>
           </nav>
           <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             <a
               href={links.loginUrl}
-              className={`hidden rounded-md px-3.5 py-2 text-[0.9375rem] font-medium text-white transition hover:text-white/70 sm:block ${navFocus}`}
+              className={`hidden rounded-md px-3.5 py-2 text-[0.9375rem] font-medium text-mk-fg transition hover:text-mk-fg/70 sm:block ${navFocus}`}
             >
               Log in
             </a>
             <a
               href={links.signupUrl}
-              className={`inline-flex items-center rounded-full bg-white px-5 py-2.5 text-[0.9375rem] font-semibold whitespace-nowrap text-slate-950 transition hover:bg-slate-200 ${navFocus}`}
+              className={`inline-flex items-center rounded-full bg-mk-fg px-5 py-2.5 text-[0.9375rem] font-semibold whitespace-nowrap text-mk-bg transition hover:opacity-85 ${navFocus}`}
             >
               Start for free
             </a>
@@ -407,7 +415,7 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
               aria-expanded={drawer}
               aria-controls="mobile-menu"
               onClick={() => setDrawer(true)}
-              className={`-mr-1 rounded-md p-2 text-white hover:text-white/70 lg:hidden ${navFocus}`}
+              className={`-mr-1 rounded-md p-2 text-mk-fg hover:text-mk-fg/70 lg:hidden ${navFocus}`}
             >
               <span className="sr-only">Open menu</span>
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-6">
@@ -428,14 +436,14 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
         <div
           id="menu-products"
           hidden={open !== 'products'}
-          className="absolute inset-x-0 top-full border-b border-slate-900/10 bg-white text-slate-900 shadow-[0_30px_60px_-30px_rgb(15_23_42/0.35)]"
+          className="absolute inset-x-0 top-full border-b border-mk-line bg-mk-elevated text-mk-fg shadow-[0_30px_60px_-30px_rgb(15_23_42/0.35)]"
         >
           <div className="mx-auto grid max-w-7xl grid-cols-[1fr_17rem] gap-10 px-8 py-9">
             <div className="grid grid-cols-3 gap-x-8 gap-y-8">
               {PRODUCT_GROUPS.map((group) => (
                 <div key={group.title}>
-                  <p className="flex items-center gap-2.5 text-sm font-semibold text-navy-900">
-                    <span className="flex size-7 items-center justify-center rounded-lg bg-azure-50 text-azure-600">
+                  <p className="flex items-center gap-2.5 text-sm font-semibold text-mk-fg">
+                    <span className="flex size-7 items-center justify-center rounded-lg bg-mk-accent-soft text-mk-accent">
                       <Icon name={group.icon} className="size-4" />
                     </span>
                     {group.title}
@@ -451,13 +459,13 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
               ))}
             </div>
             <div className="flex flex-col gap-4">
-              <div className="overflow-hidden rounded-xl bg-mist ring-1 ring-slate-900/[0.06]">
+              <div className="overflow-hidden rounded-xl bg-mk-subtle ring-1 ring-mk-line">
                 <span className="block aspect-[16/8] overflow-hidden">
                   <Photo name="laptop-shop-counter" alt="" />
                 </span>
                 <div className="p-5">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <span className="text-azure-600">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-mk-fg">
+                    <span className="text-mk-accent">
                       <Icon name={extend.icon} className="size-4" />
                     </span>
                     {extend.title}
@@ -474,7 +482,7 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
               <a
                 href="/features"
                 onClick={close}
-                className={`rounded-md px-1 text-sm font-semibold text-azure-700 hover:text-azure-600 ${focusRing}`}
+                className={`rounded-md px-1 text-sm font-semibold text-mk-accent hover:text-mk-accent ${focusRing}`}
               >
                 See all features <span aria-hidden="true">→</span>
               </a>
@@ -490,17 +498,17 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
         aria-modal="true"
         aria-label="Menu"
         hidden={!drawer}
-        className="fixed inset-0 z-50 overflow-y-auto bg-white text-slate-900 lg:hidden"
+        className="fixed inset-0 z-50 overflow-y-auto bg-mk-elevated text-mk-fg lg:hidden"
       >
-        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4 sm:px-6">
-          <Logo tone="light" />
+        <div className="flex h-16 items-center justify-between border-b border-mk-line px-4 sm:px-6">
+          <Logo />
           <button
             type="button"
             onClick={() => {
               setDrawer(false);
               drawerButton.current?.focus();
             }}
-            className="-mr-1 rounded-md p-2 text-slate-600 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-azure-600"
+            className="-mr-1 rounded-md p-2 text-mk-muted hover:text-mk-fg focus-visible:outline-2 focus-visible:outline-mk-fg"
           >
             <span className="sr-only">Close menu</span>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-6">
@@ -532,7 +540,7 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
               key={l.href}
               href={l.href}
               onClick={() => setDrawer(false)}
-              className="block border-b border-slate-200 py-4 text-lg font-semibold"
+              className="block border-b border-mk-line py-4 text-lg font-semibold"
             >
               {l.label}
             </a>
@@ -540,13 +548,13 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
           <div className="mt-8 grid gap-3">
             <a
               href={links.signupUrl}
-              className="rounded-md bg-azure-600 px-5 py-3 text-center font-semibold text-white"
+              className="rounded-full bg-mk-fg px-5 py-3 text-center font-semibold text-mk-bg"
             >
               Start for free
             </a>
             <a
               href={links.loginUrl}
-              className="rounded-md px-5 py-3 text-center font-semibold text-azure-700 ring-1 ring-azure-600/60"
+              className="rounded-full px-5 py-3 text-center font-semibold text-mk-fg ring-1 ring-mk-accent/30"
             >
               Log in
             </a>

@@ -30,6 +30,47 @@
   --color-mist: #f2f5f9;
 }
 
+/*
+ * Marketing site themes. Light is the default; the root layout sets data-mode="dark" before paint
+ * from the visitor's saved choice or device setting. `.mk-dark` keeps a block dark in both themes.
+ */
+@theme {
+  --color-mk-bg: #ffffff;
+  --color-mk-subtle: #f6f7f9;
+  --color-mk-elevated: #ffffff;
+  --color-mk-surface: #f6f7f9;
+  --color-mk-surface-2: #eceef2;
+  --color-mk-line: rgb(15 23 42 / 0.11);
+  --color-mk-fg: #0b1215;
+  --color-mk-fg-soft: #27323d;
+  --color-mk-muted: #47535f;
+  --color-mk-dim: #5f6c79;
+  --color-mk-accent: #2347e6;
+  --color-mk-accent-soft: rgb(48 94 255 / 0.1);
+  --color-mk-leaf: #0f8a4f;
+}
+
+[data-mode='dark'],
+.mk-dark {
+  --color-mk-bg: #05090c;
+  --color-mk-subtle: #0b1215;
+  --color-mk-elevated: #0e171b;
+  --color-mk-surface: rgb(255 255 255 / 0.04);
+  --color-mk-surface-2: rgb(255 255 255 / 0.09);
+  --color-mk-line: rgb(255 255 255 / 0.12);
+  --color-mk-fg: #ffffff;
+  --color-mk-fg-soft: #e2e8f0;
+  --color-mk-muted: #cbd5e1;
+  --color-mk-dim: #94a3b8;
+  --color-mk-accent: #9db5ff;
+  --color-mk-accent-soft: rgb(110 141 255 / 0.16);
+  --color-mk-leaf: #6fe0a0;
+}
+
+[data-mode='dark'] {
+  color-scheme: dark;
+}
+
 @theme inline {
   --color-brand: var(--store-brand, #111827);
   --color-brand-contrast: var(--store-brand-contrast, #ffffff);

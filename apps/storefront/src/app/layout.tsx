@@ -10,6 +10,7 @@ import { requestHost } from '@/lib/api';
 import { StoreApps } from '@/components/apps/store-apps';
 import { EditorBridge } from '@/components/editor-bridge';
 import { ScrollReveal } from '@/components/landing/scroll-reveal';
+import { THEME_SCRIPT } from '@/components/landing/theme-script';
 import { getCart, getShop, getThemePreview, isEditorPreview, isRootHost } from '@/lib/shop';
 import { themeAttributes, themeStyle } from '@/lib/theme';
 import { PasswordForm } from './(store)/password/password-form';
@@ -51,11 +52,23 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // No store: pages still render so store-only routes answer 404 (app/(store)/layout.tsx), and
   // not-found.tsx shows the marketing 404 or "Store not found".
   if (!shop) {
-    const path = (await headers()).get('x-pathname') ?? '/';
+    const requestHeaders = await headers();
+    const path = requestHeaders.get('x-pathname') ?? '/';
+    const platform = isRootHost(host);
     return (
-      <html lang="en">
-        <body className="min-h-screen bg-white text-zinc-900 antialiased">
-          {isRootHost(host) ? <PlatformSite path={path}>{children}</PlatformSite> : children}
+      <html lang="en" suppressHydrationWarning={platform}>
+        {platform ? (
+          <head>
+            <script
+              nonce={requestHeaders.get('x-nonce') ?? undefined}
+              dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }}
+            />
+          </head>
+        ) : null}
+        <body
+          className={`min-h-screen antialiased ${platform ? 'bg-mk-bg text-mk-fg' : 'bg-white text-zinc-900'}`}
+        >
+          {platform ? <PlatformSite path={path}>{children}</PlatformSite> : children}
         </body>
       </html>
     );

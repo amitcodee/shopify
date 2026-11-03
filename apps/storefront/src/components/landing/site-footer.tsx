@@ -51,16 +51,16 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
 
 export function SiteFooter() {
   return (
-    <footer className="bg-[#05090c] text-slate-400">
+    <footer className="bg-mk-bg text-mk-dim">
       <div className="mx-auto grid max-w-[90rem] gap-12 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1fr_3.4fr] lg:px-[5.5rem]">
         <div>
-          <Logo tone="dark" />
+          <Logo />
           <p className="mt-5 max-w-xs text-sm leading-6">
             Everything you need to start, run and grow an online store.
           </p>
           <a
             href={signupUrl}
-            className="mt-6 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="mt-6 inline-flex rounded-full bg-mk-fg px-5 py-2.5 text-sm font-semibold text-mk-bg transition hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg"
           >
             Start for free
           </a>
@@ -68,7 +68,7 @@ export function SiteFooter() {
         <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-5">
           {COLUMNS.map((col) => (
             <div key={col.title}>
-              <h2 className="text-xs font-semibold tracking-[0.08em] text-white uppercase">
+              <h2 className="text-xs font-semibold tracking-[0.08em] text-mk-fg uppercase">
                 {col.title}
               </h2>
               <ul className="mt-4 space-y-3 text-sm">
@@ -76,7 +76,7 @@ export function SiteFooter() {
                   <li key={l.label}>
                     <a
                       href={l.href}
-                      className="rounded text-slate-400 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                      className="rounded text-mk-dim hover:text-mk-fg hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg"
                       {...(l.external ? { target: '_blank', rel: 'noreferrer' } : {})}
                     >
                       {l.label}
@@ -89,8 +89,8 @@ export function SiteFooter() {
           ))}
         </nav>
       </div>
-      <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-[90rem] flex-col gap-2 px-5 py-6 text-xs text-slate-500 sm:flex-row sm:justify-between sm:px-8 lg:px-[5.5rem]">
+      <div className="border-t border-mk-line">
+        <div className="mx-auto flex max-w-[90rem] flex-col gap-2 px-5 py-6 text-xs text-mk-dim sm:flex-row sm:justify-between sm:px-8 lg:px-[5.5rem]">
           <p>© {new Date().getFullYear()} Commerce Platform</p>
           <ul className="flex flex-wrap gap-x-5 gap-y-1">
             {[
@@ -101,7 +101,7 @@ export function SiteFooter() {
               <li key={href}>
                 <a
                   href={href}
-                  className="rounded hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                  className="rounded hover:text-mk-fg hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg"
                 >
                   {label}
                 </a>

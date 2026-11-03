@@ -42,27 +42,27 @@ export function LegalHubPage() {
         title="Policies, in plain language"
         subtitle="The terms you agree to when you run a store with us, how we handle personal data, and the few essential cookies we use."
       />
-      <section className={`bg-white/[0.04] ${section}`}>
+      <section className={`bg-mk-surface ${section}`}>
         <div className={container}>
           <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {LEGAL_DOCS.map((doc) => (
               <li key={doc.slug} className="flex">
                 <a
                   href={`/legal/${doc.slug}`}
-                  className={`group flex flex-1 flex-col rounded-xl bg-white/[0.04] p-7 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-20px_rgb(10_34_54/0.35)] hover:ring-white/30 ${focusRing}`}
+                  className={`group flex flex-1 flex-col rounded-xl bg-mk-surface p-7 ring-1 ring-mk-line transition hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-20px_rgb(10_34_54/0.35)] hover:ring-mk-line ${focusRing}`}
                 >
-                  <span className="flex size-11 items-center justify-center rounded-lg bg-azure-400/15 text-azure-300">
+                  <span className="flex size-11 items-center justify-center rounded-lg bg-mk-accent-soft text-mk-accent">
                     <Icon name={DOC_ICONS[doc.slug] ?? 'file'} />
                   </span>
                   <span
-                    className={`mt-5 text-xl font-semibold tracking-[-0.01em] text-white group-hover:text-white ${displayFace}`}
+                    className={`mt-5 text-xl font-semibold tracking-[-0.01em] text-mk-fg group-hover:text-mk-fg ${displayFace}`}
                   >
                     {doc.title}
                   </span>
-                  <span className="mt-2 leading-7 text-slate-300">{doc.summary}</span>
+                  <span className="mt-2 leading-7 text-mk-muted">{doc.summary}</span>
                   <span className="mt-auto flex items-center justify-between pt-6 text-sm">
-                    <span className="text-slate-400">Updated {doc.updated}</span>
-                    <span className="inline-flex items-center gap-1 font-semibold text-azure-300">
+                    <span className="text-mk-dim">Updated {doc.updated}</span>
+                    <span className="inline-flex items-center gap-1 font-semibold text-mk-accent">
                       Read <Arrow />
                     </span>
                   </span>
@@ -70,10 +70,10 @@ export function LegalHubPage() {
               </li>
             ))}
           </ul>
-          <div className="mt-12 flex flex-col gap-4 rounded-xl bg-[#0b1215] p-7 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-12 flex flex-col gap-4 rounded-xl bg-mk-subtle p-7 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="font-semibold text-white">Looking for how we keep stores safe?</p>
-              <p className="mt-1 text-slate-300">
+              <p className="font-semibold text-mk-fg">Looking for how we keep stores safe?</p>
+              <p className="mt-1 text-mk-muted">
                 Database-level isolation, hosted card payments and two-factor sign-in.
               </p>
             </div>
@@ -98,7 +98,7 @@ function Block({ block }: { block: LegalBlock }) {
           <li key={item} className="flex gap-3">
             <span
               aria-hidden="true"
-              className="mt-[0.7em] size-1.5 shrink-0 rounded-full bg-azure-300"
+              className="mt-[0.7em] size-1.5 shrink-0 rounded-full bg-mk-accent"
             />
             <span>{item}</span>
           </li>
@@ -108,15 +108,15 @@ function Block({ block }: { block: LegalBlock }) {
   }
   if ('note' in block) {
     return (
-      <p className="rounded-lg border-l-4 border-azure-300 bg-azure-400/10 px-5 py-4 text-white">
+      <p className="rounded-lg border-l-4 border-mk-accent bg-mk-accent-soft px-5 py-4 text-mk-fg">
         {block.note}
       </p>
     );
   }
   return (
-    <div className="overflow-x-auto rounded-lg ring-1 ring-white/10">
+    <div className="overflow-x-auto rounded-lg ring-1 ring-mk-line">
       <table className="w-full min-w-[34rem] text-left text-[0.9375rem]">
-        <thead className="bg-[#0b1215] text-white">
+        <thead className="bg-mk-subtle text-mk-fg">
           <tr>
             {block.table.head.map((h) => (
               <th key={h} scope="col" className="px-4 py-3 font-semibold">
@@ -125,16 +125,16 @@ function Block({ block }: { block: LegalBlock }) {
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-white/10">
+        <tbody className="divide-y divide-mk-line">
           {block.table.rows.map((row) => (
             <tr key={row[0]} className="align-top">
               {row.map((cell, i) => (
                 <td
                   key={i}
-                  className={`px-4 py-3 ${i === 0 ? 'font-medium whitespace-nowrap text-white' : 'text-slate-300'}`}
+                  className={`px-4 py-3 ${i === 0 ? 'font-medium whitespace-nowrap text-mk-fg' : 'text-mk-muted'}`}
                 >
                   {i === 0 && block.table.head[0] === 'Name' ? (
-                    <code className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.8125rem]">
+                    <code className="rounded bg-mk-surface-2 px-1.5 py-0.5 font-mono text-[0.8125rem]">
                       {cell}
                     </code>
                   ) : (
@@ -163,13 +163,13 @@ export async function LegalDocPage({ doc }: { doc: LegalDoc }) {
         ]}
         title={doc.title}
         subtitle={doc.summary}
-        actions={<p className="text-sm text-slate-400">Last updated {doc.updated}</p>}
+        actions={<p className="text-sm text-mk-dim">Last updated {doc.updated}</p>}
       />
-      <section className="bg-white/[0.04] py-14 sm:py-20">
+      <section className="bg-mk-surface py-14 sm:py-20">
         <div className={`${container} grid gap-12 lg:grid-cols-[16rem_1fr] lg:gap-16`}>
           <aside className="lg:sticky lg:top-24 lg:self-start">
-            <nav aria-label="On this page" className="rounded-xl bg-[#0b1215] p-5">
-              <p className="text-xs font-semibold tracking-[0.12em] text-slate-400 uppercase">
+            <nav aria-label="On this page" className="rounded-xl bg-mk-subtle p-5">
+              <p className="text-xs font-semibold tracking-[0.12em] text-mk-dim uppercase">
                 On this page
               </p>
               <ol className="mt-3 space-y-1 text-sm">
@@ -177,9 +177,9 @@ export async function LegalDocPage({ doc }: { doc: LegalDoc }) {
                   <li key={s.id}>
                     <a
                       href={`#${s.id}`}
-                      className={`flex gap-2 rounded-md px-2 py-1.5 text-slate-200 hover:bg-white/[0.08] hover:text-white ${focusRing}`}
+                      className={`flex gap-2 rounded-md px-2 py-1.5 text-mk-fg-soft hover:bg-mk-surface-2 hover:text-mk-fg ${focusRing}`}
                     >
-                      <span className="w-5 shrink-0 text-slate-400 tabular-nums">{i + 1}.</span>
+                      <span className="w-5 shrink-0 text-mk-dim tabular-nums">{i + 1}.</span>
                       {s.title}
                     </a>
                   </li>
@@ -193,15 +193,15 @@ export async function LegalDocPage({ doc }: { doc: LegalDoc }) {
               <section
                 key={s.id}
                 id={s.id}
-                className="scroll-mt-24 border-t border-white/10 py-9 first:border-t-0 first:pt-0"
+                className="scroll-mt-24 border-t border-mk-line py-9 first:border-t-0 first:pt-0"
               >
                 <h2
-                  className={`flex gap-3 text-2xl font-semibold tracking-[-0.01em] text-white ${displayFace}`}
+                  className={`flex gap-3 text-2xl font-semibold tracking-[-0.01em] text-mk-fg ${displayFace}`}
                 >
-                  <span className="text-azure-300 tabular-nums">{i + 1}.</span>
+                  <span className="text-mk-accent tabular-nums">{i + 1}.</span>
                   {s.title}
                 </h2>
-                <div className="mt-4 space-y-4 text-[1.0625rem] leading-8 text-slate-200">
+                <div className="mt-4 space-y-4 text-[1.0625rem] leading-8 text-mk-fg-soft">
                   {s.blocks.map((b, j) => (
                     <Block key={j} block={b} />
                   ))}
@@ -209,15 +209,15 @@ export async function LegalDocPage({ doc }: { doc: LegalDoc }) {
               </section>
             ))}
 
-            <div className="mt-4 rounded-xl bg-navy-950 p-7 text-white sm:p-8">
+            <div className="mt-4 rounded-xl mk-dark bg-navy-950 p-7 text-mk-fg sm:p-8">
               <p className={`text-xl font-semibold ${displayFace}`}>Contact us</p>
-              <p className="mt-2 leading-7 text-slate-300">
+              <p className="mt-2 leading-7 text-mk-muted">
                 {supportEmail ? (
                   <>
                     Email{' '}
                     <a
                       href={`mailto:${supportEmail}`}
-                      className="font-semibold text-white underline underline-offset-4"
+                      className="font-semibold text-mk-fg underline underline-offset-4"
                     >
                       {supportEmail}
                     </a>{' '}
@@ -228,7 +228,7 @@ export async function LegalDocPage({ doc }: { doc: LegalDoc }) {
                     Use the{' '}
                     <a
                       href="/contact"
-                      className="font-semibold text-white underline underline-offset-4"
+                      className="font-semibold text-mk-fg underline underline-offset-4"
                     >
                       contact page
                     </a>{' '}
@@ -239,13 +239,13 @@ export async function LegalDocPage({ doc }: { doc: LegalDoc }) {
             </div>
 
             <div className="mt-12">
-              <p className="text-sm font-semibold text-white">Other policies</p>
+              <p className="text-sm font-semibold text-mk-fg">Other policies</p>
               <ul className="mt-3 flex flex-wrap gap-2">
                 {others.map((d) => (
                   <li key={d.slug}>
                     <a
                       href={`/legal/${d.slug}`}
-                      className={`inline-flex items-center gap-1.5 rounded-md bg-azure-400/15 px-3 py-1.5 text-sm font-medium text-azure-300 hover:bg-white/10 ${focusRing}`}
+                      className={`inline-flex items-center gap-1.5 rounded-md bg-mk-accent-soft px-3 py-1.5 text-sm font-medium text-mk-accent hover:bg-mk-surface-2 ${focusRing}`}
                     >
                       <Icon name={DOC_ICONS[d.slug] ?? 'file'} className="size-4" />
                       {d.title}
@@ -304,7 +304,7 @@ export function AboutPage() {
         eyebrow="About us"
         title={
           <>
-            Commerce that is <span className="text-azure-300">simple to start</span> and safe to
+            Commerce that is <span className="text-mk-accent">simple to start</span> and safe to
             grow
           </>
         }
@@ -328,10 +328,10 @@ export function AboutPage() {
         }
       />
 
-      <section className={`bg-white/[0.04] ${section}`}>
+      <section className={`bg-mk-surface ${section}`}>
         <div className={`${container} grid gap-12 lg:grid-cols-2 lg:gap-20`}>
-          <h2 className={`text-white ${headline}`}>Why we built it</h2>
-          <div className="space-y-5 text-lg leading-8 text-slate-300">
+          <h2 className={`text-mk-fg ${headline}`}>Why we built it</h2>
+          <div className="space-y-5 text-lg leading-8 text-mk-muted">
             <p>
               Opening an online store should not mean juggling a website builder, a payment gateway,
               a stock spreadsheet and an email tool. We put them in one product that works together
@@ -355,7 +355,7 @@ export function AboutPage() {
         </div>
       </section>
 
-      <section className={`${ink} ${section} text-white`}>
+      <section className={`${ink} ${section} text-mk-fg`}>
         <div className={container}>
           <dl className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             {[
@@ -364,21 +364,21 @@ export function AboutPage() {
               ['2', 'payment providers: Stripe and Razorpay'],
               ['0', 'card numbers stored on our servers'],
             ].map(([value, label]) => (
-              <div key={label} className="flex flex-col-reverse border-t border-white/15 pt-5">
-                <dt className="mt-2 text-slate-300">{label}</dt>
-                <dd className={`text-5xl font-medium tracking-[-0.03em] text-white ${displayFace}`}>
+              <div key={label} className="flex flex-col-reverse border-t border-mk-line pt-5">
+                <dt className="mt-2 text-mk-muted">{label}</dt>
+                <dd className={`text-5xl font-medium tracking-[-0.03em] text-mk-fg ${displayFace}`}>
                   {value}
                 </dd>
               </div>
             ))}
           </dl>
-          <p className="mt-12 text-sm text-slate-400">
+          <p className="mt-12 text-sm text-mk-dim">
             Read our{' '}
-            <a href="/legal" className="font-semibold text-white underline underline-offset-4">
+            <a href="/legal" className="font-semibold text-mk-fg underline underline-offset-4">
               policies
             </a>{' '}
             and{' '}
-            <a href="/security" className="font-semibold text-white underline underline-offset-4">
+            <a href="/security" className="font-semibold text-mk-fg underline underline-offset-4">
               security overview
             </a>
             . Policies last updated {LEGAL_UPDATED}.

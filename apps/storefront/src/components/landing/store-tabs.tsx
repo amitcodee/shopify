@@ -57,8 +57,8 @@ export function StoreTabs({ tabs }: { tabs: { id: string; label: string; panel: 
             aria-controls={`store-panel-${tab.id}`}
             tabIndex={active === i ? 0 : -1}
             onClick={() => setActive(i)}
-            className={`mr-[0.3em] cursor-pointer rounded text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-              active === i ? 'text-white' : 'text-slate-500 hover:text-slate-300'
+            className={`mr-[0.3em] cursor-pointer rounded text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg ${
+              active === i ? 'text-mk-fg' : 'text-mk-dim hover:text-mk-muted'
             }`}
           >
             {tab.label}

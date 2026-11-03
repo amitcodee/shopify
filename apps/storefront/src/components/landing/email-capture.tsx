@@ -22,8 +22,8 @@ export function EmailCapture({
       method="get"
       className={`flex w-full max-w-md flex-col gap-2 rounded-lg p-1.5 sm:flex-row ${
         dark
-          ? 'bg-white/10 ring-1 ring-white/25 backdrop-blur-xl'
-          : 'bg-[#05090c]/85 shadow-[0_10px_30px_-12px_rgb(10_34_54/0.25)] ring-1 ring-white/10 backdrop-blur-xl'
+          ? 'bg-mk-surface-2 ring-1 ring-mk-line backdrop-blur-xl'
+          : 'bg-mk-bg/85 shadow-[0_10px_30px_-12px_rgb(10_34_54/0.25)] ring-1 ring-mk-line backdrop-blur-xl'
       }`}
     >
       {template ? <input type="hidden" name="template" value={template} /> : null}
@@ -37,15 +37,15 @@ export function EmailCapture({
         autoComplete="email"
         placeholder="Enter your email"
         className={`min-w-0 flex-1 rounded-md bg-transparent px-4 py-3 text-[0.9375rem] outline-none focus-visible:ring-2 focus-visible:ring-azure-400 ${
-          dark ? 'text-white placeholder:text-slate-300' : 'text-white placeholder:text-slate-400'
+          dark ? 'text-mk-fg placeholder:text-mk-muted' : 'text-mk-fg placeholder:text-mk-dim'
         }`}
       />
       <button
         type="submit"
         className={`rounded-md px-6 py-3 text-sm font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
           dark
-            ? 'bg-white text-slate-950 hover:bg-slate-200 focus-visible:outline-white'
-            : 'bg-white/[0.04] text-slate-950 hover:bg-white/15 focus-visible:outline-white'
+            ? 'bg-mk-fg text-mk-bg hover:opacity-85 focus-visible:outline-mk-fg'
+            : 'bg-mk-surface text-mk-bg hover:bg-mk-surface-2 focus-visible:outline-mk-fg'
         }`}
       >
         Start for free

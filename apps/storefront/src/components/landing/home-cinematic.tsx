@@ -22,14 +22,14 @@ import { apiDocsUrl, signupUrl } from './urls';
 
 const wrap = 'mx-auto w-full max-w-[90rem] px-5 sm:px-8 lg:px-[5.5rem]';
 const focusWhite =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg';
 const pill =
   'inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[0.9375rem] font-semibold whitespace-nowrap transition';
-const pillLight = `${pill} bg-white text-slate-950 hover:bg-slate-200 ${focusWhite}`;
-const pillGhost = `${pill} text-white ring-2 ring-white/80 hover:bg-white/10 ${focusWhite}`;
+const pillLight = `${pill} bg-mk-fg text-mk-bg hover:opacity-85 ${focusWhite}`;
+const pillGhost = `${pill} text-mk-fg ring-2 ring-mk-fg/80 hover:bg-mk-surface-2 ${focusWhite}`;
 const h2 = `${displayFace} text-[2.5rem] leading-[1.06] font-normal tracking-[-0.03em] text-balance sm:text-[3.25rem] lg:text-[4rem]`;
 const h3 = `${displayFace} text-[2rem] leading-[1.1] font-normal tracking-[-0.025em] text-balance sm:text-[2.5rem] lg:text-5xl`;
-const inlineLink = `rounded underline underline-offset-2 hover:text-white ${focusWhite}`;
+const inlineLink = `rounded underline underline-offset-2 hover:text-mk-fg ${focusWhite}`;
 
 /** A section that overlaps the one before it with big rounded corners. */
 function Stage({
@@ -62,12 +62,12 @@ function MockPanel({
   return (
     <div
       aria-hidden="true"
-      className={`relative h-80 overflow-hidden rounded-2xl bg-white/[0.04] px-5 pt-6 ring-1 ring-white/10 sm:px-7 sm:pt-8 ${className}`}
+      className={`relative h-80 overflow-hidden rounded-2xl bg-mk-surface px-5 pt-6 ring-1 ring-mk-line sm:px-7 sm:pt-8 ${className}`}
     >
       <div className="pointer-events-none origin-top select-none">
         <FeatureMock kind={kind} />
       </div>
-      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-mk-bg/60 to-transparent" />
     </div>
   );
 }
@@ -78,7 +78,7 @@ const HERO_WORDS = ['fashion label', 'skincare brand', 'coffee shop', 'bookshop'
 
 function Hero() {
   return (
-    <section className="relative isolate flex min-h-[100svh] items-center overflow-hidden pt-24 pb-28">
+    <section className="mk-dark relative isolate flex min-h-[100svh] items-center overflow-hidden pt-24 pb-28">
       <div className="absolute inset-0 -z-20 motion-safe:animate-[cp-zoom_24s_ease-out_forwards]">
         <Photo name="laptop-shop-counter" alt="" priority position="60% center" />
       </div>
@@ -86,7 +86,7 @@ function Hero() {
         aria-hidden="true"
         className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgb(3_8_11/0.82)_0%,rgb(3_8_11/0.5)_50%,rgb(3_8_11/0.15)_100%),linear-gradient(0deg,rgb(3_8_11/0.65)_0%,transparent_40%)]"
       />
-      <div className={`${wrap} text-white`}>
+      <div className={`${wrap} text-mk-fg`}>
         <h1
           aria-label="Open your own online store"
           className={`${displayFace} text-[3.25rem] leading-[1.04] font-normal tracking-[-0.035em] sm:text-7xl lg:text-[6.5rem]`}
@@ -121,7 +121,7 @@ function TemplateTile({ template }: { template: ThemeTemplate }) {
   return (
     <a
       href={`/templates/${template.id}`}
-      className={`group relative block overflow-hidden rounded-2xl bg-white ring-1 ring-white/10 ${focusWhite}`}
+      className={`group relative block overflow-hidden rounded-2xl bg-mk-fg ring-1 ring-mk-line ${focusWhite}`}
     >
       <TemplateThumb
         template={template}
@@ -129,7 +129,7 @@ function TemplateTile({ template }: { template: ThemeTemplate }) {
         scale={9}
         className="h-[22rem] transition duration-700 group-hover:scale-[1.03] lg:h-[27rem]"
       />
-      <span className="absolute bottom-4 left-4 rounded-full bg-slate-950/85 px-3.5 py-1.5 text-sm font-medium text-white backdrop-blur">
+      <span className="absolute bottom-4 left-4 rounded-full bg-slate-950/85 px-3.5 py-1.5 text-sm font-medium text-mk-fg backdrop-blur">
         {template.name} · {template.styleLabel}
       </span>
     </a>
@@ -161,10 +161,10 @@ function StoreStage() {
     ),
   }));
   return (
-    <Stage label="Templates" className="bg-[#05090c] pt-14 text-white sm:pt-20">
+    <Stage label="Templates" className="bg-mk-bg pt-14 text-mk-fg sm:pt-20">
       <div className={wrap}>
         <StoreTabs tabs={tabs} />
-        <p className="mt-10 text-lg text-slate-300">
+        <p className="mt-10 text-lg text-mk-muted">
           Fourteen design styles across {THEME_INDUSTRIES.length} industries.{' '}
           <a href="/templates" className={inlineLink}>
             See all {THEME_TEMPLATES.length} templates
@@ -173,12 +173,12 @@ function StoreStage() {
         </p>
 
         {/* Moving house */}
-        <div className="relative mt-20 grid grid-cols-1 overflow-hidden rounded-3xl bg-[linear-gradient(120deg,#0a2f2a,#07191c_60%)] ring-1 ring-white/10 sm:mt-28 lg:grid-cols-2">
+        <div className="mk-dark relative mt-20 grid grid-cols-1 overflow-hidden text-mk-fg rounded-3xl bg-[linear-gradient(120deg,#0a2f2a,#07191c_60%)] ring-1 ring-mk-line sm:mt-28 lg:grid-cols-2">
           <div className="px-7 py-12 sm:px-12 sm:py-16">
             <h2 data-reveal className={h3}>
               Already selling somewhere else? Bring your catalog with you.
             </h2>
-            <p className="mt-5 max-w-md text-lg leading-[1.5] text-slate-300">
+            <p className="mt-5 max-w-md text-lg leading-[1.5] text-mk-muted">
               Import your products from a CSV with one row per variant, then follow the{' '}
               <a href="/switch" className={inlineLink}>
                 launch checklist
@@ -223,7 +223,7 @@ function FeatureColumn({
     <div>
       <MockPanel kind={kind} />
       <h3 className={`mt-6 text-xl font-medium ${displayFace}`}>{title}</h3>
-      <p className="mt-2 leading-6 text-slate-400">
+      <p className="mt-2 leading-6 text-mk-dim">
         <a href={href} className={inlineLink}>
           {linkText}
         </a>{' '}
@@ -235,7 +235,7 @@ function FeatureColumn({
 
 function RunStage() {
   return (
-    <section className="bg-[#05090c] pb-24 text-white sm:pb-32">
+    <section className="bg-mk-bg pb-24 text-mk-fg sm:pb-32">
       <div className={wrap}>
         <h2 data-reveal className={`max-w-3xl ${h2}`}>
           Everything runs from one admin.
@@ -270,9 +270,9 @@ function RunStage() {
         <h2 data-reveal className={`mt-24 max-w-3xl sm:mt-32 ${h2}`}>
           Sell across borders.
         </h2>
-        <div className="mt-12 grid grid-cols-1 overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#0a2440,#06121c_70%)] ring-1 ring-white/10 lg:grid-cols-[1fr_1.2fr]">
+        <div className="mk-dark mt-12 grid grid-cols-1 overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#0a2440,#06121c_70%)] ring-1 ring-mk-line lg:grid-cols-[1fr_1.2fr]">
           <div className="px-7 py-12 sm:px-12 sm:py-16">
-            <p className="text-lg leading-[1.5] text-slate-300">
+            <p className="text-lg leading-[1.5] text-mk-muted">
               Shoppers can pay in any of {SUPPORTED_CURRENCIES.length} currencies. Set{' '}
               <a href="/features/international" className={inlineLink}>
                 shipping zones and taxes
@@ -319,7 +319,7 @@ function RunStage() {
                 <Photo name={photo} alt="" />
               </div>
               <h3 className={`mt-6 text-xl font-medium ${displayFace}`}>{title}</h3>
-              <p className="mt-2 leading-6 text-slate-400">{body}</p>
+              <p className="mt-2 leading-6 text-mk-dim">{body}</p>
             </li>
           ))}
         </ul>
@@ -347,32 +347,32 @@ function BuildStage() {
   return (
     <Stage
       label="Design, apps and developers"
-      className="bg-[linear-gradient(180deg,#1b2fb8_0%,#10196e_22%,#070b2e_60%,#05090c_100%)] pt-16 text-white sm:pt-24"
+      className="mk-dark bg-[linear-gradient(180deg,#1b2fb8_0%,#10196e_22%,#070b2e_60%,#05090c_100%)] pt-16 text-mk-fg sm:pt-24"
     >
       <div className={wrap}>
         <h2 data-reveal className={`max-w-3xl ${h2}`}>
           Restyle your store by describing it.
         </h2>
         <div className="mt-12 grid grid-cols-1 gap-5 lg:grid-cols-[1.6fr_1fr]">
-          <div className="relative flex min-h-[24rem] items-center justify-center overflow-hidden rounded-3xl bg-[radial-gradient(40rem_24rem_at_70%_30%,rgb(96_120_255/0.45),transparent_70%),#080c33] p-6 ring-1 ring-white/10 sm:p-12">
+          <div className="relative flex min-h-[24rem] items-center justify-center overflow-hidden rounded-3xl bg-[radial-gradient(40rem_24rem_at_70%_30%,rgb(96_120_255/0.45),transparent_70%),#080c33] p-6 ring-1 ring-mk-line sm:p-12">
             <div
               aria-hidden="true"
-              className="w-full max-w-lg rounded-2xl bg-white p-5 text-slate-900 shadow-2xl"
+              className="w-full max-w-lg rounded-2xl bg-mk-fg p-5 text-slate-900 shadow-2xl"
             >
               <p className="text-lg">Make it warmer, with a serif headline and a bolder hero</p>
               <div className="mt-6 flex items-center justify-between text-sm text-slate-500">
                 <span>AI design assistant</span>
-                <span className="flex size-9 items-center justify-center rounded-full bg-azure-600 text-white">
+                <span className="flex size-9 items-center justify-center rounded-full bg-azure-600 text-mk-fg">
                   ↑
                 </span>
               </div>
             </div>
           </div>
-          <div className="flex flex-col justify-end rounded-3xl bg-white/[0.05] p-7 ring-1 ring-white/10 sm:p-10">
+          <div className="flex flex-col justify-end rounded-3xl bg-mk-surface p-7 ring-1 ring-mk-line sm:p-10">
             <h3 className={h3.replace('lg:text-5xl', 'lg:text-4xl')}>
               Preview first. Publish when you like it.
             </h3>
-            <p className="mt-4 leading-[1.6] text-slate-300">
+            <p className="mt-4 leading-[1.6] text-mk-muted">
               The theme editor autosaves to a private draft, so shoppers keep seeing your live store
               until you publish. The AI assistant is available when the platform has it switched on.
             </p>
@@ -384,7 +384,7 @@ function BuildStage() {
             <h2 data-reveal className={h3}>
               Add features without touching code.
             </h2>
-            <p className="mt-5 max-w-md text-lg leading-[1.5] text-slate-300">
+            <p className="mt-5 max-w-md text-lg leading-[1.5] text-mk-muted">
               Turn on built-in apps from your admin. They run on our platform, so no outside scripts
               are added to your store.
             </p>
@@ -393,7 +393,7 @@ function BuildStage() {
             {APPS.map((app) => (
               <li
                 key={app}
-                className="rounded-full bg-white/[0.07] px-5 py-3 ring-1 ring-white/15 backdrop-blur"
+                className="rounded-full bg-mk-surface-2 px-5 py-3 ring-1 ring-mk-line backdrop-blur"
               >
                 {app}
               </li>
@@ -405,7 +405,7 @@ function BuildStage() {
           <h2 data-reveal className={`max-w-3xl ${h3}`}>
             Developers get a real API.
           </h2>
-          <p className="mt-5 max-w-2xl text-lg leading-[1.5] text-slate-300">
+          <p className="mt-5 max-w-2xl text-lg leading-[1.5] text-mk-muted">
             Scoped{' '}
             <a href="/features/developers" className={inlineLink}>
               admin API tokens
@@ -419,9 +419,9 @@ function BuildStage() {
           </p>
           <div
             aria-hidden="true"
-            className="mt-10 overflow-hidden rounded-2xl bg-[#04071f]/90 shadow-2xl ring-1 ring-white/15"
+            className="mt-10 overflow-hidden rounded-2xl bg-[#04071f]/90 shadow-2xl ring-1 ring-mk-line"
           >
-            <div className="flex items-center gap-2 border-b border-white/10 px-5 py-3.5 text-xs text-slate-400">
+            <div className="flex items-center gap-2 border-b border-mk-line px-5 py-3.5 text-xs text-mk-dim">
               <span className="flex gap-1.5">
                 <span className="size-2.5 rounded-full bg-rose-400" />
                 <span className="size-2.5 rounded-full bg-amber-300" />
@@ -429,22 +429,22 @@ function BuildStage() {
               </span>
               <span className="ml-3 truncate">POST https://example.com/hooks</span>
             </div>
-            <pre className="overflow-x-auto p-6 font-mono text-[13px] leading-6 text-slate-300">
+            <pre className="overflow-x-auto p-6 font-mono text-[13px] leading-6 text-mk-muted">
               <code>
-                <span className="text-azure-300">x-commerce-topic</span>: orders/paid{'\n'}
-                <span className="text-azure-300">x-commerce-hmac-sha256</span>: 3q2+7w…{'\n\n'}
+                <span className="text-mk-accent">x-commerce-topic</span>: orders/paid{'\n'}
+                <span className="text-mk-accent">x-commerce-hmac-sha256</span>: 3q2+7w…{'\n\n'}
                 {'{ '}
-                <span className="text-azure-200">&quot;number&quot;</span>
+                <span className="text-mk-accent">&quot;number&quot;</span>
                 {': '}
                 <span className="text-amber-200">1042</span>
                 {', '}
-                <span className="text-azure-200">&quot;total&quot;</span>
+                <span className="text-mk-accent">&quot;total&quot;</span>
                 {': '}
                 <span className="text-amber-200">8318</span>
                 {', '}
-                <span className="text-azure-200">&quot;currency&quot;</span>
+                <span className="text-mk-accent">&quot;currency&quot;</span>
                 {': '}
-                <span className="text-leaf-300">&quot;USD&quot;</span>
+                <span className="text-mk-leaf">&quot;USD&quot;</span>
                 {' }'}
               </code>
             </pre>
@@ -525,7 +525,7 @@ function TrustStage() {
   return (
     <Stage
       label="Checkout and security"
-      className="bg-[linear-gradient(180deg,#0c3a30_0%,#072019_40%,#04100e_100%)] pt-16 text-white sm:pt-24"
+      className="mk-dark bg-[linear-gradient(180deg,#0c3a30_0%,#072019_40%,#04100e_100%)] pt-16 text-mk-fg sm:pt-24"
     >
       <div className={wrap}>
         <h2 data-reveal className={`mx-auto max-w-3xl text-center ${h2}`}>
@@ -537,8 +537,8 @@ function TrustStage() {
             <dl className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-3">
               {facts.map(([label, value, note]) => (
                 <div key={label} className="flex flex-col-reverse">
-                  <dt className="mt-1 text-sm leading-5 text-slate-400">
-                    <span className="block font-semibold tracking-wide text-leaf-300 uppercase">
+                  <dt className="mt-1 text-sm leading-5 text-mk-dim">
+                    <span className="block font-semibold tracking-wide text-mk-leaf uppercase">
                       {label}
                     </span>
                     {note}
@@ -547,7 +547,7 @@ function TrustStage() {
                 </div>
               ))}
             </dl>
-            <p className="mt-10 max-w-lg leading-[1.6] text-slate-300">
+            <p className="mt-10 max-w-lg leading-[1.6] text-mk-muted">
               Prices, discounts and taxes are worked out on the server, never trusted from the
               browser. Shoppers enter card details on Stripe or Razorpay&apos;s hosted page.
             </p>
@@ -580,7 +580,7 @@ function TrustStage() {
             <h2 data-reveal className={h3}>
               Every store is kept apart.
             </h2>
-            <p className="mt-5 max-w-lg text-lg leading-[1.5] text-slate-300">
+            <p className="mt-5 max-w-lg text-lg leading-[1.5] text-mk-muted">
               Store data is separated in the database itself as well as in the application. Staff
               roles and two-factor sign-in protect your admin.{' '}
               <a href="/security" className={inlineLink}>
@@ -600,7 +600,7 @@ function TrustStage() {
 function ClosingStage() {
   const steps = ['Pick a template', 'Add your products', 'Connect payments'];
   return (
-    <Stage label="Get started" className="bg-[#0b1114] pt-16 text-white sm:pt-24">
+    <Stage label="Get started" className="bg-mk-subtle pt-16 text-mk-fg sm:pt-24">
       <div className={wrap}>
         <h2 data-reveal className={`text-center ${h2}`}>
           Your store could be live today.
@@ -619,9 +619,9 @@ function ClosingStage() {
               {steps.map((step, i) => (
                 <li
                   key={step}
-                  className={`flex items-baseline gap-6 border-b border-white/15 py-6 text-[1.75rem] tracking-[-0.02em] sm:text-4xl ${displayFace}`}
+                  className={`flex items-baseline gap-6 border-b border-mk-line py-6 text-[1.75rem] tracking-[-0.02em] sm:text-4xl ${displayFace}`}
                 >
-                  <span className="font-mono text-sm text-leaf-300">0{i + 1}</span>
+                  <span className="font-mono text-sm text-mk-leaf">0{i + 1}</span>
                   {step}
                 </li>
               ))}
@@ -629,9 +629,7 @@ function ClosingStage() {
             <a href={signupUrl} className={`mt-10 ${pillLight}`}>
               Start for free
             </a>
-            <p className="mt-4 text-sm text-slate-400">
-              Every new store starts with a 14-day trial.
-            </p>
+            <p className="mt-4 text-sm text-mk-dim">Every new store starts with a 14-day trial.</p>
           </div>
         </div>
       </div>
@@ -642,7 +640,7 @@ function ClosingStage() {
 /** The whole home page. */
 export function CinematicHome() {
   return (
-    <div className="bg-[#05090c]">
+    <div className="bg-mk-bg">
       <Hero />
       <StoreStage />
       <RunStage />

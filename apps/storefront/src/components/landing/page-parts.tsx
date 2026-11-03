@@ -8,15 +8,16 @@ import { signupUrl } from './urls';
  * The marketing site's design system: layout, type scale, buttons and the building blocks every
  * page shares, so the whole site reads as one product.
  *
- * The site is dark: near-black pages with `paper` and `ink` bands. Product mockups and template
- * previews stay light so they read as real screens. Type: the display face for h1/h2, Inter Tight
+ * Light and dark themes come from the `mk-*` color tokens in globals.css. Add `mk-dark` to anything
+ * that stays dark in both themes (photo bands, `ink`). Product mockups and template previews stay
+ * light so they read as real screens. Type: the display face for h1/h2, Inter Tight
  * for text (both set by MarketingShell). Buttons are pills: white for the main action, outlined
  * for the second one.
  */
 
 export const container = 'mx-auto w-full max-w-[90rem] px-5 sm:px-8 lg:px-[5.5rem]';
-export const paper = 'bg-[#0b1215]';
-export const ink = 'bg-[#0a1c33]';
+export const paper = 'bg-mk-subtle';
+export const ink = 'mk-dark bg-[#0a1c33]';
 export const section = 'py-20 sm:py-24 lg:py-28';
 
 /** The display typeface (TASA Orbiter), for headings. */
@@ -26,26 +27,26 @@ export const headline = `${displayFace} text-[2rem] leading-[1.08] font-normal t
 export const lead = 'text-lg leading-8 text-pretty sm:text-xl sm:leading-[1.6]';
 /** Frosted glass for chips and cards floating over photos and gradients. */
 export const glass =
-  'bg-[#05090c]/85 shadow-[0_8px_32px_-12px_rgb(10_34_54/0.25)] ring-1 ring-white/70 backdrop-blur-xl backdrop-saturate-150';
-export const glassDark = 'bg-white/[0.07] ring-1 ring-white/15 backdrop-blur-xl';
+  'bg-mk-bg/85 shadow-[0_8px_32px_-12px_rgb(10_34_54/0.25)] ring-1 ring-mk-line backdrop-blur-xl backdrop-saturate-150';
+export const glassDark = 'bg-mk-surface-2 ring-1 ring-mk-line backdrop-blur-xl';
 
 export const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg';
 const focusRingLight =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg';
 const button =
   'inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-[0.9375rem] font-semibold whitespace-nowrap transition';
 
 /** Primary action on light surfaces. */
-export const buttonPrimary = `${button} bg-white text-slate-950 hover:bg-slate-200 ${focusRing}`;
+export const buttonPrimary = `${button} bg-mk-fg text-mk-bg hover:opacity-85 ${focusRing}`;
 /** Secondary action on light surfaces. */
-export const buttonSecondary = `${button} text-white ring-2 ring-white/80 hover:bg-white/10 ${focusRing}`;
+export const buttonSecondary = `${button} text-mk-fg ring-2 ring-mk-fg/80 hover:bg-mk-surface-2 ${focusRing}`;
 /** Primary action on dark surfaces and photos. */
-export const buttonLight = `${button} bg-white text-slate-950 hover:bg-slate-200 ${focusRingLight}`;
+export const buttonLight = `${button} bg-mk-fg text-mk-bg hover:opacity-85 ${focusRingLight}`;
 /** Secondary action on dark surfaces and photos. */
-export const buttonGhostDark = `${button} text-white ring-2 ring-white/80 hover:bg-white/10 ${focusRingLight}`;
-export const textLink = `rounded font-semibold text-azure-300 underline-offset-4 hover:underline ${focusRing}`;
-export const textLinkDark = `rounded font-semibold text-azure-200 underline-offset-4 hover:underline ${focusRingLight}`;
+export const buttonGhostDark = `${button} text-mk-fg ring-2 ring-mk-fg/80 hover:bg-mk-surface-2 ${focusRingLight}`;
+export const textLink = `rounded font-semibold text-mk-accent underline-offset-4 hover:underline ${focusRing}`;
+export const textLinkDark = `rounded font-semibold text-mk-accent underline-offset-4 hover:underline ${focusRingLight}`;
 
 /** Small → used after link text. */
 export function Arrow() {
@@ -69,12 +70,12 @@ export function Eyebrow({
   return (
     <p
       className={`flex items-center gap-2 text-xs font-semibold tracking-[0.14em] uppercase ${
-        dark ? 'text-azure-200' : 'text-azure-300'
+        dark ? 'text-mk-accent' : 'text-mk-accent'
       } ${className}`}
     >
       <span
         aria-hidden="true"
-        className={`h-px w-6 ${dark ? 'bg-azure-300/60' : 'bg-azure-600/50'}`}
+        className={`h-px w-6 ${dark ? 'bg-mk-accent-soft' : 'bg-azure-600/50'}`}
       />
       {children}
     </p>
@@ -95,8 +96,8 @@ export function IconTile({
     <span
       className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
         dark
-          ? 'bg-white/10 text-azure-200 ring-1 ring-white/15'
-          : 'bg-white/[0.04] text-azure-300 shadow-sm ring-1 ring-white/10'
+          ? 'bg-mk-surface-2 text-mk-accent ring-1 ring-mk-line'
+          : 'bg-mk-surface text-mk-accent shadow-sm ring-1 ring-mk-line'
       } ${className}`}
     >
       <Icon name={name} />
@@ -115,7 +116,7 @@ export function Breadcrumbs({
   return (
     <nav aria-label="Breadcrumb">
       <ol
-        className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-sm ${dark ? 'text-slate-400' : 'text-slate-400'}`}
+        className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-sm ${dark ? 'text-mk-dim' : 'text-mk-dim'}`}
       >
         {items.map((item, i) => (
           <li key={item.label} className="flex items-center gap-2">
@@ -123,14 +124,14 @@ export function Breadcrumbs({
             {item.href ? (
               <a
                 href={item.href}
-                className={`rounded ${dark ? `hover:text-white ${focusRingLight}` : `hover:text-white ${focusRing}`}`}
+                className={`rounded ${dark ? `hover:text-mk-fg ${focusRingLight}` : `hover:text-mk-fg ${focusRing}`}`}
               >
                 {item.label}
               </a>
             ) : (
               <span
                 aria-current="page"
-                className={`max-w-[16rem] truncate ${dark ? 'text-slate-200' : 'text-white'}`}
+                className={`max-w-[16rem] truncate ${dark ? 'text-mk-fg-soft' : 'text-mk-fg'}`}
               >
                 {item.label}
               </span>
@@ -164,12 +165,12 @@ export function PageHero({
 }) {
   const centered = center && !aside;
   return (
-    <section className={'relative isolate overflow-hidden bg-[#05090c] text-white'}>
+    <section className={'relative isolate overflow-hidden bg-mk-bg text-mk-fg'}>
       <div
         aria-hidden="true"
         className={`absolute inset-0 -z-10 ${
           dark
-            ? 'bg-[radial-gradient(48rem_28rem_at_85%_-10%,rgb(48_94_255/0.35),transparent),radial-gradient(36rem_24rem_at_-10%_110%,rgb(22_163_95/0.18),transparent)]'
+            ? 'bg-[radial-gradient(48rem_28rem_at_85%_-10%,rgb(48_94_255/0.16),transparent),radial-gradient(36rem_24rem_at_-10%_110%,rgb(22_163_95/0.08),transparent)]'
             : 'bg-[radial-gradient(44rem_26rem_at_90%_-10%,rgb(48_94_255/0.12),transparent),radial-gradient(30rem_20rem_at_0%_100%,rgb(251_191_36/0.10),transparent)]'
         }`}
       />
@@ -190,9 +191,7 @@ export function PageHero({
           ) : null}
           <h1 className={`mt-5 ${display}`}>{title}</h1>
           {subtitle ? (
-            <p className={`mt-6 ${lead} ${dark ? 'text-slate-300' : 'text-slate-300'}`}>
-              {subtitle}
-            </p>
+            <p className={`mt-6 ${lead} ${dark ? 'text-mk-muted' : 'text-mk-muted'}`}>{subtitle}</p>
           ) : null}
           {actions ? (
             <div
@@ -239,12 +238,12 @@ export function SectionHeading({
           size === 'lg'
             ? headline
             : 'text-2xl leading-tight font-semibold tracking-[-0.02em] text-balance sm:text-3xl'
-        } ${dark ? 'text-white' : 'text-white'}`}
+        } ${dark ? 'text-mk-fg' : 'text-mk-fg'}`}
       >
         {title}
       </h2>
       {intro ? (
-        <p className={`mt-5 ${lead} ${dark ? 'text-slate-300' : 'text-slate-300'}`}>{intro}</p>
+        <p className={`mt-5 ${lead} ${dark ? 'text-mk-muted' : 'text-mk-muted'}`}>{intro}</p>
       ) : null}
     </div>
   );
@@ -267,10 +266,10 @@ export function IconGrid({
         const inner = (
           <>
             <IconTile name={item.icon} />
-            <h3 className="mt-5 text-base font-semibold text-white">{item.title}</h3>
-            <p className="mt-2 text-[0.9375rem] leading-7 text-slate-300">{item.body}</p>
+            <h3 className="mt-5 text-base font-semibold text-mk-fg">{item.title}</h3>
+            <p className="mt-2 text-[0.9375rem] leading-7 text-mk-muted">{item.body}</p>
             {item.href ? (
-              <span className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-semibold text-azure-300">
+              <span className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-semibold text-mk-accent">
                 Learn more <Arrow />
               </span>
             ) : null}
@@ -281,12 +280,12 @@ export function IconGrid({
             {item.href ? (
               <a
                 href={item.href}
-                className={`group flex flex-1 flex-col rounded-2xl bg-white/[0.04] p-6 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-20px_rgb(15_23_42/0.35)] hover:ring-white/30 sm:p-7 ${focusRing}`}
+                className={`group flex flex-1 flex-col rounded-2xl bg-mk-surface p-6 ring-1 ring-mk-line transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-20px_rgb(15_23_42/0.35)] hover:ring-mk-line sm:p-7 ${focusRing}`}
               >
                 {inner}
               </a>
             ) : (
-              <div className="flex flex-1 flex-col rounded-2xl bg-white/[0.04] p-6 ring-1 ring-white/10 sm:p-7">
+              <div className="flex flex-1 flex-col rounded-2xl bg-mk-surface p-6 ring-1 ring-mk-line sm:p-7">
                 {inner}
               </div>
             )}
@@ -315,7 +314,7 @@ export function Steps({
           <div className="flex items-center gap-4">
             <span
               className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-                dark ? 'bg-white/[0.04] text-white' : 'bg-white text-slate-950'
+                dark ? 'bg-mk-surface text-mk-fg' : 'bg-mk-fg text-mk-bg'
               }`}
             >
               {i + 1}
@@ -323,14 +322,14 @@ export function Steps({
             {i < steps.length - 1 ? (
               <span
                 aria-hidden="true"
-                className={`hidden h-px flex-1 md:block ${dark ? 'bg-white/15' : 'bg-white/15'}`}
+                className={`hidden h-px flex-1 md:block ${dark ? 'bg-mk-surface-2' : 'bg-mk-surface-2'}`}
               />
             ) : null}
           </div>
-          <h3 className={`mt-6 text-lg font-semibold ${dark ? 'text-white' : 'text-white'}`}>
+          <h3 className={`mt-6 text-lg font-semibold ${dark ? 'text-mk-fg' : 'text-mk-fg'}`}>
             {step.title}
           </h3>
-          <p className={`mt-2 leading-7 ${dark ? 'text-slate-300' : 'text-slate-300'}`}>
+          <p className={`mt-2 leading-7 ${dark ? 'text-mk-muted' : 'text-mk-muted'}`}>
             {step.body}
           </p>
         </li>
@@ -354,7 +353,7 @@ export function CtaBand({
 }) {
   return (
     <section className="px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-      <div className="relative isolate mx-auto max-w-[79rem] overflow-hidden rounded-3xl bg-navy-950 text-white">
+      <div className="relative isolate mx-auto max-w-[79rem] overflow-hidden rounded-3xl mk-dark bg-navy-950 text-mk-fg">
         <div className="absolute inset-0 -z-20">
           <Photo name={photo} alt="" />
         </div>
@@ -364,11 +363,11 @@ export function CtaBand({
         />
         <div className="max-w-2xl px-6 py-16 sm:px-12 sm:py-20 lg:px-16 lg:py-24">
           <h2 className={headline}>{title}</h2>
-          <p className="mt-5 max-w-xl text-lg leading-8 text-slate-200">{body}</p>
+          <p className="mt-5 max-w-xl text-lg leading-8 text-mk-fg-soft">{body}</p>
           <div className="mt-9">
             <EmailCapture signupUrl={signupUrl} template={template} />
           </div>
-          <p className="mt-3 text-sm text-slate-300">Every new store starts with a 14-day trial.</p>
+          <p className="mt-3 text-sm text-mk-muted">Every new store starts with a 14-day trial.</p>
         </div>
       </div>
     </section>
@@ -378,12 +377,12 @@ export function CtaBand({
 /** A check-marked list. */
 export function CheckList({ items, dark = false }: { items: ReactNode[]; dark?: boolean }) {
   return (
-    <ul className={`space-y-3.5 ${dark ? 'text-slate-200' : 'text-slate-200'}`}>
+    <ul className={`space-y-3.5 ${dark ? 'text-mk-fg-soft' : 'text-mk-fg-soft'}`}>
       {items.map((item, i) => (
         <li key={i} className="flex gap-3">
           <span
             className={`mt-1 flex size-5 shrink-0 items-center justify-center rounded-full ${
-              dark ? 'bg-azure-400/20 text-azure-200' : 'bg-azure-600/10 text-azure-300'
+              dark ? 'bg-mk-accent-soft text-mk-accent' : 'bg-azure-600/10 text-mk-accent'
             }`}
           >
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" className="size-3.5">
@@ -429,7 +428,7 @@ export function PhotoPanel({
   return (
     <div className={`relative ${overlay ? 'pb-6 sm:pb-0' : ''} ${className}`}>
       <div
-        className={`overflow-hidden rounded-xl bg-white/10 shadow-[0_30px_60px_-30px_rgb(15_23_42/0.45)] ring-1 ring-white/10 ${ratio}`}
+        className={`overflow-hidden rounded-xl bg-mk-surface-2 shadow-[0_30px_60px_-30px_rgb(15_23_42/0.45)] ring-1 ring-mk-line ${ratio}`}
       >
         <Photo name={photo} alt={alt} priority={priority} position={position} />
       </div>
@@ -452,7 +451,7 @@ export function FloatCard({
 }) {
   return (
     <div
-      className={`rounded-2xl bg-[#0e171b]/95 p-4 text-white shadow-[0_24px_48px_-16px_rgb(15_23_42/0.35)] ring-1 ring-white/10 backdrop-blur ${className}`}
+      className={`rounded-2xl bg-mk-elevated p-4 text-mk-fg shadow-[0_24px_48px_-16px_rgb(15_23_42/0.35)] ring-1 ring-mk-line backdrop-blur ${className}`}
     >
       {children}
     </div>

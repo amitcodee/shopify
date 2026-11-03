@@ -339,7 +339,7 @@ const cookies: LegalDoc = {
       id: 'local-storage',
       title: 'Local storage',
       blocks: [
-        'This website stores one value in your browser’s local storage to remember that you have dismissed the cookie notice. It is never sent to our servers.',
+        'This website and the merchant admin use your browser’s local storage for two small preferences: whether you have dismissed the cookie notice, and whether you chose the light or dark theme. They are never sent to our servers.',
       ],
     },
     {

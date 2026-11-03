@@ -1,5 +1,5 @@
 /** The Commerce Platform mark and wordmark. */
-export function Logo({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
+export function Logo() {
   return (
     <span className="flex items-center gap-2.5">
       <span className="flex size-8 items-center justify-center rounded-md bg-azure-600 shadow-sm">
@@ -14,7 +14,7 @@ export function Logo({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
         </svg>
       </span>
       <span
-        className={`font-[family-name:var(--font-display)] text-[1.0625rem] font-semibold tracking-[-0.01em] whitespace-nowrap ${tone === 'dark' ? 'text-white' : 'text-navy-900'}`}
+        className={`font-[family-name:var(--font-display)] text-[1.0625rem] font-semibold tracking-[-0.01em] whitespace-nowrap text-mk-fg`}
       >
         Commerce Platform
       </span>

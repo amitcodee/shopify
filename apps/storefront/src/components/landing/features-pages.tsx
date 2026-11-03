@@ -72,9 +72,9 @@ function AreaCard({ area }: { area: FeatureArea }) {
   return (
     <a
       href={`/features/${area.slug}`}
-      className={`group flex h-full flex-col overflow-hidden rounded-xl bg-white/[0.04] ring-1 ring-white/10 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgb(15_23_42/0.4)] ${focusRing}`}
+      className={`group flex h-full flex-col overflow-hidden rounded-xl bg-mk-surface ring-1 ring-mk-line transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgb(15_23_42/0.4)] ${focusRing}`}
     >
-      <span className="relative block aspect-[16/10] overflow-hidden bg-white/10">
+      <span className="relative block aspect-[16/10] overflow-hidden bg-mk-surface-2">
         <span className="block size-full transition duration-700 group-hover:scale-[1.04]">
           <Photo name={FEATURE_PHOTOS[area.slug] ?? 'boutique-interior'} alt="" />
         </span>
@@ -83,9 +83,9 @@ function AreaCard({ area }: { area: FeatureArea }) {
         </span>
       </span>
       <span className="flex flex-1 flex-col p-6 sm:p-7">
-        <span className="text-lg font-semibold tracking-tight text-white">{area.name}</span>
-        <span className="mt-2 text-[0.9375rem] leading-7 text-slate-300">{area.summary}</span>
-        <span className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-semibold text-azure-300">
+        <span className="text-lg font-semibold tracking-tight text-mk-fg">{area.name}</span>
+        <span className="mt-2 text-[0.9375rem] leading-7 text-mk-muted">{area.summary}</span>
+        <span className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-semibold text-mk-accent">
           Explore {area.name.toLowerCase()} <Arrow />
         </span>
       </span>
@@ -113,13 +113,13 @@ export function FeaturesHub() {
         }
         aside={
           <div className="grid grid-cols-[1.25fr_1fr] gap-3 sm:gap-4">
-            <div className="row-span-2 overflow-hidden rounded-xl shadow-[0_30px_60px_-30px_rgb(15_23_42/0.5)] ring-1 ring-white/10">
+            <div className="row-span-2 overflow-hidden rounded-xl shadow-[0_30px_60px_-30px_rgb(15_23_42/0.5)] ring-1 ring-mk-line">
               <Photo name="boutique-interior" priority position="40% center" />
             </div>
-            <div className="aspect-[4/3] overflow-hidden rounded-xl ring-1 ring-white/10">
+            <div className="aspect-[4/3] overflow-hidden rounded-xl ring-1 ring-mk-line">
               <Photo name="packing-orders" priority />
             </div>
-            <div className="aspect-[4/3] overflow-hidden rounded-xl ring-1 ring-white/10">
+            <div className="aspect-[4/3] overflow-hidden rounded-xl ring-1 ring-mk-line">
               <Photo name="checkout-counter" priority />
             </div>
           </div>
@@ -127,14 +127,14 @@ export function FeaturesHub() {
       />
       <nav
         aria-label="Feature areas"
-        className="sticky top-[4.5rem] z-30 border-y border-white/10 bg-[#05090c]/85 backdrop-blur-xl"
+        className="sticky top-[4.5rem] z-30 border-y border-mk-line bg-mk-bg/85 backdrop-blur-xl"
       >
         <ul className={`${container} flex gap-2 overflow-x-auto [scrollbar-width:none] py-3`}>
           {FEATURE_AREAS.map((a) => (
             <li key={a.slug} className="shrink-0">
               <a
                 href={`/features/${a.slug}`}
-                className={`flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-200 ring-1 ring-white/10 transition hover:bg-navy-950 hover:text-white hover:ring-white/30 ${focusRing}`}
+                className={`flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium text-mk-fg-soft ring-1 ring-mk-line transition hover:bg-mk-fg hover:text-mk-bg hover:text-mk-fg hover:ring-mk-line ${focusRing}`}
               >
                 <Icon name={a.icon} className="size-4" />
                 {a.name}
@@ -147,7 +147,7 @@ export function FeaturesHub() {
         <section
           key={group.title}
           aria-labelledby={`group-${i}`}
-          className={`py-20 sm:py-24 ${i % 2 ? paper : 'bg-white/[0.04]'}`}
+          className={`py-20 sm:py-24 ${i % 2 ? paper : 'bg-mk-surface'}`}
         >
           <div className={container}>
             <SectionHeading
@@ -206,13 +206,13 @@ export function FeaturePage({ area }: { area: FeatureArea }) {
             overlayPosition="bottom-left"
             overlay={
               <FloatCard>
-                <p className="text-xs font-semibold tracking-[0.14em] text-slate-400 uppercase">
+                <p className="text-xs font-semibold tracking-[0.14em] text-mk-dim uppercase">
                   Included
                 </p>
                 <ul className="mt-3 space-y-2.5">
                   {area.capabilities.slice(0, 3).map((c) => (
                     <li key={c.title} className="flex items-center gap-2.5 text-sm font-medium">
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-azure-400/15 text-azure-300">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-mk-accent-soft text-mk-accent">
                         <Icon name={c.icon} className="size-4" />
                       </span>
                       {c.title}
@@ -225,7 +225,7 @@ export function FeaturePage({ area }: { area: FeatureArea }) {
         }
       />
 
-      <section aria-labelledby="capabilities" className={`bg-white/[0.04] ${section}`}>
+      <section aria-labelledby="capabilities" className={`bg-mk-surface ${section}`}>
         <div className={container}>
           <SectionHeading
             id="capabilities"
@@ -277,8 +277,8 @@ export function FeaturePage({ area }: { area: FeatureArea }) {
             <Steps dark steps={area.steps} />
           </div>
           {guides.length > 0 ? (
-            <div className="mt-14 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/10 pt-8 text-sm text-slate-400">
-              <span className="font-semibold text-slate-200">Step-by-step guides</span>
+            <div className="mt-14 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-mk-line pt-8 text-sm text-mk-dim">
+              <span className="font-semibold text-mk-fg-soft">Step-by-step guides</span>
               {guides.map((g) => (
                 <a
                   key={g.slug}
@@ -293,7 +293,7 @@ export function FeaturePage({ area }: { area: FeatureArea }) {
         </div>
       </section>
 
-      <section aria-labelledby="related" className={`bg-white/[0.04] ${section}`}>
+      <section aria-labelledby="related" className={`bg-mk-surface ${section}`}>
         <div className={container}>
           <SectionHeading id="related" eyebrow="Keep exploring" title="Related features" />
           <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

@@ -4,11 +4,11 @@ import { TemplateThumb } from './template-thumb';
 // Not imported from page-parts: that module is server-only and this card also renders in the
 // client-side gallery.
 const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg';
 
 /** Pastel panel color for a template: a soft tint of its accent. */
 export function templateTint(t: ThemeTemplate, percent = 16): string {
-  return `color-mix(in srgb, ${t.settings.accentColor} ${percent + 14}%, #10181c)`;
+  return `color-mix(in srgb, ${t.settings.accentColor} ${percent}%, var(--color-mk-subtle))`;
 }
 
 export function Swatches({ template: t }: { template: ThemeTemplate }) {
@@ -17,7 +17,7 @@ export function Swatches({ template: t }: { template: ThemeTemplate }) {
       {[t.settings.brandColor, t.settings.accentColor, t.settings.backgroundColor].map((c, i) => (
         <span
           key={i}
-          className="size-4 rounded-full ring-2 ring-white"
+          className="size-4 rounded-full ring-2 ring-mk-bg"
           style={{ background: c, boxShadow: 'inset 0 0 0 1px rgb(0 0 0 / 0.12)' }}
         />
       ))}
@@ -55,10 +55,10 @@ export function TemplateCard({
           href={`/templates/${t.id}`}
           tabIndex={-1}
           aria-hidden="true"
-          className="block overflow-hidden rounded-[1.75rem] px-3 pt-3 ring-1 ring-white/10 transition duration-300 group-hover:shadow-[0_28px_56px_-28px_rgb(15_23_42/0.5)] sm:px-4 sm:pt-4"
+          className="block overflow-hidden rounded-[1.75rem] px-3 pt-3 ring-1 ring-mk-line transition duration-300 group-hover:shadow-[0_28px_56px_-28px_rgb(15_23_42/0.5)] sm:px-4 sm:pt-4"
           style={{ background: templateTint(t) }}
         >
-          <div className="overflow-hidden rounded-t-[1.1rem] shadow-[0_12px_32px_-16px_rgb(15_23_42/0.45)] ring-1 ring-white/10">
+          <div className="overflow-hidden rounded-t-[1.1rem] shadow-[0_12px_32px_-16px_rgb(15_23_42/0.45)] ring-1 ring-mk-line">
             <TemplateThumb
               template={t}
               tiles={t.settings.gridColumns >= 4 ? 4 : 3}
@@ -71,7 +71,7 @@ export function TemplateCard({
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center gap-2 rounded-b-[1.75rem] bg-gradient-to-t from-slate-950/45 to-transparent px-4 pt-16 pb-4 opacity-0 transition duration-300 group-focus-within:opacity-100 group-hover:opacity-100 *:pointer-events-auto [@media(hover:none)]:opacity-100">
             <a
               href={`${signupUrl}?template=${t.id}`}
-              className={`${pill} bg-white text-slate-950 hover:bg-slate-200 ${focusRing}`}
+              className={`${pill} bg-mk-fg text-mk-bg hover:opacity-85 ${focusRing}`}
             >
               Use template<span className="sr-only">: {t.name}</span>
             </a>
@@ -79,7 +79,7 @@ export function TemplateCard({
               href={`${demoStoreUrl}/?${THEME_PREVIEW_PARAM}=${t.id}`}
               target="_blank"
               rel="noreferrer"
-              className={`${pill} bg-navy-950/80 text-white ring-1 ring-white/25 backdrop-blur hover:bg-navy-950 ${focusRing}`}
+              className={`${pill} mk-dark bg-navy-950/80 text-mk-fg ring-1 ring-mk-line backdrop-blur hover:bg-mk-fg hover:text-mk-bg ${focusRing}`}
             >
               Live preview
               <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" className="size-3.5">
@@ -92,15 +92,15 @@ export function TemplateCard({
       </div>
       <div className="mt-4 flex items-start justify-between gap-3 px-1">
         <div className="min-w-0">
-          <H className={`${lg ? 'text-lg' : 'text-base'} font-semibold tracking-tight text-white`}>
+          <H className={`${lg ? 'text-lg' : 'text-base'} font-semibold tracking-tight text-mk-fg`}>
             <a
               href={`/templates/${t.id}`}
-              className={`rounded group-hover:text-white ${focusRing}`}
+              className={`rounded group-hover:text-mk-fg ${focusRing}`}
             >
               {t.name}
             </a>
           </H>
-          <p className="mt-0.5 truncate text-sm text-slate-400">
+          <p className="mt-0.5 truncate text-sm text-mk-dim">
             {t.industryLabel} · {t.styleLabel}
           </p>
         </div>

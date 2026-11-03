@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { logoutAction } from '@/app/(auth)/actions';
 import { Icon } from './icons';
 import { LogoMark } from './logo';
+import { ThemeToggle } from './theme-toggle';
 
 function initialOf(text: string): string {
   return (text.trim()[0] ?? '?').toUpperCase();
@@ -34,6 +35,7 @@ export function UserMenu({ user }: { user: CurrentUser }) {
         <span className="hidden max-w-[220px] truncate lg:inline">{user.email}</span>
         <span className="sr-only lg:hidden">{user.email}</span>
       </Link>
+      <ThemeToggle />
       <form action={logoutAction}>
         <button
           type="submit"

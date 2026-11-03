@@ -170,10 +170,10 @@ export function TemplateDetail({ template }: { template: ThemeTemplate }) {
               <Eyebrow>
                 {template.industryLabel} · {template.styleLabel}
               </Eyebrow>
-              <h1 className={`mt-5 text-white ${display}`}>{template.name}</h1>
+              <h1 className={`mt-5 text-mk-fg ${display}`}>{template.name}</h1>
             </div>
             <div>
-              <p className={`text-slate-300 ${lead}`}>{template.description}</p>
+              <p className={`text-mk-muted ${lead}`}>{template.description}</p>
               <div className="mt-7 flex flex-wrap items-center gap-3">
                 <a href={`${signupUrl}?template=${template.id}`} className={buttonPrimary}>
                   Start with this template
@@ -189,14 +189,14 @@ export function TemplateDetail({ template }: { template: ThemeTemplate }) {
         {/* Desktop and phone previews. */}
         <div aria-hidden="true" className={`${container} relative mt-14 pb-16 sm:mt-16 sm:pb-24`}>
           <div className="relative mx-auto max-w-6xl">
-            <div className="overflow-hidden rounded-2xl bg-white/[0.04] shadow-[0_50px_100px_-40px_rgb(15_23_42/0.55)] ring-1 ring-white/10 md:mr-24 lg:mr-32">
-              <div className="flex items-center gap-3 border-b border-white/10 bg-white/[0.04] px-4 py-2.5">
+            <div className="overflow-hidden rounded-2xl bg-mk-surface shadow-[0_50px_100px_-40px_rgb(15_23_42/0.55)] ring-1 ring-mk-line md:mr-24 lg:mr-32">
+              <div className="flex items-center gap-3 border-b border-mk-line bg-mk-surface px-4 py-2.5">
                 <span className="flex gap-1.5">
-                  <span className="size-2.5 rounded-full bg-white/10" />
-                  <span className="size-2.5 rounded-full bg-white/10" />
-                  <span className="size-2.5 rounded-full bg-white/10" />
+                  <span className="size-2.5 rounded-full bg-mk-surface-2" />
+                  <span className="size-2.5 rounded-full bg-mk-surface-2" />
+                  <span className="size-2.5 rounded-full bg-mk-surface-2" />
                 </span>
-                <span className="mx-auto w-full max-w-xs truncate rounded-md bg-white/[0.04] px-3 py-1 text-center text-xs text-slate-400 ring-1 ring-white/10">
+                <span className="mx-auto w-full max-w-xs truncate rounded-md bg-mk-surface px-3 py-1 text-center text-xs text-mk-dim ring-1 ring-mk-line">
                   yourstore.com
                 </span>
               </div>
@@ -210,7 +210,7 @@ export function TemplateDetail({ template }: { template: ThemeTemplate }) {
                 />
               </div>
             </div>
-            <div className="absolute -bottom-8 right-0 hidden w-52 rounded-[2.2rem] bg-navy-950 p-2 shadow-[0_40px_80px_-30px_rgb(15_23_42/0.7)] ring-1 ring-white/10 md:block lg:w-60">
+            <div className="absolute -bottom-8 right-0 hidden w-52 rounded-[2.2rem] mk-dark bg-navy-950 p-2 shadow-[0_40px_80px_-30px_rgb(15_23_42/0.7)] ring-1 ring-mk-line md:block lg:w-60">
               <div className="overflow-hidden rounded-xl">
                 <TemplateThumb
                   template={template}
@@ -225,7 +225,7 @@ export function TemplateDetail({ template }: { template: ThemeTemplate }) {
         </div>
       </section>
 
-      <section aria-labelledby="design" className="bg-white/[0.04] py-20 sm:py-28">
+      <section aria-labelledby="design" className="bg-mk-surface py-20 sm:py-28">
         <div className={`${container} grid gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-20`}>
           <div>
             <SectionHeading
@@ -234,34 +234,32 @@ export function TemplateDetail({ template }: { template: ThemeTemplate }) {
               title="What this template sets"
               intro="Every choice below can be changed after you apply the template — in your admin under Settings → Theme → Customize."
             />
-            <h3 className="mt-10 text-xs font-semibold tracking-[0.14em] text-slate-400 uppercase">
+            <h3 className="mt-10 text-xs font-semibold tracking-[0.14em] text-mk-dim uppercase">
               Colors
             </h3>
             <ul className="mt-4 grid grid-cols-5 gap-2 sm:gap-3">
               {swatches.map(([label, hex]) => (
                 <li key={label} className="min-w-0">
                   <span
-                    className="block aspect-[4/5] rounded-xl ring-1 ring-white/10"
+                    className="block aspect-[4/5] rounded-xl ring-1 ring-mk-line"
                     style={{ background: hex }}
                   />
-                  <span className="mt-2 block truncate text-xs font-medium text-slate-200">
+                  <span className="mt-2 block truncate text-xs font-medium text-mk-fg-soft">
                     {label}
                   </span>
-                  <span className="block font-mono text-[10px] text-slate-400 uppercase">
-                    {hex}
-                  </span>
+                  <span className="block font-mono text-[10px] text-mk-dim uppercase">{hex}</span>
                 </li>
               ))}
             </ul>
           </div>
-          <dl className="divide-y divide-white/10 self-start rounded-2xl bg-[#0b1215] px-1 ring-1 ring-white/10">
+          <dl className="divide-y divide-mk-line self-start rounded-2xl bg-mk-subtle px-1 ring-1 ring-mk-line">
             {tokens.map(([k, v]) => (
               <div
                 key={k}
                 className="grid grid-cols-[8rem_1fr] gap-4 px-5 py-4 text-sm sm:grid-cols-[11rem_1fr]"
               >
-                <dt className="text-slate-400">{k}</dt>
-                <dd className="font-medium text-white">{v}</dd>
+                <dt className="text-mk-dim">{k}</dt>
+                <dd className="font-medium text-mk-fg">{v}</dd>
               </div>
             ))}
           </dl>

@@ -83,14 +83,14 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
             key={plan.code}
             className={`relative flex flex-col rounded-xl p-8 sm:p-9 ${
               highlight
-                ? 'bg-navy-950 text-white shadow-[0_40px_80px_-30px_rgb(15_23_42/0.6)] ring-1 ring-white/10'
-                : 'bg-white/[0.04] text-white shadow-[0_20px_40px_-30px_rgb(15_23_42/0.35)] ring-1 ring-white/10'
+                ? 'mk-dark bg-navy-950 text-mk-fg shadow-[0_40px_80px_-30px_rgb(15_23_42/0.6)] ring-1 ring-mk-line'
+                : 'bg-mk-surface text-mk-fg shadow-[0_20px_40px_-30px_rgb(15_23_42/0.35)] ring-1 ring-mk-line'
             }`}
           >
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">{plan.name}</h2>
               {highlight && (
-                <p className="rounded-full bg-azure-500/20 px-3 py-1 text-xs font-semibold text-azure-200 ring-1 ring-azure-400/30">
+                <p className="rounded-full bg-mk-accent-soft px-3 py-1 text-xs font-semibold text-mk-accent ring-1 ring-mk-accent/30">
                   Recommended
                 </p>
               )}
@@ -100,11 +100,11 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
                 {price(plan.priceMonthly)}
               </span>
               {plan.priceMonthly > 0 && (
-                <span className={highlight ? 'text-slate-400' : 'text-slate-400'}>USD/month</span>
+                <span className={highlight ? 'text-mk-dim' : 'text-mk-dim'}>USD/month</span>
               )}
             </p>
             <ul
-              className={`mt-8 flex-1 space-y-3.5 border-t pt-8 text-sm ${highlight ? 'border-white/10 text-slate-300' : 'border-white/10 text-slate-300'}`}
+              className={`mt-8 flex-1 space-y-3.5 border-t pt-8 text-sm ${highlight ? 'border-mk-line text-mk-muted' : 'border-mk-line text-mk-muted'}`}
             >
               {[
                 limit(plan.maxProducts, 'products'),
@@ -114,7 +114,7 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
                 'Every feature included',
               ].map((line) => (
                 <li key={line} className="flex gap-2.5">
-                  <span className={`mt-0.5 ${highlight ? 'text-azure-300' : 'text-azure-300'}`}>
+                  <span className={`mt-0.5 ${highlight ? 'text-mk-accent' : 'text-mk-accent'}`}>
                     <Check />
                   </span>
                   {line}
@@ -125,8 +125,8 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
               href={signupUrl}
               className={`mt-9 rounded-full px-4 py-3 text-center text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
                 highlight
-                  ? 'bg-white text-slate-950 hover:bg-slate-200 focus-visible:outline-white'
-                  : 'text-white ring-2 ring-white/80 hover:bg-white/10 focus-visible:outline-white'
+                  ? 'bg-mk-fg text-mk-bg hover:opacity-85 focus-visible:outline-mk-fg'
+                  : 'text-mk-fg ring-2 ring-mk-fg/80 hover:bg-mk-surface-2 focus-visible:outline-mk-fg'
               }`}
             >
               Start with {plan.name}
@@ -150,60 +150,60 @@ function Comparison({ plans }: { plans: PublicPlan[] }) {
       values: plans.map((p) => (p.transactionFeeBps === 0 ? 'None' : percent(p.transactionFeeBps))),
     },
   ];
-  const cell = (i: number) => `px-4 py-4 text-center ${i === featured ? 'bg-azure-400/10' : ''}`;
+  const cell = (i: number) => `px-4 py-4 text-center ${i === featured ? 'bg-mk-accent-soft' : ''}`;
   return (
-    <section aria-labelledby="compare-title" className="bg-white/[0.04] py-20 sm:py-28">
+    <section aria-labelledby="compare-title" className="bg-mk-surface py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionHeading center id="compare-title" eyebrow="Side by side" title="Compare plans" />
-        <div className="relative mt-12 overflow-x-auto rounded-xl bg-white/[0.04] ring-1 ring-white/10">
+        <div className="relative mt-12 overflow-x-auto rounded-xl bg-mk-surface ring-1 ring-mk-line">
           <table className="w-full min-w-[36rem] text-sm">
             <caption className="sr-only">Plan limits and included features</caption>
             <thead>
-              <tr className="border-b border-white/10 bg-[#0b1215]">
-                <th scope="col" className="px-4 py-4 text-left font-semibold text-white">
+              <tr className="border-b border-mk-line bg-mk-subtle">
+                <th scope="col" className="px-4 py-4 text-left font-semibold text-mk-fg">
                   <span className="sr-only">Feature</span>
                 </th>
                 {plans.map((p, i) => (
                   <th
                     key={p.code}
                     scope="col"
-                    className={`${cell(i)} font-semibold text-white ${i === featured ? 'text-azure-300' : ''}`}
+                    className={`${cell(i)} font-semibold text-mk-fg ${i === featured ? 'text-mk-accent' : ''}`}
                   >
                     {p.name}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/10">
+            <tbody className="divide-y divide-mk-line">
               {rows.map((row) => (
                 <tr key={row.label}>
-                  <th scope="row" className="px-4 py-4 text-left font-medium text-slate-200">
+                  <th scope="row" className="px-4 py-4 text-left font-medium text-mk-fg-soft">
                     {row.label}
                   </th>
                   {row.values.map((v, i) => (
-                    <td key={plans[i]?.code} className={`${cell(i)} text-white`}>
+                    <td key={plans[i]?.code} className={`${cell(i)} text-mk-fg`}>
                       {v}
                     </td>
                   ))}
                 </tr>
               ))}
-              <tr className="bg-[#0b1215]">
+              <tr className="bg-mk-subtle">
                 <th
                   scope="colgroup"
                   colSpan={plans.length + 1}
-                  className="px-4 py-3 text-left text-xs font-semibold tracking-wide text-slate-400 uppercase"
+                  className="px-4 py-3 text-left text-xs font-semibold tracking-wide text-mk-dim uppercase"
                 >
                   Included in every plan
                 </th>
               </tr>
               {INCLUDED.map((feature) => (
                 <tr key={feature}>
-                  <th scope="row" className="px-4 py-3.5 text-left font-normal text-slate-200">
+                  <th scope="row" className="px-4 py-3.5 text-left font-normal text-mk-fg-soft">
                     {feature}
                   </th>
                   {plans.map((p, i) => (
                     <td key={p.code} className={cell(i).replace('py-4', 'py-3.5')}>
-                      <span className="inline-flex text-azure-300">
+                      <span className="inline-flex text-mk-accent">
                         <Check className="size-5" />
                       </span>
                       <span className="sr-only">Included</span>
@@ -233,8 +233,8 @@ export async function PricingPage() {
         />
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
           <Eyebrow className="justify-center">Pricing</Eyebrow>
-          <h1 className={`mt-5 text-white ${display}`}>Pick a plan that fits your store</h1>
-          <p className={`mt-6 text-slate-300 ${lead}`}>
+          <h1 className={`mt-5 text-mk-fg ${display}`}>Pick a plan that fits your store</h1>
+          <p className={`mt-6 text-mk-muted ${lead}`}>
             Every feature is included on every plan — plans differ only in limits and the platform
             fee on sales. Every new store starts with a 14-day trial.
           </p>
@@ -243,9 +243,9 @@ export async function PricingPage() {
           {plans ? (
             <PlanCards plans={plans} />
           ) : (
-            <div className="mx-auto max-w-lg rounded-xl bg-white/[0.04] p-8 text-center ring-1 ring-white/10">
-              <p className="font-semibold text-white">Plan details are unavailable right now.</p>
-              <p className="mt-2 text-sm text-slate-300">
+            <div className="mx-auto max-w-lg rounded-xl bg-mk-surface p-8 text-center ring-1 ring-mk-line">
+              <p className="font-semibold text-mk-fg">Plan details are unavailable right now.</p>
+              <p className="mt-2 text-sm text-mk-muted">
                 Please check back shortly — or create your store now and choose a plan from your
                 admin.
               </p>
@@ -255,7 +255,7 @@ export async function PricingPage() {
             </div>
           )}
         </div>
-        <p className="mt-10 px-4 text-center text-sm text-slate-400">
+        <p className="mt-10 px-4 text-center text-sm text-mk-dim">
           Prices in US dollars. Card processing fees from your payment provider are separate.
         </p>
       </section>

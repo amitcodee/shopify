@@ -13,6 +13,9 @@
     'Inter', 'Inter var', 'Segoe UI Variable Text', 'Segoe UI', ui-sans-serif, system-ui,
     -apple-system, 'Helvetica Neue', Arial, sans-serif;
   --color-canvas: #f5f6f8;
+  /* Darker than Tailwind's slate so small muted text stays readable (WCAG AA). */
+  --color-slate-400: #66758a;
+  --color-slate-500: #556379;
   --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.03);
   --shadow-raised: 0 1px 2px 0 rgb(15 23 42 / 0.05), 0 6px 16px -4px rgb(15 23 42 / 0.08);
   --shadow-button-primary:
@@ -145,4 +148,99 @@
     translate: 0 8px;
     scale: 0.97;
   }
+}
+
+/*
+ * Dark theme. Every screen is written with the slate scale and white, so remapping those variables
+ * themes the whole admin. The root layout sets data-mode before first paint.
+ */
+[data-mode='dark'] {
+  color-scheme: dark;
+  --color-canvas: #0a0f14;
+  --color-white: #121920;
+  --color-slate-50: #171f27;
+  --color-slate-100: #1d2630;
+  --color-slate-200: #2a3541;
+  --color-slate-300: #3c4957;
+  --color-slate-400: #8493a3;
+  --color-slate-500: #9aa7b5;
+  --color-slate-600: #b4bfca;
+  --color-slate-700: #cad3dc;
+  --color-slate-800: #dde3e9;
+  --color-slate-900: #eff2f5;
+  --color-slate-950: #f8fafc;
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-raised: 0 1px 2px 0 rgb(0 0 0 / 0.4), 0 6px 16px -4px rgb(0 0 0 / 0.5);
+  --color-indigo-50: #1c1f47;
+  --color-indigo-100: #262a5c;
+  --color-indigo-200: #343a78;
+  --color-indigo-700: #c7d2fe;
+  --color-indigo-800: #c7d2fe;
+  --color-indigo-900: #e0e7ff;
+  --color-red-50: #34161a;
+  --color-red-100: #451c21;
+  --color-red-200: #642a30;
+  --color-red-800: #fecaca;
+  --color-red-900: #fee2e2;
+  --color-emerald-50: #0f2a22;
+  --color-emerald-100: #14382d;
+  --color-emerald-200: #1e5443;
+  --color-emerald-600: #6ee7b7;
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+  --color-emerald-900: #d1fae5;
+  --color-green-50: #10291b;
+  --color-green-100: #153722;
+  --color-green-200: #1f5333;
+  --color-green-600: #86efac;
+  --color-green-700: #86efac;
+  --color-green-800: #bbf7d0;
+  --color-green-900: #dcfce7;
+  --color-amber-50: #2e2210;
+  --color-amber-100: #3d2d13;
+  --color-amber-200: #5c441c;
+  --color-amber-600: #fcd34d;
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+  --color-sky-50: #0f2533;
+  --color-sky-100: #143144;
+  --color-sky-200: #1e4a65;
+  --color-sky-600: #7dd3fc;
+  --color-sky-700: #7dd3fc;
+  --color-sky-800: #bae6fd;
+  --color-sky-900: #e0f2fe;
+  --color-violet-50: #211a3f;
+  --color-violet-100: #2c2354;
+  --color-violet-200: #41347a;
+  --color-violet-600: #c4b5fd;
+  --color-violet-700: #c4b5fd;
+  --color-violet-800: #ddd6fe;
+  --color-violet-900: #ede9fe;
+}
+
+/* These colors also fill buttons, so only their text uses are lightened. */
+[data-mode='dark'] :is(.text-indigo-500, .text-indigo-600, .hover\:text-indigo-600:hover) {
+  color: #a5b4fc;
+}
+[data-mode='dark']
+  :is(
+    .text-red-500,
+    .text-red-600,
+    .text-red-700,
+    .hover\:text-red-600:hover,
+    .hover\:text-red-700:hover
+  ) {
+  color: #fca5a5;
+}
+[data-mode='dark'] :is(.text-white, .hover\:text-white:hover) {
+  color: #ffffff;
+}
+
+/* Dark buttons and badges stay dark, with white text, rather than flipping to pale. */
+[data-mode='dark'] :is(.bg-slate-800, .bg-slate-900, .bg-slate-950) {
+  background-color: #1f2a36;
+}
+[data-mode='dark'] :is(.hover\:bg-slate-800:hover, .hover\:bg-slate-900:hover) {
+  background-color: #2c3947;
 }

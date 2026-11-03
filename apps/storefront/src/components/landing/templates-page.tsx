@@ -16,28 +16,28 @@ function BentoTile({ template: t, big = false }: { template: ThemeTemplate; big?
   return (
     <a
       href={`/templates/${t.id}`}
-      className={`group relative flex flex-col overflow-hidden rounded-[1.75rem] ring-1 ring-white/10 ${focusRing} ${
+      className={`group relative flex flex-col overflow-hidden rounded-[1.75rem] ring-1 ring-mk-line ${focusRing} ${
         big ? 'row-span-2' : ''
       }`}
       style={{ background: templateTint(t, 22) }}
     >
       <span className="flex items-center justify-between gap-2 px-5 pt-4">
         <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold text-white">{t.name}</span>
-          <span className="block truncate text-xs text-slate-300">
+          <span className="block truncate text-sm font-semibold text-mk-fg">{t.name}</span>
+          <span className="block truncate text-xs text-mk-muted">
             {t.industryLabel} · {t.styleLabel}
           </span>
         </span>
         <span
           aria-hidden="true"
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-white/[0.04] text-white shadow-sm transition group-hover:rotate-45"
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-mk-surface text-mk-fg shadow-sm transition group-hover:rotate-45"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="size-4">
             <path d="M6.2 4.5a.75.75 0 0 1 .75-.75h8.55a.75.75 0 0 1 .75.75v8.55a.75.75 0 0 1-1.5 0V6.31l-9.47 9.47a.75.75 0 1 1-1.06-1.06l9.47-9.47H6.95a.75.75 0 0 1-.75-.75Z" />
           </svg>
         </span>
       </span>
-      <span className="relative mt-4 ml-5 flex-1 overflow-hidden rounded-tl-2xl shadow-[0_20px_40px_-20px_rgb(15_23_42/0.5)] ring-1 ring-white/10">
+      <span className="relative mt-4 ml-5 flex-1 overflow-hidden rounded-tl-2xl shadow-[0_20px_40px_-20px_rgb(15_23_42/0.5)] ring-1 ring-mk-line">
         <TemplateThumb
           template={t}
           tiles={3}
@@ -67,8 +67,8 @@ export function TemplatesPage({ industry, style }: { industry: string; style: st
         >
           <div className="max-w-xl">
             <Eyebrow>Template store</Eyebrow>
-            <h1 className={`mt-5 text-white ${display}`}>Templates for every kind of store</h1>
-            <p className={`mt-6 text-slate-300 ${lead}`}>
+            <h1 className={`mt-5 text-mk-fg ${display}`}>Templates for every kind of store</h1>
+            <p className={`mt-6 text-mk-muted ${lead}`}>
               Preview any template on a live demo store, then start your store with the one you
               like. Colors, fonts and layout stay editable, and you can switch any time.
             </p>
@@ -79,8 +79,8 @@ export function TemplatesPage({ industry, style }: { industry: string; style: st
                 [THEME_STYLES.length, 'design styles'],
               ].map(([n, label]) => (
                 <div key={label} className="flex flex-col">
-                  <dt className="order-2 text-sm text-slate-300">{label}</dt>
-                  <dd className="order-1 text-3xl font-semibold tracking-tight text-white">{n}</dd>
+                  <dt className="order-2 text-sm text-mk-muted">{label}</dt>
+                  <dd className="order-1 text-3xl font-semibold tracking-tight text-mk-fg">{n}</dd>
                 </div>
               ))}
             </dl>
