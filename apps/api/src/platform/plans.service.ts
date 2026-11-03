@@ -186,8 +186,11 @@ export class PlanLimits {
   async assertCanAcceptOrder(tx: TenantTx, storeId: string): Promise<void> {
     const { plan } = await this.plans.subscriptionFor(storeId, tx);
     if (plan.maxOrdersPerMonth === null) return;
-    const usage = await this.plans.usage(tx, storeId);
-    if (usage.ordersThisMonth >= plan.maxOrdersPerMonth) {
+    // Paid orders only: unpaid checkouts must not let anyone exhaust a store's quota.
+    const ordersThisMonth = await tx.order.count({
+      where: { storeId, paidAt: { gte: startOfMonthUtc() } },
+    });
+    if (ordersThisMonth >= plan.maxOrdersPerMonth) {
       // Shoppers see a neutral message; the merchant sees usage in their billing page.
       throw new PlanLimitError(
         'This store cannot accept new orders right now. Please try again later.',

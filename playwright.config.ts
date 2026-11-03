@@ -71,6 +71,8 @@ export default defineConfig({
       env: {
         API_URL: apiUrl,
         STOREFRONT_SHARED_SECRET: storefrontSecret,
+        // Decides which admin may frame the theme editor preview.
+        ADMIN_PUBLIC_URL: `http://localhost:${PORTS.admin}`,
       },
     },
   ],

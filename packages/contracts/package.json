@@ -4,6 +4,7 @@
   "private": true,
   "description": "Zod request/response contracts shared by the API and frontends",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

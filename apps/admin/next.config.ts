@@ -7,6 +7,17 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
   reactStrictMode: true,
   poweredByHeader: false,
+  // Photos in public/media keep their names, so cache for a week rather than forever.
+  async headers() {
+    return [
+      {
+        source: '/media/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' },
+        ],
+      },
+    ];
+  },
   experimental: {
     // Product image uploads pass through server actions (API limit is 20 MB per file; the
     // media manager batches files so each request stays under this).

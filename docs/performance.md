@@ -27,6 +27,30 @@ trusts it only from `TRUST_PROXY`).
 - Daily cleanup of expired sessions/carts/tokens and old outbox/webhook rows keeps hot tables small.
 - Store resolution is cached for 30 s per host.
 
+## Tuning pass (2026-11-03)
+
+Query times are `EXPLAIN ANALYZE` as the `shop_app` role, with row-level security on, against
+20,000 temporary products in one store on the development machine. Page weights are compressed
+transfer sizes in Chrome.
+
+| Change                                                |      Before |      After |
+| ----------------------------------------------------- | ----------: | ---------: |
+| Search (stored `searchVector` column)                 |     ~400 ms |      27 ms |
+| Listing, default sort, first page (index, page first) |      125 ms |     0.5 ms |
+| JavaScript on pages without templates (`sideEffects`) |      204 KB |     155 KB |
+| Repeat visits to `/media` photos                      | Revalidated | Cached 7 d |
+
+- **Row-level security disables GIN indexes for the app role.** `@@` and `@>` are not leakproof,
+  so PostgreSQL will not use them as index conditions under RLS: search took 398 ms as `shop_app`
+  and 3.6 ms with RLS bypassed. Do not expect a GIN index to help a tenant query; check with
+  `EXPLAIN` as `shop_app`. `enum_eq` is not leakproof either, so `status` columns in an index do
+  not narrow tenant queries. `Product_tags_idx` has the same limit and was left in place.
+- Deep pages (page 500 of 20,000 products) still sort the whole store, about 108 ms.
+- The outbox no longer holds a transaction while sending. Claiming a message leases it for five
+  minutes, so delivery is at-least-once: a worker dying mid-send causes a retry after the lease.
+- `Product_storeId_listing_idx` is `NULLS LAST` in the database. Prisma cannot express that, so
+  the schema declares it as plain `DESC`; `prisma migrate diff` stays empty.
+
 ## Known hot spots / next steps
 
 1. **Cart writes** dominate latency: each request opens an interactive transaction (BEGIN,

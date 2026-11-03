@@ -221,7 +221,7 @@ export class StorefrontCatalogService {
       if (query.q && !tsQuery) {
         return { items: [], page: query.page, pageSize: query.pageSize, total: 0 };
       }
-      const document = Prisma.sql`app_product_search_document(p.title, p.description, p.tags)`;
+      const document = Prisma.sql`p."searchVector"`;
       // Every word must match: as a word prefix anywhere, or inside the title ("coat" finds
       // "Overcoat"). Words are letters and digits only, so they carry no LIKE wildcards.
       for (const word of query.q ? searchWords(query.q) : []) {
@@ -233,7 +233,29 @@ export class StorefrontCatalogService {
       const where = Prisma.join(filters, ' AND ');
       const order = this.orderBy(query.sort, tsQuery, document);
 
-      const rows = await tx.$queryRaw<CardRow[]>`
+      // Pick the page first: only price sorts need every product's variants, and the other sorts
+      // can read the page straight from an index.
+      const skip = (query.page - 1) * query.pageSize;
+      const pageRows =
+        query.sort === 'price-asc' || query.sort === 'price-desc'
+          ? await tx.$queryRaw<{ id: string }[]>`
+              SELECT p.id, MIN(v.price) AS min_price, MAX(v.price) AS max_price
+              FROM "Product" p
+              JOIN "ProductVariant" v ON v."productId" = p.id
+              WHERE ${where}
+              GROUP BY p.id
+              ORDER BY ${order}
+              LIMIT ${query.pageSize} OFFSET ${skip}`
+          : await tx.$queryRaw<{ id: string }[]>`
+              SELECT p.id
+              FROM "Product" p
+              WHERE ${where}
+                AND EXISTS (SELECT 1 FROM "ProductVariant" e WHERE e."productId" = p.id)
+              ORDER BY ${order}
+              LIMIT ${query.pageSize} OFFSET ${skip}`;
+      const ids = pageRows.map((r) => r.id);
+
+      const details = await tx.$queryRaw<CardRow[]>`
         SELECT p.id, p.title, p.handle, p."publishedAt" AS published_at,
                MIN(v.price)::int AS min_price,
                MAX(v.price)::int AS max_price,
@@ -246,10 +268,10 @@ export class StorefrontCatalogService {
                (SELECT i."renditionWidths" FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.position OFFSET 1 LIMIT 1) AS second_image_widths
         FROM "Product" p
         JOIN "ProductVariant" v ON v."productId" = p.id
-        WHERE ${where}
-        GROUP BY p.id
-        ORDER BY ${order}
-        LIMIT ${query.pageSize} OFFSET ${(query.page - 1) * query.pageSize}`;
+        WHERE p.id = ANY(${ids}::uuid[])
+        GROUP BY p.id`;
+      const byId = new Map(details.map((r) => [r.id, r]));
+      const rows = ids.flatMap((id) => byId.get(id) ?? []);
 
       const [counted] = await tx.$queryRaw<{ count: number }[]>`
         SELECT COUNT(*)::int AS count FROM "Product" p WHERE ${where}`;

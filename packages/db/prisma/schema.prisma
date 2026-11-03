@@ -212,31 +212,33 @@ enum ProductStatus {
 }
 
 model Product {
-  id             String        @id @default(uuid(7)) @db.Uuid
-  storeId        String        @db.Uuid
+  id             String                   @id @default(uuid(7)) @db.Uuid
+  storeId        String                   @db.Uuid
   title          String
   /// URL slug, unique per store.
   handle         String
   /// Plain text; rendered escaped (no merchant HTML reaches the storefront).
-  description    String        @default("")
-  status         ProductStatus @default(DRAFT)
+  description    String                   @default("")
+  status         ProductStatus            @default(DRAFT)
   vendor         String?
   productType    String?
-  tags           String[]      @default([])
+  tags           String[]                 @default([])
   /// Sold as a gift card: variants are denominations; each unit paid issues a card.
-  isGiftCard     Boolean       @default(false)
+  isGiftCard     Boolean                  @default(false)
   /// A bundle (combo): each variant is made of other variants (BundleComponent) whose stock it uses.
-  isBundle       Boolean       @default(false)
+  isBundle       Boolean                  @default(false)
   /// Who the merchant buys this product from (purchase orders).
-  supplierId     String?       @db.Uuid
+  supplierId     String?                  @db.Uuid
   /// Shopper inputs such as engraving text or gift wrap (see @repo/contracts customizationSchema).
-  customizations Json          @default("[]")
+  customizations Json                     @default("[]")
   seoTitle       String?
   seoDescription String?
   /// Visible on the storefront from this time on (when ACTIVE); a future time means scheduled.
   publishedAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  /// Generated from title, tags and description; see migration 20261103090000.
+  searchVector   Unsupported("tsvector")? @default(dbgenerated("app_product_search_document(title, description, tags)"))
 
   store       Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
   options     ProductOption[]
@@ -248,6 +250,9 @@ model Product {
 
   @@unique([storeId, id])
   @@unique([storeId, handle])
+  @@index([storeId, title, id])
+  /// The database index is NULLS LAST on publishedAt, which Prisma cannot express.
+  @@index([storeId, publishedAt(sort: Desc), createdAt(sort: Desc), id], map: "Product_storeId_listing_idx")
   @@index([supplierId])
   @@index([storeId, status, updatedAt])
   @@index([tags], type: Gin)
@@ -589,6 +594,7 @@ model Customer {
 
   @@unique([storeId, id])
   @@unique([storeId, email])
+  @@index([storeId, createdAt])
 }
 
 model CustomerSession {
@@ -758,6 +764,7 @@ model Order {
   @@unique([storeId, id])
   @@unique([storeId, number])
   @@unique([storeId, checkoutKey])
+  @@index([storeId, cartId])
   @@index([storeId, createdAt])
   @@index([status, expiresAt])
   @@index([storeId, customerId])
@@ -994,6 +1001,7 @@ model Refund {
   payment Payment @relation(fields: [storeId, paymentId], references: [storeId, id], onDelete: Cascade)
 
   @@index([orderId])
+  @@index([storeId, createdAt])
 }
 
 model Fulfillment {

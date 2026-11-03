@@ -56,7 +56,9 @@ function committedRefunds(order: OrderWithDetail): number {
 }
 
 export function toListItem(
-  order: Prisma.OrderGetPayload<{ include: { lines: true; customer: { select: { name: true } } } }>,
+  order: Prisma.OrderGetPayload<{
+    include: { lines: { select: { quantity: true } }; customer: { select: { name: true } } };
+  }>,
 ): OrderListItem {
   return {
     id: order.id,
@@ -106,7 +108,7 @@ export class OrdersService {
       Promise.all([
         tx.order.findMany({
           where,
-          include: { lines: true, customer: { select: { name: true } } },
+          include: { lines: { select: { quantity: true } }, customer: { select: { name: true } } },
           orderBy: { createdAt: 'desc' },
           skip: (query.page - 1) * query.pageSize,
           take: query.pageSize,

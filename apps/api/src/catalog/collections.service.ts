@@ -44,7 +44,10 @@ export class CollectionsService {
   }
 
   private async toDto(tx: TenantTx, c: Collection): Promise<CollectionDto> {
-    const productIds = await CollectionsService.productIds(tx, c);
+    return this.dto(c, await CollectionsService.productIds(tx, c));
+  }
+
+  private dto(c: Collection, productIds: string[]): CollectionDto {
     return {
       id: c.id,
       title: c.title,
@@ -61,7 +64,26 @@ export class CollectionsService {
   list(storeId: string): Promise<CollectionDto[]> {
     return this.tenantDb.run(storeId, async (tx) => {
       const rows = await tx.collection.findMany({ where: { storeId }, orderBy: { title: 'asc' } });
-      return Promise.all(rows.map((c) => this.toDto(tx, c)));
+      // Manual collections share one query; rule collections each need their own tag lookup.
+      const manual = rows.filter((c) => !c.ruleTag).map((c) => c.id);
+      const links = manual.length
+        ? await tx.collectionProduct.findMany({
+            where: { storeId, collectionId: { in: manual } },
+            orderBy: { position: 'asc' },
+            select: { collectionId: true, productId: true },
+          })
+        : [];
+      const members = new Map<string, string[]>();
+      for (const link of links) {
+        const ids = members.get(link.collectionId);
+        if (ids) ids.push(link.productId);
+        else members.set(link.collectionId, [link.productId]);
+      }
+      const items: CollectionDto[] = [];
+      for (const c of rows) {
+        items.push(c.ruleTag ? await this.toDto(tx, c) : this.dto(c, members.get(c.id) ?? []));
+      }
+      return items;
     });
   }
 
