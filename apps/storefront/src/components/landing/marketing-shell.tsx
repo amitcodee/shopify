@@ -25,12 +25,12 @@ export function MarketingShell({
 }) {
   return (
     <div
-      className={`${bodyFont.variable} ${displayFont.variable} relative flex min-h-screen flex-col overflow-x-clip bg-white font-[family-name:var(--font-body)] text-slate-900 antialiased`}
+      className={`${bodyFont.variable} ${displayFont.variable} relative flex min-h-screen flex-col overflow-x-clip bg-[#05090c] font-[family-name:var(--font-body)] text-slate-200 antialiased`}
     >
       <style>{KEYFRAMES}</style>
       <a
         href="#main"
-        className="sr-only z-[60] rounded bg-white p-2 text-slate-900 focus:not-sr-only focus:absolute focus:top-2 focus:left-2"
+        className="sr-only z-[60] rounded bg-white p-2 text-slate-950 focus:not-sr-only focus:absolute focus:top-2 focus:left-2"
       >
         Skip to content
       </a>

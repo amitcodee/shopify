@@ -4,11 +4,11 @@ import { TemplateThumb } from './template-thumb';
 // Not imported from page-parts: that module is server-only and this card also renders in the
 // client-side gallery.
 const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-600';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
 
 /** Pastel panel color for a template: a soft tint of its accent. */
 export function templateTint(t: ThemeTemplate, percent = 16): string {
-  return `color-mix(in srgb, ${t.settings.accentColor} ${percent}%, #f6f7f9)`;
+  return `color-mix(in srgb, ${t.settings.accentColor} ${percent + 14}%, #10181c)`;
 }
 
 export function Swatches({ template: t }: { template: ThemeTemplate }) {
@@ -55,10 +55,10 @@ export function TemplateCard({
           href={`/templates/${t.id}`}
           tabIndex={-1}
           aria-hidden="true"
-          className="block overflow-hidden rounded-[1.75rem] px-3 pt-3 ring-1 ring-slate-900/[0.06] transition duration-300 group-hover:shadow-[0_28px_56px_-28px_rgb(15_23_42/0.5)] sm:px-4 sm:pt-4"
+          className="block overflow-hidden rounded-[1.75rem] px-3 pt-3 ring-1 ring-white/10 transition duration-300 group-hover:shadow-[0_28px_56px_-28px_rgb(15_23_42/0.5)] sm:px-4 sm:pt-4"
           style={{ background: templateTint(t) }}
         >
-          <div className="overflow-hidden rounded-t-[1.1rem] shadow-[0_12px_32px_-16px_rgb(15_23_42/0.45)] ring-1 ring-slate-900/[0.08]">
+          <div className="overflow-hidden rounded-t-[1.1rem] shadow-[0_12px_32px_-16px_rgb(15_23_42/0.45)] ring-1 ring-white/10">
             <TemplateThumb
               template={t}
               tiles={t.settings.gridColumns >= 4 ? 4 : 3}
@@ -71,7 +71,7 @@ export function TemplateCard({
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center gap-2 rounded-b-[1.75rem] bg-gradient-to-t from-slate-950/45 to-transparent px-4 pt-16 pb-4 opacity-0 transition duration-300 group-focus-within:opacity-100 group-hover:opacity-100 *:pointer-events-auto [@media(hover:none)]:opacity-100">
             <a
               href={`${signupUrl}?template=${t.id}`}
-              className={`${pill} bg-white text-navy-950 hover:bg-azure-50 ${focusRing}`}
+              className={`${pill} bg-white text-slate-950 hover:bg-slate-200 ${focusRing}`}
             >
               Use template<span className="sr-only">: {t.name}</span>
             </a>
@@ -92,17 +92,15 @@ export function TemplateCard({
       </div>
       <div className="mt-4 flex items-start justify-between gap-3 px-1">
         <div className="min-w-0">
-          <H
-            className={`${lg ? 'text-lg' : 'text-base'} font-semibold tracking-tight text-navy-900`}
-          >
+          <H className={`${lg ? 'text-lg' : 'text-base'} font-semibold tracking-tight text-white`}>
             <a
               href={`/templates/${t.id}`}
-              className={`rounded group-hover:text-azure-700 ${focusRing}`}
+              className={`rounded group-hover:text-white ${focusRing}`}
             >
               {t.name}
             </a>
           </H>
-          <p className="mt-0.5 truncate text-sm text-slate-500">
+          <p className="mt-0.5 truncate text-sm text-slate-400">
             {t.industryLabel} · {t.styleLabel}
           </p>
         </div>

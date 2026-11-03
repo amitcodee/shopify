@@ -35,18 +35,18 @@ const FAQS: { q: string; a: string }[] = [
 
 export function Faq() {
   return (
-    <section id="faq" className="scroll-mt-24 bg-mist py-20 sm:py-28">
+    <section id="faq" className="scroll-mt-24 bg-[#0b1215] py-20 sm:py-28">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <div className="text-center">
-          <p className="text-xs font-semibold tracking-[0.14em] text-azure-700 uppercase">FAQ</p>
-          <h2 className="mt-4 font-[family-name:var(--font-display)] text-[2rem] leading-tight font-semibold tracking-[-0.03em] text-navy-900 sm:text-5xl">
+          <p className="text-xs font-semibold tracking-[0.14em] text-azure-300 uppercase">FAQ</p>
+          <h2 className="mt-4 font-[family-name:var(--font-display)] text-[2rem] leading-tight font-semibold tracking-[-0.03em] text-white sm:text-5xl">
             Questions, answered
           </h2>
         </div>
-        <div className="mt-12 divide-y divide-slate-900/[0.07] rounded-xl bg-white shadow-[0_20px_40px_-30px_rgb(10_34_54/0.35)] ring-1 ring-slate-900/[0.08]">
+        <div className="mt-12 divide-y divide-white/10 rounded-xl bg-white/[0.04] shadow-[0_20px_40px_-30px_rgb(10_34_54/0.35)] ring-1 ring-white/10">
           {FAQS.map(({ q, a }) => (
             <details key={q} className="group px-5 sm:px-7">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded py-5 font-semibold text-navy-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-600 [&::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded py-5 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white [&::-webkit-details-marker]:hidden">
                 {q}
                 <svg
                   viewBox="0 0 20 20"
@@ -57,7 +57,7 @@ export function Faq() {
                   <path d="M10 4a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H5a1 1 0 1 1 0-2h4V5a1 1 0 0 1 1-1Z" />
                 </svg>
               </summary>
-              <p className="-mt-1 pb-5 text-slate-600 leading-7">{a}</p>
+              <p className="-mt-1 pb-5 text-slate-300 leading-7">{a}</p>
             </details>
           ))}
         </div>

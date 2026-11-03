@@ -42,27 +42,27 @@ export function LegalHubPage() {
         title="Policies, in plain language"
         subtitle="The terms you agree to when you run a store with us, how we handle personal data, and the few essential cookies we use."
       />
-      <section className={`bg-white ${section}`}>
+      <section className={`bg-white/[0.04] ${section}`}>
         <div className={container}>
           <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {LEGAL_DOCS.map((doc) => (
               <li key={doc.slug} className="flex">
                 <a
                   href={`/legal/${doc.slug}`}
-                  className={`group flex flex-1 flex-col rounded-xl bg-white p-7 ring-1 ring-slate-900/[0.08] transition hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-20px_rgb(10_34_54/0.35)] hover:ring-azure-600/30 ${focusRing}`}
+                  className={`group flex flex-1 flex-col rounded-xl bg-white/[0.04] p-7 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-20px_rgb(10_34_54/0.35)] hover:ring-white/30 ${focusRing}`}
                 >
-                  <span className="flex size-11 items-center justify-center rounded-lg bg-azure-50 text-azure-700">
+                  <span className="flex size-11 items-center justify-center rounded-lg bg-azure-400/15 text-azure-300">
                     <Icon name={DOC_ICONS[doc.slug] ?? 'file'} />
                   </span>
                   <span
-                    className={`mt-5 text-xl font-semibold tracking-[-0.01em] text-navy-900 group-hover:text-azure-700 ${displayFace}`}
+                    className={`mt-5 text-xl font-semibold tracking-[-0.01em] text-white group-hover:text-white ${displayFace}`}
                   >
                     {doc.title}
                   </span>
-                  <span className="mt-2 leading-7 text-slate-600">{doc.summary}</span>
+                  <span className="mt-2 leading-7 text-slate-300">{doc.summary}</span>
                   <span className="mt-auto flex items-center justify-between pt-6 text-sm">
-                    <span className="text-slate-500">Updated {doc.updated}</span>
-                    <span className="inline-flex items-center gap-1 font-semibold text-azure-700">
+                    <span className="text-slate-400">Updated {doc.updated}</span>
+                    <span className="inline-flex items-center gap-1 font-semibold text-azure-300">
                       Read <Arrow />
                     </span>
                   </span>
@@ -70,10 +70,10 @@ export function LegalHubPage() {
               </li>
             ))}
           </ul>
-          <div className="mt-12 flex flex-col gap-4 rounded-xl bg-mist p-7 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-12 flex flex-col gap-4 rounded-xl bg-[#0b1215] p-7 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="font-semibold text-navy-900">Looking for how we keep stores safe?</p>
-              <p className="mt-1 text-slate-600">
+              <p className="font-semibold text-white">Looking for how we keep stores safe?</p>
+              <p className="mt-1 text-slate-300">
                 Database-level isolation, hosted card payments and two-factor sign-in.
               </p>
             </div>
@@ -98,7 +98,7 @@ function Block({ block }: { block: LegalBlock }) {
           <li key={item} className="flex gap-3">
             <span
               aria-hidden="true"
-              className="mt-[0.7em] size-1.5 shrink-0 rounded-full bg-azure-600"
+              className="mt-[0.7em] size-1.5 shrink-0 rounded-full bg-azure-300"
             />
             <span>{item}</span>
           </li>
@@ -108,15 +108,15 @@ function Block({ block }: { block: LegalBlock }) {
   }
   if ('note' in block) {
     return (
-      <p className="rounded-lg border-l-4 border-azure-600 bg-azure-50/70 px-5 py-4 text-navy-900">
+      <p className="rounded-lg border-l-4 border-azure-300 bg-azure-400/10 px-5 py-4 text-white">
         {block.note}
       </p>
     );
   }
   return (
-    <div className="overflow-x-auto rounded-lg ring-1 ring-slate-900/10">
+    <div className="overflow-x-auto rounded-lg ring-1 ring-white/10">
       <table className="w-full min-w-[34rem] text-left text-[0.9375rem]">
-        <thead className="bg-mist text-navy-900">
+        <thead className="bg-[#0b1215] text-white">
           <tr>
             {block.table.head.map((h) => (
               <th key={h} scope="col" className="px-4 py-3 font-semibold">
@@ -125,16 +125,16 @@ function Block({ block }: { block: LegalBlock }) {
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-900/[0.07]">
+        <tbody className="divide-y divide-white/10">
           {block.table.rows.map((row) => (
             <tr key={row[0]} className="align-top">
               {row.map((cell, i) => (
                 <td
                   key={i}
-                  className={`px-4 py-3 ${i === 0 ? 'font-medium whitespace-nowrap text-navy-900' : 'text-slate-600'}`}
+                  className={`px-4 py-3 ${i === 0 ? 'font-medium whitespace-nowrap text-white' : 'text-slate-300'}`}
                 >
                   {i === 0 && block.table.head[0] === 'Name' ? (
-                    <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[0.8125rem]">
+                    <code className="rounded bg-white/[0.07] px-1.5 py-0.5 font-mono text-[0.8125rem]">
                       {cell}
                     </code>
                   ) : (
@@ -163,13 +163,13 @@ export async function LegalDocPage({ doc }: { doc: LegalDoc }) {
         ]}
         title={doc.title}
         subtitle={doc.summary}
-        actions={<p className="text-sm text-slate-500">Last updated {doc.updated}</p>}
+        actions={<p className="text-sm text-slate-400">Last updated {doc.updated}</p>}
       />
-      <section className="bg-white py-14 sm:py-20">
+      <section className="bg-white/[0.04] py-14 sm:py-20">
         <div className={`${container} grid gap-12 lg:grid-cols-[16rem_1fr] lg:gap-16`}>
           <aside className="lg:sticky lg:top-24 lg:self-start">
-            <nav aria-label="On this page" className="rounded-xl bg-mist p-5">
-              <p className="text-xs font-semibold tracking-[0.12em] text-slate-500 uppercase">
+            <nav aria-label="On this page" className="rounded-xl bg-[#0b1215] p-5">
+              <p className="text-xs font-semibold tracking-[0.12em] text-slate-400 uppercase">
                 On this page
               </p>
               <ol className="mt-3 space-y-1 text-sm">
@@ -177,7 +177,7 @@ export async function LegalDocPage({ doc }: { doc: LegalDoc }) {
                   <li key={s.id}>
                     <a
                       href={`#${s.id}`}
-                      className={`flex gap-2 rounded-md px-2 py-1.5 text-slate-700 hover:bg-white hover:text-azure-700 ${focusRing}`}
+                      className={`flex gap-2 rounded-md px-2 py-1.5 text-slate-200 hover:bg-white/[0.08] hover:text-white ${focusRing}`}
                     >
                       <span className="w-5 shrink-0 text-slate-400 tabular-nums">{i + 1}.</span>
                       {s.title}
@@ -193,15 +193,15 @@ export async function LegalDocPage({ doc }: { doc: LegalDoc }) {
               <section
                 key={s.id}
                 id={s.id}
-                className="scroll-mt-24 border-t border-slate-900/[0.07] py-9 first:border-t-0 first:pt-0"
+                className="scroll-mt-24 border-t border-white/10 py-9 first:border-t-0 first:pt-0"
               >
                 <h2
-                  className={`flex gap-3 text-2xl font-semibold tracking-[-0.01em] text-navy-900 ${displayFace}`}
+                  className={`flex gap-3 text-2xl font-semibold tracking-[-0.01em] text-white ${displayFace}`}
                 >
-                  <span className="text-azure-600 tabular-nums">{i + 1}.</span>
+                  <span className="text-azure-300 tabular-nums">{i + 1}.</span>
                   {s.title}
                 </h2>
-                <div className="mt-4 space-y-4 text-[1.0625rem] leading-8 text-slate-700">
+                <div className="mt-4 space-y-4 text-[1.0625rem] leading-8 text-slate-200">
                   {s.blocks.map((b, j) => (
                     <Block key={j} block={b} />
                   ))}
@@ -239,13 +239,13 @@ export async function LegalDocPage({ doc }: { doc: LegalDoc }) {
             </div>
 
             <div className="mt-12">
-              <p className="text-sm font-semibold text-navy-900">Other policies</p>
+              <p className="text-sm font-semibold text-white">Other policies</p>
               <ul className="mt-3 flex flex-wrap gap-2">
                 {others.map((d) => (
                   <li key={d.slug}>
                     <a
                       href={`/legal/${d.slug}`}
-                      className={`inline-flex items-center gap-1.5 rounded-md bg-azure-50 px-3 py-1.5 text-sm font-medium text-azure-700 hover:bg-azure-100 ${focusRing}`}
+                      className={`inline-flex items-center gap-1.5 rounded-md bg-azure-400/15 px-3 py-1.5 text-sm font-medium text-azure-300 hover:bg-white/10 ${focusRing}`}
                     >
                       <Icon name={DOC_ICONS[d.slug] ?? 'file'} className="size-4" />
                       {d.title}
@@ -304,7 +304,7 @@ export function AboutPage() {
         eyebrow="About us"
         title={
           <>
-            Commerce that is <span className="text-azure-600">simple to start</span> and safe to
+            Commerce that is <span className="text-azure-300">simple to start</span> and safe to
             grow
           </>
         }
@@ -328,10 +328,10 @@ export function AboutPage() {
         }
       />
 
-      <section className={`bg-white ${section}`}>
+      <section className={`bg-white/[0.04] ${section}`}>
         <div className={`${container} grid gap-12 lg:grid-cols-2 lg:gap-20`}>
-          <h2 className={`text-navy-900 ${headline}`}>Why we built it</h2>
-          <div className="space-y-5 text-lg leading-8 text-slate-600">
+          <h2 className={`text-white ${headline}`}>Why we built it</h2>
+          <div className="space-y-5 text-lg leading-8 text-slate-300">
             <p>
               Opening an online store should not mean juggling a website builder, a payment gateway,
               a stock spreadsheet and an email tool. We put them in one product that works together

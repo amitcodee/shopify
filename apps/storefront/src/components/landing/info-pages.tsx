@@ -85,7 +85,7 @@ export function SwitchPage() {
         }
       />
 
-      <section aria-labelledby="what-moves" className={`bg-white ${section}`}>
+      <section aria-labelledby="what-moves" className={`bg-white/[0.04] ${section}`}>
         <div className={container}>
           <SectionHeading
             id="what-moves"
@@ -161,21 +161,21 @@ export function SwitchPage() {
               Read the product guide <Arrow />
             </a>
           </div>
-          <div className="min-w-0 self-center rounded-xl bg-white p-6 ring-1 ring-slate-900/[0.08] sm:p-8">
-            <h3 className="text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase">
+          <div className="min-w-0 self-center rounded-xl bg-white/[0.04] p-6 ring-1 ring-white/10 sm:p-8">
+            <h3 className="text-xs font-semibold tracking-[0.14em] text-slate-400 uppercase">
               Columns the import understands
             </h3>
             <ul className="mt-4 flex flex-wrap gap-2">
               {CSV_COLUMNS.map((c) => (
                 <li
                   key={c}
-                  className="rounded-lg bg-mist px-2.5 py-1 font-mono text-xs text-slate-700 ring-1 ring-slate-900/[0.06]"
+                  className="rounded-lg bg-[#0b1215] px-2.5 py-1 font-mono text-xs text-slate-200 ring-1 ring-white/10"
                 >
                   {c}
                 </li>
               ))}
             </ul>
-            <p className="mt-5 text-sm leading-6 text-slate-600">
+            <p className="mt-5 text-sm leading-6 text-slate-300">
               Handle, Title and Variant Price are required. Options go up to Option3, and columns
               like Variant Barcode, Variant Taxable and Variant Allow Backorder are supported too.
             </p>
@@ -183,7 +183,7 @@ export function SwitchPage() {
         </div>
       </section>
 
-      <section aria-labelledby="steps" className={`bg-white ${section}`}>
+      <section aria-labelledby="steps" className={`bg-white/[0.04] ${section}`}>
         <div className={container}>
           <SectionHeading id="steps" eyebrow="The plan" title="Switch in three steps" />
           <div className="mt-14">
@@ -241,13 +241,13 @@ export function SwitchPage() {
                   href={href}
                   className="group flex items-center gap-4 rounded-2xl bg-white/[0.04] px-5 py-4 text-slate-100 ring-1 ring-white/10 transition hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-navy-900">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/[0.04] text-xs font-semibold text-white">
                     {i + 1}
                   </span>
                   <span className="flex-1">{item}</span>
                   <span
                     aria-hidden="true"
-                    className="text-slate-500 transition group-hover:translate-x-0.5 group-hover:text-white"
+                    className="text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-white"
                   >
                     →
                   </span>
@@ -351,7 +351,7 @@ export function SecurityPage() {
                 className="flex items-center gap-4 rounded-2xl bg-white/[0.06] p-5 ring-1 ring-white/10 backdrop-blur"
                 style={{ marginLeft: `${i * 1.5}rem` }}
               >
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-sm font-semibold text-navy-900">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-sm font-semibold text-white">
                   {i + 1}
                 </span>
                 <div>
@@ -363,7 +363,7 @@ export function SecurityPage() {
           </div>
         }
       />
-      <section aria-labelledby="layers" className={`bg-white ${section}`}>
+      <section aria-labelledby="layers" className={`bg-white/[0.04] ${section}`}>
         <div className={container}>
           <SectionHeading
             id="layers"
@@ -374,10 +374,10 @@ export function SecurityPage() {
             {SECURITY_AREAS.map((area) => (
               <li
                 key={area.title}
-                className="rounded-xl bg-mist p-7 ring-1 ring-slate-900/[0.06] sm:p-8"
+                className="rounded-xl bg-[#0b1215] p-7 ring-1 ring-white/10 sm:p-8"
               >
                 <IconTile name={area.icon} />
-                <h3 className="mt-5 text-lg font-semibold tracking-tight text-navy-900">
+                <h3 className="mt-5 text-lg font-semibold tracking-tight text-white">
                   {area.title}
                 </h3>
                 <div className="mt-4 text-sm leading-6">
@@ -412,9 +412,9 @@ export function SecurityPage() {
           </div>
         </div>
       </section>
-      <section className="bg-white pt-16">
+      <section className="bg-white/[0.04] pt-16">
         <div className={`${container} text-center`}>
-          <p className="text-slate-600">
+          <p className="text-slate-300">
             Found a security issue? Please tell us through our{' '}
             <a href="/contact" className={textLink}>
               contact page
@@ -439,7 +439,7 @@ export function ContactPage({ supportEmail }: { supportEmail: string | null }) {
         subtitle="Most questions are answered in our guides. If you can’t find what you need, email the support team."
         aside={<PhotoPanel photo="coffee-roaster" priority ratio="aspect-[5/4]" />}
       />
-      <section className={`bg-white ${section}`}>
+      <section className={`bg-white/[0.04] ${section}`}>
         <div className={`${container} grid gap-5 lg:grid-cols-3`}>
           <div
             className={`relative isolate flex flex-col overflow-hidden rounded-xl ${ink} p-8 text-white sm:p-9`}
@@ -490,26 +490,26 @@ export function ContactPage({ supportEmail }: { supportEmail: string | null }) {
             <a
               key={card.title}
               href={card.href}
-              className={`group flex flex-col rounded-xl bg-mist p-8 ring-1 ring-slate-900/[0.06] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_24px_48px_-24px_rgb(15_23_42/0.4)] sm:p-9 ${focusRing}`}
+              className={`group flex flex-col rounded-xl bg-[#0b1215] p-8 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:bg-white/[0.08] hover:shadow-[0_24px_48px_-24px_rgb(15_23_42/0.4)] sm:p-9 ${focusRing}`}
             >
               <IconTile name={card.icon} />
-              <h2 className="mt-6 text-2xl font-semibold tracking-tight text-navy-900">
+              <h2 className="mt-6 text-2xl font-semibold tracking-tight text-white">
                 {card.title}
               </h2>
-              <p className="mt-2 leading-7 text-slate-600">{card.body}</p>
-              <span className="mt-auto inline-flex items-center gap-1 pt-8 text-sm font-semibold text-azure-700">
+              <p className="mt-2 leading-7 text-slate-300">{card.body}</p>
+              <span className="mt-auto inline-flex items-center gap-1 pt-8 text-sm font-semibold text-azure-300">
                 {card.cta} <Arrow />
               </span>
             </a>
           ))}
         </div>
         <div className={`${container} mt-5`}>
-          <div className="flex flex-col items-start justify-between gap-6 rounded-xl p-8 ring-1 ring-slate-900/10 sm:flex-row sm:items-center sm:p-9">
+          <div className="flex flex-col items-start justify-between gap-6 rounded-xl p-8 ring-1 ring-white/10 sm:flex-row sm:items-center sm:p-9">
             <div className="flex gap-5">
               <IconTile name="code" className="hidden sm:flex" />
               <div>
-                <h2 className="text-lg font-semibold text-navy-900">Building an integration?</h2>
-                <p className="mt-1 leading-7 text-slate-600">
+                <h2 className="text-lg font-semibold text-white">Building an integration?</h2>
+                <p className="mt-1 leading-7 text-slate-300">
                   The OpenAPI reference documents the REST API, and the{' '}
                   <a href="/guides/api-and-webhooks" className={textLink}>
                     API tokens and webhooks guide

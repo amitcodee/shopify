@@ -83,8 +83,8 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
             key={plan.code}
             className={`relative flex flex-col rounded-xl p-8 sm:p-9 ${
               highlight
-                ? 'bg-navy-950 text-white shadow-[0_40px_80px_-30px_rgb(15_23_42/0.6)] ring-1 ring-slate-950'
-                : 'bg-white text-navy-900 shadow-[0_20px_40px_-30px_rgb(15_23_42/0.35)] ring-1 ring-slate-900/[0.08]'
+                ? 'bg-navy-950 text-white shadow-[0_40px_80px_-30px_rgb(15_23_42/0.6)] ring-1 ring-white/10'
+                : 'bg-white/[0.04] text-white shadow-[0_20px_40px_-30px_rgb(15_23_42/0.35)] ring-1 ring-white/10'
             }`}
           >
             <div className="flex items-center justify-between gap-3">
@@ -100,11 +100,11 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
                 {price(plan.priceMonthly)}
               </span>
               {plan.priceMonthly > 0 && (
-                <span className={highlight ? 'text-slate-400' : 'text-slate-500'}>USD/month</span>
+                <span className={highlight ? 'text-slate-400' : 'text-slate-400'}>USD/month</span>
               )}
             </p>
             <ul
-              className={`mt-8 flex-1 space-y-3.5 border-t pt-8 text-sm ${highlight ? 'border-white/10 text-slate-300' : 'border-slate-900/[0.08] text-slate-600'}`}
+              className={`mt-8 flex-1 space-y-3.5 border-t pt-8 text-sm ${highlight ? 'border-white/10 text-slate-300' : 'border-white/10 text-slate-300'}`}
             >
               {[
                 limit(plan.maxProducts, 'products'),
@@ -114,7 +114,7 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
                 'Every feature included',
               ].map((line) => (
                 <li key={line} className="flex gap-2.5">
-                  <span className={`mt-0.5 ${highlight ? 'text-azure-300' : 'text-azure-600'}`}>
+                  <span className={`mt-0.5 ${highlight ? 'text-azure-300' : 'text-azure-300'}`}>
                     <Check />
                   </span>
                   {line}
@@ -123,10 +123,10 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
             </ul>
             <a
               href={signupUrl}
-              className={`mt-9 rounded-md px-4 py-3 text-center text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
+              className={`mt-9 rounded-full px-4 py-3 text-center text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
                 highlight
-                  ? 'bg-white text-navy-900 hover:bg-azure-50 focus-visible:outline-white'
-                  : 'bg-azure-600 text-white hover:bg-azure-700 focus-visible:outline-azure-600'
+                  ? 'bg-white text-slate-950 hover:bg-slate-200 focus-visible:outline-white'
+                  : 'text-white ring-2 ring-white/80 hover:bg-white/10 focus-visible:outline-white'
               }`}
             >
               Start with {plan.name}
@@ -150,60 +150,60 @@ function Comparison({ plans }: { plans: PublicPlan[] }) {
       values: plans.map((p) => (p.transactionFeeBps === 0 ? 'None' : percent(p.transactionFeeBps))),
     },
   ];
-  const cell = (i: number) => `px-4 py-4 text-center ${i === featured ? 'bg-azure-50/70' : ''}`;
+  const cell = (i: number) => `px-4 py-4 text-center ${i === featured ? 'bg-azure-400/10' : ''}`;
   return (
-    <section aria-labelledby="compare-title" className="bg-white py-20 sm:py-28">
+    <section aria-labelledby="compare-title" className="bg-white/[0.04] py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <SectionHeading center id="compare-title" eyebrow="Side by side" title="Compare plans" />
-        <div className="relative mt-12 overflow-x-auto rounded-xl bg-white ring-1 ring-slate-900/10">
+        <div className="relative mt-12 overflow-x-auto rounded-xl bg-white/[0.04] ring-1 ring-white/10">
           <table className="w-full min-w-[36rem] text-sm">
             <caption className="sr-only">Plan limits and included features</caption>
             <thead>
-              <tr className="border-b border-slate-900/10 bg-mist">
-                <th scope="col" className="px-4 py-4 text-left font-semibold text-slate-900">
+              <tr className="border-b border-white/10 bg-[#0b1215]">
+                <th scope="col" className="px-4 py-4 text-left font-semibold text-white">
                   <span className="sr-only">Feature</span>
                 </th>
                 {plans.map((p, i) => (
                   <th
                     key={p.code}
                     scope="col"
-                    className={`${cell(i)} font-semibold text-slate-900 ${i === featured ? 'text-azure-700' : ''}`}
+                    className={`${cell(i)} font-semibold text-white ${i === featured ? 'text-azure-300' : ''}`}
                   >
                     {p.name}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-900/[0.07]">
+            <tbody className="divide-y divide-white/10">
               {rows.map((row) => (
                 <tr key={row.label}>
-                  <th scope="row" className="px-4 py-4 text-left font-medium text-slate-700">
+                  <th scope="row" className="px-4 py-4 text-left font-medium text-slate-200">
                     {row.label}
                   </th>
                   {row.values.map((v, i) => (
-                    <td key={plans[i]?.code} className={`${cell(i)} text-slate-900`}>
+                    <td key={plans[i]?.code} className={`${cell(i)} text-white`}>
                       {v}
                     </td>
                   ))}
                 </tr>
               ))}
-              <tr className="bg-mist">
+              <tr className="bg-[#0b1215]">
                 <th
                   scope="colgroup"
                   colSpan={plans.length + 1}
-                  className="px-4 py-3 text-left text-xs font-semibold tracking-wide text-slate-500 uppercase"
+                  className="px-4 py-3 text-left text-xs font-semibold tracking-wide text-slate-400 uppercase"
                 >
                   Included in every plan
                 </th>
               </tr>
               {INCLUDED.map((feature) => (
                 <tr key={feature}>
-                  <th scope="row" className="px-4 py-3.5 text-left font-normal text-slate-700">
+                  <th scope="row" className="px-4 py-3.5 text-left font-normal text-slate-200">
                     {feature}
                   </th>
                   {plans.map((p, i) => (
                     <td key={p.code} className={cell(i).replace('py-4', 'py-3.5')}>
-                      <span className="inline-flex text-azure-600">
+                      <span className="inline-flex text-azure-300">
                         <Check className="size-5" />
                       </span>
                       <span className="sr-only">Included</span>
@@ -233,8 +233,8 @@ export async function PricingPage() {
         />
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
           <Eyebrow className="justify-center">Pricing</Eyebrow>
-          <h1 className={`mt-5 text-navy-900 ${display}`}>Pick a plan that fits your store</h1>
-          <p className={`mt-6 text-slate-600 ${lead}`}>
+          <h1 className={`mt-5 text-white ${display}`}>Pick a plan that fits your store</h1>
+          <p className={`mt-6 text-slate-300 ${lead}`}>
             Every feature is included on every plan — plans differ only in limits and the platform
             fee on sales. Every new store starts with a 14-day trial.
           </p>
@@ -243,9 +243,9 @@ export async function PricingPage() {
           {plans ? (
             <PlanCards plans={plans} />
           ) : (
-            <div className="mx-auto max-w-lg rounded-xl bg-white p-8 text-center ring-1 ring-slate-900/10">
-              <p className="font-semibold text-navy-900">Plan details are unavailable right now.</p>
-              <p className="mt-2 text-sm text-slate-600">
+            <div className="mx-auto max-w-lg rounded-xl bg-white/[0.04] p-8 text-center ring-1 ring-white/10">
+              <p className="font-semibold text-white">Plan details are unavailable right now.</p>
+              <p className="mt-2 text-sm text-slate-300">
                 Please check back shortly — or create your store now and choose a plan from your
                 admin.
               </p>
@@ -255,7 +255,7 @@ export async function PricingPage() {
             </div>
           )}
         </div>
-        <p className="mt-10 px-4 text-center text-sm text-slate-500">
+        <p className="mt-10 px-4 text-center text-sm text-slate-400">
           Prices in US dollars. Card processing fees from your payment provider are separate.
         </p>
       </section>

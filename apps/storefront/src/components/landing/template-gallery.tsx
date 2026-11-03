@@ -7,7 +7,7 @@ import { industryPhoto } from './photos';
 import { TemplateCard } from './template-card';
 
 const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-600';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
 
 const perIndustry = THEME_STYLES.length;
 const PAGE = 24;
@@ -62,9 +62,9 @@ export function TemplateGallery({
   };
 
   return (
-    <section aria-label="Template catalog" className="bg-white pb-24">
+    <section aria-label="Template catalog" className="bg-white/[0.04] pb-24">
       <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-        <h2 className="text-sm font-semibold text-navy-900">Shop by industry</h2>
+        <h2 className="text-sm font-semibold text-white">Shop by industry</h2>
         <ul
           className="-mx-4 mt-4 flex gap-4 overflow-x-auto px-4 pb-3 sm:gap-5 lg:mx-0 lg:justify-between lg:overflow-visible lg:px-0"
           aria-label="Industries"
@@ -82,9 +82,9 @@ export function TemplateGallery({
                   <span
                     className={`grid size-16 place-items-center overflow-hidden rounded-full ring-offset-2 transition ${
                       active
-                        ? 'ring-2 ring-navy-950'
-                        : 'ring-1 ring-slate-900/10 group-hover:ring-slate-900/40'
-                    } ${i.id ? 'bg-slate-100' : 'bg-navy-950 text-white'}`}
+                        ? 'ring-2 ring-white/10'
+                        : 'ring-1 ring-white/10 group-hover:ring-white/30'
+                    } ${i.id ? 'bg-white/[0.07]' : 'bg-white text-slate-950'}`}
                   >
                     {i.id ? (
                       <img
@@ -108,10 +108,10 @@ export function TemplateGallery({
                     )}
                   </span>
                   <span
-                    className={`text-xs leading-tight ${active ? 'font-semibold text-navy-950' : 'font-medium text-slate-700'}`}
+                    className={`text-xs leading-tight ${active ? 'font-semibold text-white' : 'font-medium text-slate-200'}`}
                   >
                     {i.id ? i.label.split(' & ')[0] : 'All'}
-                    <span className="mt-0.5 block text-[11px] font-normal text-slate-500">
+                    <span className="mt-0.5 block text-[11px] font-normal text-slate-400">
                       {i.id ? perIndustry : THEME_TEMPLATES.length} templates
                     </span>
                   </span>
@@ -122,7 +122,7 @@ export function TemplateGallery({
         </ul>
       </div>
 
-      <div className="sticky top-16 z-30 mt-6 border-y border-slate-900/[0.07] bg-white/85 backdrop-blur-xl">
+      <div className="sticky top-[4.5rem] z-30 mt-6 border-y border-white/10 bg-[#05090c]/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:px-8">
           <ul
             aria-label="Styles"
@@ -136,8 +136,8 @@ export function TemplateGallery({
                   onClick={() => setStyle(st.id)}
                   className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${focusRing} ${
                     style === st.id
-                      ? 'bg-navy-950 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? 'bg-white text-slate-950'
+                      : 'bg-white/[0.07] text-slate-200 hover:bg-white/15'
                   }`}
                 >
                   {st.label}
@@ -165,10 +165,10 @@ export function TemplateGallery({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search templates"
-                className={`w-full rounded-full border-0 bg-slate-100 py-2 pr-4 pl-10 text-sm text-slate-900 placeholder:text-slate-500 focus:bg-white focus:ring-1 focus:ring-slate-900/20 ${focusRing}`}
+                className={`w-full rounded-full border-0 bg-white/[0.07] py-2 pr-4 pl-10 text-sm text-white placeholder:text-slate-400 focus:bg-white/[0.08] focus:ring-1 focus:ring-slate-900/20 ${focusRing}`}
               />
             </label>
-            <p aria-live="polite" className="shrink-0 text-sm font-medium text-slate-600">
+            <p aria-live="polite" className="shrink-0 text-sm font-medium text-slate-300">
               {shown.length} {shown.length === 1 ? 'template' : 'templates'}
             </p>
           </div>
@@ -177,12 +177,12 @@ export function TemplateGallery({
 
       <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
         {shown.length === 0 ? (
-          <div className="rounded-[1.75rem] bg-slate-50 py-24 text-center">
-            <p className="text-lg font-semibold text-navy-900">No templates match those filters.</p>
+          <div className="rounded-[1.75rem] bg-white/[0.04] py-24 text-center">
+            <p className="text-lg font-semibold text-white">No templates match those filters.</p>
             <button
               type="button"
               onClick={clear}
-              className={`mt-4 rounded-full bg-navy-950 px-5 py-2 text-sm font-semibold text-white hover:bg-navy-900 ${focusRing}`}
+              className={`mt-4 rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-200 ${focusRing}`}
             >
               Clear filters
             </button>
@@ -198,13 +198,13 @@ export function TemplateGallery({
             </ul>
             {shown.length > count ? (
               <div className="mt-14 flex flex-col items-center gap-3">
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-400">
                   Showing {count} of {shown.length}
                 </p>
                 <button
                   type="button"
                   onClick={() => setMore({ key: filterKey, count: count + PAGE })}
-                  className={`rounded-full bg-navy-950 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-900 ${focusRing}`}
+                  className={`rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-200 ${focusRing}`}
                 >
                   Show more templates
                 </button>
@@ -212,7 +212,7 @@ export function TemplateGallery({
             ) : null}
           </>
         )}
-        <p className="mt-20 text-center text-sm text-slate-600">
+        <p className="mt-20 text-center text-sm text-slate-300">
           Pick one when you create your store, and switch any time from your admin.
         </p>
       </div>
