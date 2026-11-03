@@ -28,12 +28,8 @@ import { Icon } from '@/components/icons';
 import { Alert, Badge, buttonClass, Card, formatDateTime, inputClass } from '@/components/ui';
 import { useCountryOptions, useHydrated } from '@/lib/countries';
 import type { FormState } from '@/lib/form';
-<<<<<<< HEAD
-import type { ActionResult, VariantPick } from './actions';
-=======
 import { toast } from '@/lib/toast';
-import type { ActionResult } from './actions';
->>>>>>> 2a88f2fea32ba1bc9550d4a9daf10c53553e5ee0
+import type { ActionResult, VariantPick } from './actions';
 import { imageSrc } from './images';
 import {
   BundleContentsCard,

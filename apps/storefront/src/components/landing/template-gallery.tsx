@@ -175,33 +175,7 @@ export function TemplateGallery({
         </div>
       </div>
 
-<<<<<<< Updated upstream
-      <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
-        <ul
-          className="-mx-4 flex gap-2 overflow-x-auto [scrollbar-width:none] px-4 pb-2 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
-          aria-label="Industries"
-        >
-          {[{ id: '', label: 'All' }, ...THEME_INDUSTRIES].map((i) => (
-            <li key={i.id} className="shrink-0">
-              <button
-                type="button"
-                aria-pressed={industry === i.id}
-                onClick={() => setIndustry(i.id)}
-                className={`rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 transition ${focusRing} ${
-                  industry === i.id
-                    ? 'bg-navy-950 text-white ring-slate-950'
-                    : 'bg-white text-slate-700 ring-slate-900/15 hover:ring-slate-900/40'
-                }`}
-              >
-                {i.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-
-=======
       <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
->>>>>>> Stashed changes
         {shown.length === 0 ? (
           <div className="rounded-[1.75rem] bg-slate-50 py-24 text-center">
             <p className="text-lg font-semibold text-navy-900">No templates match those filters.</p>
