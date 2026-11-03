@@ -92,7 +92,7 @@ test('shopper browses a store by subdomain, searches, and manages the cart', asy
   await expect(
     shopper.getByRole('heading', {
       level: 1,
-      name: 'Your online store, ready to sell today',
+      name: 'Open your own online store',
     }),
   ).toBeVisible();
   // Store-only routes and unknown paths are real 404s on the platform site.

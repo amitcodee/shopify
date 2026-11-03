@@ -1,48 +1,7 @@
 /* eslint-disable @next/next/no-html-link-for-pages -- the root layout picks the marketing page from the request path, so links between marketing pages must be full page loads, not client navigations. */
 import type { ReactNode } from 'react';
-import {
-  Developers,
-  GetStarted,
-  HomeFaq,
-  HomeHero,
-  IndustriesTabs,
-  IndustryStrip,
-  PlatformSuite,
-  Statements,
-  SwitchBanner,
-} from './landing/home-sections';
-import {
-  ControlCenter,
-  HowItWorks,
-  PricingTeaser,
-  SellWorldwide,
-  StatsBand,
-  TemplateShowcase,
-} from './landing/home-more';
+import { CinematicHome } from './landing/home-cinematic';
 import { MarketingShell } from './landing/marketing-shell';
-
-/** The platform's own home page, served on the root host (no store subdomain). */
-export function PlatformLanding() {
-  return (
-    <>
-      <HomeHero />
-      <IndustryStrip />
-      <StatsBand />
-      <SwitchBanner />
-      <PlatformSuite />
-      <ControlCenter />
-      <IndustriesTabs />
-      <SellWorldwide />
-      <TemplateShowcase />
-      <HowItWorks />
-      <Statements />
-      <Developers />
-      <PricingTeaser />
-      <HomeFaq />
-      <GetStarted />
-    </>
-  );
-}
 
 export function PlatformNotFound() {
   return (
@@ -68,5 +27,6 @@ export function PlatformNotFound() {
  */
 export function PlatformSite({ path, children }: { path: string; children: ReactNode }) {
   const page = path.replace(/\/+$/, '') || '/';
-  return <MarketingShell>{page === '/' ? <PlatformLanding /> : children}</MarketingShell>;
+  const home = page === '/';
+  return <MarketingShell overlayNav={home}>{home ? <CinematicHome /> : children}</MarketingShell>;
 }

@@ -10,11 +10,19 @@ import { marketingLinks } from './urls';
 const KEYFRAMES = `
 @keyframes cp-marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
 @keyframes cp-marquee-rev { from { transform: translateX(-50%) } to { transform: translateX(0) } }
+@keyframes cp-zoom { from { transform: scale(1.08) } to { transform: scale(1) } }
 @keyframes cp-word { from { opacity: 0; transform: translateY(0.35em) } to { opacity: 1; transform: none } }
 `;
 
 /** Nav, page and footer shared by the platform's marketing pages on the root host. */
-export function MarketingShell({ children }: { children: ReactNode }) {
+export function MarketingShell({
+  children,
+  overlayNav = false,
+}: {
+  children: ReactNode;
+  /** The nav floats over a full-bleed hero instead of taking its own row. */
+  overlayNav?: boolean;
+}) {
   return (
     <div
       className={`${bodyFont.variable} ${displayFont.variable} relative flex min-h-screen flex-col overflow-x-clip bg-white font-[family-name:var(--font-body)] text-slate-900 antialiased`}
@@ -26,7 +34,7 @@ export function MarketingShell({ children }: { children: ReactNode }) {
       >
         Skip to content
       </a>
-      <SiteNav links={marketingLinks} />
+      <SiteNav links={marketingLinks} overlay={overlayNav} />
       <main id="main" className="w-full min-w-0 flex-1">
         {children}
       </main>

@@ -154,6 +154,8 @@ function resourceCards(links: MarketingLinks): NavCard[] {
 
 const focusRing =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure-600';
+const navFocus =
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white';
 const panelLink = `rounded-md text-sm text-slate-600 hover:text-azure-700 ${focusRing}`;
 const summaryClass =
   'flex cursor-pointer list-none items-center justify-between py-4 text-lg font-semibold [&::-webkit-details-marker]:hidden';
@@ -205,8 +207,9 @@ function LinkItem({
  * Marketing header: mega-menus on wide screens (hover, click or keyboard; Escape and clicks
  * outside close them) and a full-screen drawer with accordion groups on phones.
  */
-export function SiteNav({ links }: { links: MarketingLinks }) {
+export function SiteNav({ links, overlay = false }: { links: MarketingLinks; overlay?: boolean }) {
   const [open, setOpen] = useState<MenuId | null>(null);
+  const [scrolled, setScrolled] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const buttons = useRef<Record<MenuId, HTMLButtonElement | null>>({
@@ -238,6 +241,15 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
     };
   }, [open, drawer]);
 
+  // Over a hero the bar is see-through until the page scrolls.
+  useEffect(() => {
+    if (!overlay) return;
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [overlay]);
+
   // The drawer covers the page: stop the page behind it from scrolling.
   useEffect(() => {
     if (!drawer) return;
@@ -260,9 +272,9 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
       aria-controls={`menu-${id}`}
       onClick={() => setOpen(open === id ? null : id)}
       onMouseEnter={() => setOpen(id)}
-      className={`flex items-center gap-1 rounded-md px-3 py-2 text-[0.9375rem] font-medium transition hover:text-azure-700 ${
-        open === id ? 'text-azure-700' : 'text-navy-900'
-      } ${focusRing}`}
+      className={`flex items-center gap-1 rounded-md px-3 py-2 text-[0.9375rem] font-medium text-white transition hover:text-white/70 ${
+        open === id ? 'text-white/70' : ''
+      } ${navFocus}`}
     >
       {label}
       <Chevron open={open === id} />
@@ -274,7 +286,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
       <a
         href={href}
         onMouseEnter={close}
-        className={`rounded-md px-3 py-2 text-[0.9375rem] font-medium text-navy-900 transition hover:text-azure-700 ${focusRing}`}
+        className={`rounded-md px-3 py-2 text-[0.9375rem] font-medium text-white transition hover:text-white/70 ${navFocus}`}
       >
         {label}
       </a>
@@ -359,11 +371,13 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
         onBlur={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) close();
         }}
-        className="sticky top-0 z-50 border-b border-slate-900/[0.06] bg-white/75 text-slate-900 shadow-[0_1px_0_rgb(255_255_255/0.6)_inset] backdrop-blur-xl backdrop-saturate-150"
+        className={`z-50 text-white transition-colors duration-300 ${
+          overlay ? 'fixed inset-x-0 top-0' : 'sticky top-0'
+        } ${!overlay || open ? 'bg-[#05090c]' : scrolled ? 'bg-[#05090c]/85 backdrop-blur-xl' : 'bg-transparent'}`}
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-6">
-          <a href="/" className={`rounded-md ${focusRing}`} aria-label="Commerce Platform home">
-            <Logo tone="light" />
+        <div className="mx-auto flex h-[4.5rem] max-w-[90rem] items-center gap-3 px-4 sm:gap-6 sm:px-8 lg:px-[5.5rem]">
+          <a href="/" className={`rounded-md ${navFocus}`} aria-label="Commerce Platform home">
+            <Logo tone="dark" />
           </a>
           <nav aria-label="Main" className="hidden lg:block">
             <ul className="flex items-center gap-1">
@@ -377,21 +391,15 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
           <div className="ml-auto flex items-center gap-2">
             <a
               href={links.loginUrl}
-              className={`hidden rounded-md px-3.5 py-2 text-sm font-semibold text-azure-700 ring-1 ring-azure-600/60 transition hover:bg-azure-50 sm:block ${focusRing}`}
+              className={`hidden rounded-md px-3.5 py-2 text-[0.9375rem] font-medium text-white transition hover:text-white/70 sm:block ${navFocus}`}
             >
               Log in
             </a>
             <a
               href={links.signupUrl}
-              className={`group inline-flex items-center gap-1.5 rounded-md bg-azure-600 px-4 py-2 text-sm font-semibold whitespace-nowrap text-white shadow-[0_1px_2px_rgb(10_34_54/0.2)] transition hover:bg-azure-700 ${focusRing}`}
+              className={`inline-flex items-center rounded-full bg-white px-5 py-2.5 text-[0.9375rem] font-semibold whitespace-nowrap text-slate-950 transition hover:bg-slate-200 ${navFocus}`}
             >
               Start for free
-              <span
-                aria-hidden="true"
-                className="hidden transition-transform group-hover:translate-x-0.5 sm:inline"
-              >
-                →
-              </span>
             </a>
             <button
               ref={drawerButton}
@@ -399,7 +407,7 @@ export function SiteNav({ links }: { links: MarketingLinks }) {
               aria-expanded={drawer}
               aria-controls="mobile-menu"
               onClick={() => setDrawer(true)}
-              className={`-mr-1 rounded-md p-2 text-slate-700 hover:text-navy-900 lg:hidden ${focusRing}`}
+              className={`-mr-1 rounded-md p-2 text-white hover:text-white/70 lg:hidden ${navFocus}`}
             >
               <span className="sr-only">Open menu</span>
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-6">
