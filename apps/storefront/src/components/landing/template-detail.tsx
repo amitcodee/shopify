@@ -48,6 +48,12 @@ const LAYOUTS: Record<string, string> = {
   mosaic: 'Mosaic — a checkerboard of photos and color blocks',
   showroom: 'Showroom — pieces on a gallery wall with captions',
   arch: 'Arch — stepped arched photo frames on a warm panel',
+  spotlight: 'Spotlight — one glowing product center stage on a dark page',
+  duo: 'Duo — an edge-to-edge split of photo and color',
+  lookbook: 'Lookbook — a staggered strip of tall captioned photos',
+  ticker: 'Ticker — a moving headline band over a big photo',
+  pop: 'Pop — tilted photo cards and a round sticker',
+  swiss: 'Swiss — a strict grid with numbered collections',
 };
 
 const words = {

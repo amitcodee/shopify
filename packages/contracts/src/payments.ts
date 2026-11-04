@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { disputeSchema, disputeStatusSchema } from './orders.js';
+import { gatewayModeSchema } from './store-gateways.js';
 
 /**
  * Countries where merchants can connect a payout account (Stripe Connect Express availability,
@@ -149,8 +150,10 @@ export const paymentsOverviewSchema = z.object({
   /** True when the connected gateway (or, before connecting, every offered one) is the sandbox. */
   sandbox: z.boolean(),
   account: paymentAccountSchema.nullable(),
-  /** True when shoppers can check out (account connected and charges enabled). */
+  /** True when shoppers can order: a gateway is active, an account can charge, or COD is on. */
   acceptingPayments: z.boolean(),
+  /** The merchant's own gateway taking payments, which replaces the payouts account. */
+  activeStoreGateway: z.object({ label: z.string(), mode: gatewayModeSchema }).nullable(),
   /** Platform fee on each sale from the store's plan, in basis points. */
   transactionFeeBps: z.number().int(),
   summary: salesSummarySchema,

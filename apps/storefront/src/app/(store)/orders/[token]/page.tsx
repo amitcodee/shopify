@@ -22,15 +22,16 @@ export default async function OrderStatusPage({
     throw error;
   }
 
+  const confirmed =
+    from === 'checkout' && (order.financialStatus === 'PAID' || order.cashOnDelivery);
+
   return (
     <>
       <p className="eyebrow text-zinc-500">Order #{order.number}</p>
       <h1 className="page-title t-title mt-2 mb-8">
-        {from === 'checkout' && order.financialStatus === 'PAID'
-          ? 'Thank you for your order!'
-          : 'Your order'}
+        {confirmed ? 'Thank you for your order!' : 'Your order'}
       </h1>
-      {from === 'checkout' && order.financialStatus === 'PAID' ? (
+      {confirmed ? (
         <p className="-mt-4 mb-8 text-zinc-600">
           A confirmation email is on its way. Bookmark this page to track your order.
         </p>

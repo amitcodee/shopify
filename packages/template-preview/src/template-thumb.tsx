@@ -1062,6 +1062,224 @@ export function TemplateThumb({
         </div>
       );
       break;
+    case 'spotlight':
+      hero = (
+        <div
+          className="relative text-center"
+          style={{
+            margin: `0 -${pad}em`,
+            padding: `1.2em ${pad}em 1.4em`,
+            background: `radial-gradient(70% 60% at 50% 68%, ${tint(s.accentColor, 45)}, transparent 72%)`,
+          }}
+        >
+          {eyebrow(template.name, muted)}
+          {title(s.brandColor, phone ? 1.8 : 2.5, { fontWeight: 700 })}
+          {subtitle(muted, 'center')}
+          {cta(s.accentColor, onAccent)}
+          <div
+            className="relative mx-auto overflow-hidden"
+            style={{
+              marginTop: '1em',
+              width: phone ? '92%' : '66%',
+              aspectRatio: '16 / 10',
+              borderRadius: '1.2em',
+              boxShadow: `0 1.6em 3.6em -0.8em ${tint(s.accentColor, 70)}`,
+            }}
+          >
+            <Img src={hero1} priority={priority} />
+          </div>
+        </div>
+      );
+      break;
+    case 'duo':
+      hero = (
+        <div
+          className={phone ? 'grid' : 'grid grid-cols-2'}
+          style={{ margin: `0 -${pad}em`, background: s.surfaceColor }}
+        >
+          {photo(hero1, { minHeight: phone ? '9em' : '17em' })}
+          <div className="flex flex-col justify-center" style={{ padding: '1.4em 1.6em' }}>
+            {eyebrow(template.name, muted)}
+            {title(s.brandColor, phone ? 1.5 : 1.95, { fontWeight: 600 })}
+            {subtitle(s.textColor)}
+            {cta()}
+            {phone
+              ? null
+              : photo(extra(1), { aspectRatio: '16 / 9', marginTop: '1em', width: '70%' })}
+          </div>
+        </div>
+      );
+      break;
+    case 'lookbook':
+      hero = (
+        <div>
+          <div
+            className={phone ? 'grid' : 'grid grid-cols-[1.4fr_1fr] items-end'}
+            style={{ gap: '1em' }}
+          >
+            {title(s.brandColor, phone ? 1.7 : 2.3, { fontWeight: 500 })}
+            <div>
+              {subtitle(muted)}
+              {cta()}
+            </div>
+          </div>
+          <div
+            className={`grid ${phone ? 'grid-cols-2' : 'grid-cols-4'} items-start`}
+            style={{ gap: '0.5em', marginTop: '1em', paddingBottom: phone ? 0 : '1.4em' }}
+          >
+            {[hero1, extra(1), extra(2), extra(3)].slice(0, phone ? 2 : 4).map((src, i) => (
+              <div key={src} style={{ transform: i % 2 ? 'translateY(1.4em)' : undefined }}>
+                {photo(src, { aspectRatio: '3 / 4' })}
+                <p style={{ ...eyebrowStyle, color: muted, marginTop: '0.6em' }}>Look 0{i + 1}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+      break;
+    case 'ticker':
+      hero = (
+        <div>
+          <div
+            className="overflow-hidden whitespace-nowrap"
+            style={{
+              ...heading,
+              background: s.accentColor,
+              color: onAccent,
+              fontSize: '1.1em',
+              fontWeight: 700,
+              margin: `0 -${pad / 1.1}em`,
+              padding: '0.3em 0',
+            }}
+          >
+            {`${template.sample.heroTitle} — `.repeat(6)}
+          </div>
+          <div
+            className={phone ? 'grid' : 'grid grid-cols-[1.5fr_1fr]'}
+            style={{ gap: '0.5em', marginTop: '0.5em' }}
+          >
+            {photo(hero1, { minHeight: phone ? '8em' : '13em', borderRadius: r })}
+            <div
+              className="flex flex-col justify-between"
+              style={{ background: s.brandColor, padding: '1.1em', borderRadius: r }}
+            >
+              {title(onBrand, phone ? 1.5 : 1.8, { fontWeight: 800, lineHeight: 0.95 })}
+              <div>
+                {subtitle(onBrand)}
+                {cta(onBrand, s.brandColor)}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+      break;
+    case 'pop':
+      hero = (
+        <div
+          className={phone ? 'grid' : 'grid grid-cols-[1fr_1.15fr] items-center'}
+          style={{
+            background: mix(s.accentColor, 22, s.backgroundColor),
+            borderRadius: '1.8em',
+            padding: '1.5em',
+            gap: '1em',
+          }}
+        >
+          <div>
+            {title(s.brandColor, phone ? 1.6 : 2.1, { fontWeight: 800 })}
+            {subtitle(s.textColor)}
+            {cta()}
+          </div>
+          <div className="relative grid grid-cols-3 items-center">
+            {[extra(1), hero1, extra(2)].map((src, i) => (
+              <div
+                key={src}
+                className="relative overflow-hidden"
+                style={{
+                  aspectRatio: '3 / 4',
+                  borderRadius: '1em',
+                  border: `0.2em solid ${s.backgroundColor}`,
+                  boxShadow: '0 0.8em 1.6em -0.6em rgb(0 0 0 / 0.45)',
+                  zIndex: i === 1 ? 1 : 0,
+                  transform:
+                    i === 1
+                      ? 'scale(1.12)'
+                      : i === 0
+                        ? 'translateX(0.4em) rotate(-6deg)'
+                        : 'translateX(-0.4em) rotate(6deg)',
+                }}
+              >
+                <Img src={src} priority={priority} />
+              </div>
+            ))}
+            <span
+              className="absolute grid place-items-center text-center"
+              style={{
+                top: '-0.9em',
+                right: 0,
+                zIndex: 2,
+                width: '4.4em',
+                height: '4.4em',
+                borderRadius: 999,
+                background: s.accentColor,
+                color: onAccent,
+                fontSize: '0.6em',
+                fontWeight: 800,
+                lineHeight: 1.1,
+                transform: 'rotate(12deg)',
+              }}
+            >
+              New in
+            </span>
+          </div>
+        </div>
+      );
+      break;
+    case 'swiss':
+      hero = (
+        <div style={{ borderTop: `0.15em solid ${s.textColor}` }}>
+          <div
+            className={phone ? 'grid' : 'grid grid-cols-[1fr_3fr]'}
+            style={{ gap: '0.8em', padding: '0.8em 0' }}
+          >
+            {eyebrow(template.name, muted)}
+            {title(s.brandColor, phone ? 1.7 : 2.4, { fontWeight: 700, margin: 0 })}
+          </div>
+          <div
+            className={phone ? 'grid' : 'grid grid-cols-[1fr_3fr]'}
+            style={{
+              gap: '0.8em',
+              borderTop: `1px solid ${tint(s.textColor, 22)}`,
+              paddingTop: '0.8em',
+            }}
+          >
+            <div>
+              {subtitle(muted, 'left', { margin: 0 })}
+              {cta(undefined, undefined, '0.7em')}
+              {phone
+                ? null
+                : categories.map((c, i) => (
+                    <p
+                      key={c}
+                      className="flex"
+                      style={{
+                        borderTop: `1px solid ${tint(s.textColor, 22)}`,
+                        fontSize: '0.52em',
+                        fontWeight: 550,
+                        gap: '0.7em',
+                        margin: i === 0 ? '1em 0 0' : 0,
+                        padding: '0.5em 0',
+                      }}
+                    >
+                      <span style={{ color: muted }}>0{i + 1}</span>
+                      {c}
+                    </p>
+                  ))}
+            </div>
+            {photo(hero1, { aspectRatio: '16 / 9' })}
+          </div>
+        </div>
+      );
+      break;
     default:
       // minimal: one large photo with the headline set into its lower corner.
       hero = (

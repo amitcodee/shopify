@@ -50,6 +50,7 @@ export async function placeOrderAction(_: FormResult, formData: FormData): Promi
         discountCode: field(formData, 'discountCode'),
         giftCardCode: field(formData, 'giftCardCode'),
         note: field(formData, 'note'),
+        paymentMethod: field(formData, 'paymentMethod'),
         shippingAddress: {
           name: field(formData, 'name') ?? '',
           line1: field(formData, 'line1') ?? '',

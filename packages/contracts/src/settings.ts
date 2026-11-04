@@ -200,12 +200,41 @@ export const domainSchema = z.object({
   hostname: z.string(),
   verified: z.boolean(),
   isPrimary: z.boolean(),
-  /** DNS records the merchant must publish. */
-  verificationRecord: z.object({ type: z.literal('TXT'), name: z.string(), value: z.string() }),
-  routingRecord: z.object({ type: z.literal('CNAME'), name: z.string(), value: z.string() }),
+  /** A bare domain (example.com) cannot use a CNAME at most DNS providers. */
+  apex: z.boolean(),
+  /** The zone the records go in, for "add them at the DNS provider of …". */
+  zone: z.string(),
+  /** DNS records the merchant must publish. `host` is the name relative to the zone. */
+  verificationRecord: z.object({
+    type: z.literal('TXT'),
+    name: z.string(),
+    host: z.string(),
+    value: z.string(),
+  }),
+  routingRecord: z.object({
+    type: z.enum(['CNAME', 'A', 'ALIAS']),
+    name: z.string(),
+    host: z.string(),
+    value: z.string(),
+  }),
   createdAt: z.iso.datetime(),
 });
 export type Domain = z.infer<typeof domainSchema>;
+
+export const dnsRecordStatusSchema = z.enum(['found', 'missing', 'wrong']);
+export type DnsRecordStatus = z.infer<typeof dnsRecordStatusSchema>;
+
+/** What public DNS answers right now for a domain's records. */
+export const domainCheckSchema = z.object({
+  /** Local development: answers are simulated, nothing is looked up. */
+  simulated: z.boolean(),
+  /** The DNS host, recognised from the zone's nameservers, e.g. "Cloudflare". */
+  dnsProvider: z.string().nullable(),
+  nameservers: z.array(z.string()),
+  verification: z.object({ status: dnsRecordStatusSchema, found: z.array(z.string()) }),
+  routing: z.object({ status: dnsRecordStatusSchema, found: z.array(z.string()) }),
+});
+export type DomainCheck = z.infer<typeof domainCheckSchema>;
 
 // ── Shipping & taxes ───────────────────────────────────────────────────────────
 

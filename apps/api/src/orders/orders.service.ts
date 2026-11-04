@@ -30,8 +30,14 @@ import {
 } from '../outbox/templates.js';
 import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-provider.js';
 import { GiftCardLedger } from '../gift-cards/gift-card-ledger.js';
+import { StoreGatewaysService } from '../payments/store-gateways/store-gateways.service.js';
 import { WebhookEmitter } from '../webhooks/webhooks.service.js';
-import { GIFT_CARD_PAYMENT, MANUAL_PAYMENT, OrderLifecycle } from './order-lifecycle.service.js';
+import {
+  CASH_ON_DELIVERY,
+  GIFT_CARD_PAYMENT,
+  MANUAL_PAYMENT,
+  OrderLifecycle,
+} from './order-lifecycle.service.js';
 import { toReturnDto } from './return-rules.js';
 
 const detailInclude = {
@@ -100,6 +106,7 @@ export class OrdersService {
     private readonly giftCards: GiftCardLedger,
     private readonly webhooks: WebhookEmitter,
     @Inject(PAYMENT_PROVIDERS) private readonly providers: Map<string, PaymentProvider>,
+    private readonly storeGateways: StoreGatewaysService,
   ) {}
 
   async list(storeId: string, query: OrderListQuery): Promise<Paginated<OrderListItem>> {
@@ -270,7 +277,10 @@ export class OrdersService {
       };
     });
 
-    const provider = pending.payment ? this.providers.get(pending.payment.provider) : undefined;
+    const provider = pending.payment
+      ? ((await this.storeGateways.forProviderName(store.id, pending.payment.provider)) ??
+        this.providers.get(pending.payment.provider))
+      : undefined;
     let result: Awaited<ReturnType<PaymentProvider['refund']>> | null = null;
     try {
       if (!pending.refund || !pending.payment) {
@@ -457,6 +467,37 @@ export class OrdersService {
     return this.get(store.id, orderId);
   }
 
+  /** The merchant has the cash for a cash-on-delivery order. */
+  async recordCashCollected(
+    store: StoreContext,
+    orderId: string,
+    actor: AuthUser,
+    meta: RequestMeta,
+  ): Promise<OrderDetail> {
+    await this.tenantDb.run(store.id, async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId}::uuid AND "storeId" = ${store.id}::uuid FOR UPDATE`;
+      const order = await this.find(tx, store.id, orderId);
+      if (
+        order.paymentProvider !== CASH_ON_DELIVERY ||
+        order.status !== 'OPEN' ||
+        order.financialStatus !== 'PENDING'
+      ) {
+        throw new ConflictException('This order is not waiting for cash on delivery.');
+      }
+      await this.lifecycle.recordCashCollected(tx, store.id, order, actor.id);
+      await this.audit.record(tx, {
+        storeId: store.id,
+        actorUserId: actor.id,
+        action: 'order.cash_collected',
+        entityType: 'order',
+        entityId: orderId,
+        data: { amount: order.total - order.giftCardAmount },
+        meta,
+      });
+    });
+    return this.get(store.id, orderId);
+  }
+
   async cancel(
     store: StoreContext,
     orderId: string,
@@ -576,6 +617,7 @@ export class OrdersService {
         createdAt: e.createdAt.toISOString(),
       })),
       refundableAmount: Math.max(0, paidAmount(order) - committedRefunds(order)),
+      cashOnDelivery: order.paymentProvider === CASH_ON_DELIVERY,
       returns: order.returns.map((r) => toReturnDto(r, order)),
     };
   }

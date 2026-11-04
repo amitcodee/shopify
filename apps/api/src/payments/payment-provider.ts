@@ -7,18 +7,24 @@ export interface CreatePaymentInput {
   amount: number;
   currency: string;
   email: string;
+  /** From the shipping address; some gateways require them. */
+  phone?: string;
+  customerName?: string;
   /** Where the provider sends the shopper after paying / cancelling. */
   successUrl: string;
   cancelUrl: string;
   idempotencyKey: string;
-  /** The store's connected account receives the sale minus the platform fee. */
-  destination: { accountId: string; applicationFee: number };
+  /**
+   * The store's connected account receives the sale minus the platform fee. Null when the payment
+   * runs on the merchant's own keys and settles in their account directly.
+   */
+  destination: { accountId: string; applicationFee: number } | null;
 }
 
 export interface CreatedPayment {
   providerRef: string;
   checkoutUrl: string;
-  /** Stored only for the sandbox provider, which redirects itself. */
+  /** For flows that come back through us first (sandbox, PayU, PayPal): the final stop. */
   returnUrl?: string;
 }
 

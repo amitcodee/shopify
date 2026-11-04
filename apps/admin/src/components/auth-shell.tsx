@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { LogoMark } from './logo';
 
 const BENEFITS = [
-  '216 storefront templates',
+  '288 storefront templates',
   'Payments, shipping & taxes built in',
   'Sell in multiple currencies',
 ];

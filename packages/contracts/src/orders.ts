@@ -93,6 +93,8 @@ export const disputeSchema = z.object({
 export type Dispute = z.infer<typeof disputeSchema>;
 
 export const orderDetailSchema = orderListItemSchema.extend({
+  /** Paid in cash on delivery: unpaid until the merchant records the cash. */
+  cashOnDelivery: z.boolean(),
   subtotal: z.number().int(),
   discountTotal: z.number().int(),
   shippingTotal: z.number().int(),
@@ -180,6 +182,7 @@ export type CancelOrderInput = z.input<typeof cancelOrderInputSchema>;
 
 /** What the order-status page and customer accounts may see. */
 export const publicOrderSchema = z.object({
+  cashOnDelivery: z.boolean(),
   number: z.number().int(),
   storeName: z.string(),
   status: orderStatusSchema,

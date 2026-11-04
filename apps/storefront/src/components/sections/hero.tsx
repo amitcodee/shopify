@@ -955,6 +955,221 @@ export function Hero(props: HeroProps) {
       );
     }
 
+    case 'spotlight': {
+      const chips = tiles.slice(0, 3);
+      return (
+        <section className={`store-section ${FULL_BLEED} text-center`}>
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-[radial-gradient(46rem_30rem_at_50%_62%,color-mix(in_oklab,var(--store-accent)_42%,transparent),transparent_70%)]"
+          />
+          <div className="store-container relative pt-14 pb-14 sm:pt-20 sm:pb-20">
+            <p className="eyebrow text-zinc-500">{shopName}</p>
+            <h1 className="t-display mx-auto mt-4 max-w-5xl text-5xl text-brand break-words sm:text-7xl lg:text-[6rem]">
+              {title}
+            </h1>
+            <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-zinc-600">
+              {subtitle}
+            </p>
+            <Cta label={cta} variant="btn-accent" />
+            {image ? (
+              <div className="relative mx-auto mt-12 aspect-[16/10] max-w-3xl overflow-hidden rounded-[2rem] bg-surface shadow-[0_50px_120px_-30px_color-mix(in_oklab,var(--store-accent)_60%,transparent)] ring-1 ring-[color-mix(in_oklab,var(--store-text)_14%,transparent)]">
+                <Photo image={image} sizes="(min-width: 768px) 48rem, 100vw" />
+              </div>
+            ) : null}
+            {chips.length > 0 ? (
+              <ul className="mt-8 flex flex-wrap justify-center gap-2">
+                {chips.map((tile) => (
+                  <li key={tile.href}>
+                    <Link
+                      href={tile.href}
+                      className="block rounded-full bg-surface px-4 py-2 text-sm font-medium text-ink ring-1 ring-[color-mix(in_oklab,var(--store-text)_14%,transparent)]"
+                    >
+                      {tile.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </section>
+      );
+    }
+
+    case 'duo':
+      return (
+        <section className={`store-section ${FULL_BLEED} grid md:grid-cols-2`}>
+          <div className="relative min-h-[22rem] bg-surface md:min-h-[42rem]">
+            {image ? <Photo image={image} sizes={HALF} /> : <Wash />}
+          </div>
+          <div className="relative flex flex-col justify-center bg-surface px-6 py-14 sm:px-14 lg:px-20">
+            <p className="eyebrow text-zinc-500">{shopName}</p>
+            <h1 className="t-display mt-5 max-w-lg text-[2.75rem] text-brand break-words sm:text-6xl">
+              {title}
+            </h1>
+            <p className="mt-6 max-w-md text-lg leading-relaxed text-zinc-700">{subtitle}</p>
+            <div>
+              <Cta label={cta} />
+            </div>
+            {extras[0] ? (
+              <div className="relative mt-10 hidden aspect-[16/9] max-w-sm overflow-hidden bg-[var(--store-bg)] lg:block">
+                <Photo image={{ ...extras[0], alt: '' }} eager={false} sizes="24rem" />
+              </div>
+            ) : null}
+          </div>
+        </section>
+      );
+
+    case 'lookbook': {
+      const looks = image ? [image, ...extras].slice(0, 4) : [];
+      return (
+        <section className="store-section">
+          <div className="grid gap-6 md:grid-cols-[1.4fr_1fr] md:items-end">
+            <h1 className="t-display text-5xl text-brand break-words sm:text-7xl">{title}</h1>
+            <div>
+              <p className="max-w-md text-lg leading-relaxed text-zinc-600">{subtitle}</p>
+              <Cta label={cta} className="mt-6" />
+            </div>
+          </div>
+          {looks.length > 0 ? (
+            <div className="mt-10 flex snap-x gap-3 overflow-x-auto pb-2 sm:gap-5 md:grid md:grid-cols-4 md:overflow-visible md:pb-14">
+              {looks.map((photo, i) => (
+                <figure
+                  key={photo.src}
+                  className={`w-[68%] shrink-0 snap-start md:w-auto ${i % 2 === 1 ? 'md:translate-y-14' : ''}`}
+                >
+                  <div className="relative aspect-[3/4] overflow-hidden bg-surface">
+                    <Photo image={photo} eager={i === 0} sizes="(min-width: 768px) 25vw, 68vw" />
+                  </div>
+                  <figcaption className="eyebrow mt-2.5 text-zinc-500">
+                    Look {String(i + 1).padStart(2, '0')}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      );
+    }
+
+    case 'ticker': {
+      const phrase = `${title} — `;
+      return (
+        <section className="store-section">
+          <div className={`${FULL_BLEED} bg-accent py-3 text-accent-contrast`}>
+            <div aria-hidden="true" className="store-ticker flex w-max whitespace-nowrap">
+              {[0, 1].map((group) => (
+                <span key={group} className="t-title px-1 text-2xl sm:text-4xl">
+                  {phrase.repeat(8)}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="mt-4 grid gap-4 md:grid-cols-[1.5fr_1fr]">
+            <div className="relative min-h-[20rem] overflow-hidden rounded-sm bg-surface md:min-h-[32rem]">
+              {image ? <Photo image={image} /> : <Wash />}
+            </div>
+            <div className="flex flex-col justify-between rounded-sm bg-brand p-7 text-brand-contrast sm:p-10">
+              <h1 className="t-display text-5xl break-words sm:text-6xl lg:text-7xl">{title}</h1>
+              <div className="mt-8">
+                <p className="max-w-sm text-base leading-relaxed opacity-90">{subtitle}</p>
+                <Cta label={cta} variant="btn-on-brand" className="mt-6" />
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    case 'pop': {
+      const cards = image ? [extras[0], image, extras[1]] : [];
+      return (
+        <section className="store-section relative overflow-hidden rounded-[2.5rem] bg-[color-mix(in_oklab,var(--store-accent)_22%,var(--store-bg))] px-6 py-12 sm:px-12 sm:py-16">
+          <div className="grid items-center gap-10 md:grid-cols-[1fr_1.15fr]">
+            <div>
+              <h1 className="t-display text-5xl text-brand break-words sm:text-6xl lg:text-7xl">
+                {title}
+              </h1>
+              <p className="mt-5 max-w-md text-lg leading-relaxed text-zinc-700">{subtitle}</p>
+              <Cta label={cta} />
+            </div>
+            <div className="relative mx-auto grid w-full max-w-xl grid-cols-3 items-center">
+              {cards.map((photo, i) =>
+                photo ? (
+                  <div
+                    key={photo.src}
+                    className={`relative aspect-[3/4] overflow-hidden rounded-3xl bg-surface shadow-[0_24px_50px_-20px_rgb(0_0_0/0.45)] ring-4 ring-[var(--store-bg)] ${
+                      i === 0
+                        ? 'z-0 translate-x-3 -rotate-6'
+                        : i === 1
+                          ? 'z-10 scale-110'
+                          : 'z-0 -translate-x-3 rotate-6'
+                    }`}
+                  >
+                    <Photo
+                      image={i === 1 ? photo : { ...photo, alt: '' }}
+                      eager={i === 1}
+                      sizes="(min-width: 768px) 16rem, 33vw"
+                    />
+                  </div>
+                ) : (
+                  <span key={i} />
+                ),
+              )}
+              <span className="absolute -top-5 right-2 z-20 grid size-20 rotate-12 place-items-center rounded-full bg-accent text-center text-sm leading-tight font-bold text-accent-contrast sm:size-24">
+                New
+                <br />
+                in
+              </span>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    case 'swiss': {
+      const index = tiles.slice(0, 4);
+      return (
+        <section className="store-section border-t-2 border-ink">
+          <div className="grid gap-6 py-6 md:grid-cols-12">
+            <p className="eyebrow text-zinc-600 md:col-span-3">{shopName}</p>
+            <h1 className="t-display text-5xl text-brand break-words sm:text-7xl md:col-span-9 lg:text-[6.5rem]">
+              {title}
+            </h1>
+          </div>
+          <div className="grid gap-6 border-t border-[color-mix(in_oklab,var(--store-text)_22%,transparent)] pt-6 md:grid-cols-12">
+            <div className="md:col-span-3">
+              <p className="text-sm leading-relaxed text-zinc-600">{subtitle}</p>
+              <Cta label={cta} className="mt-5" />
+              {index.length > 0 ? (
+                <ol className="mt-8 border-t border-[color-mix(in_oklab,var(--store-text)_22%,transparent)]">
+                  {index.map((tile, i) => (
+                    <li
+                      key={tile.href}
+                      className="border-b border-[color-mix(in_oklab,var(--store-text)_22%,transparent)]"
+                    >
+                      <Link
+                        href={tile.href}
+                        className="flex gap-3 py-2.5 text-sm font-medium text-ink hover:underline"
+                      >
+                        <span className="text-zinc-500 tabular-nums">
+                          {String(i + 1).padStart(2, '0')}
+                        </span>
+                        <span className="min-w-0 break-words">{tile.label}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+            </div>
+            <div className="relative aspect-[16/9] bg-surface md:col-span-9">
+              {image ? <Photo image={image} sizes="75vw" /> : <Wash className="opacity-40" />}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     default:
       // Minimal: one large photo with the headline set into its lower corner.
       return image ? (

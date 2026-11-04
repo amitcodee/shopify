@@ -118,6 +118,10 @@ model Store {
   passwordMessage             String      @default("")
   /// Extra currencies shoppers can pay in (see @repo/contracts presentmentCurrencySchema).
   presentmentCurrencies       Json        @default("[]")
+  /// Shoppers can choose to pay in cash when the order is delivered.
+  codEnabled                  Boolean     @default(false)
+  /// Largest order total allowed for cash on delivery (minor units); null = no limit.
+  codMaxAmount                Int?
   createdAt                   DateTime    @default(now())
   updatedAt                   DateTime    @updatedAt
 
@@ -146,6 +150,7 @@ model Store {
   purchaseOrders PurchaseOrder[]
   webhooks       WebhookSubscription[]
   subscription   Subscription?
+  storeGateways  StoreGateway[]
   paymentAccount PaymentAccount?
 
   @@index([merchantId])
@@ -955,6 +960,29 @@ enum PaymentAccountStatus {
 
 /// The store's connected payout account (Stripe Connect Express, or the sandbox). Shoppers can
 /// only check out once it can accept charges; sales settle to it minus the plan's platform fee.
+/// Tenant-scoped (RLS). A gateway the merchant connected with their own API keys.
+model StoreGateway {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  storeId        String   @db.Uuid
+  /// See @repo/contracts STORE_GATEWAY_IDS.
+  provider       String
+  /// "test" or "live".
+  mode           String
+  /// JSON of the keys, AES-256-GCM encrypted with APP_ENCRYPTION_KEY. Never returned or logged.
+  credentialsEnc String
+  /// Masked account identifier for display.
+  keyHint        String
+  /// Shoppers pay with this one (partial unique index: at most one per store).
+  active         Boolean  @default(false)
+  verifiedAt     DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, provider])
+}
+
 model PaymentAccount {
   id               String               @id @default(uuid(7)) @db.Uuid
   storeId          String               @unique @db.Uuid

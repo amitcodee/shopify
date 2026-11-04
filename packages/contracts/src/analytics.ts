@@ -12,7 +12,7 @@ export const analyticsSchema = z.object({
   grossSales: z.number().int(),
   refunded: z.number().int(),
   orderCount: z.number().int(),
-  /** How many of `orderCount` were paid through the sandbox: no real money moved. */
+  /** How many of `orderCount` were paid in a sandbox or on test keys: no real money moved. */
   testOrderCount: z.number().int(),
   averageOrderValue: z.number().int(),
   daily: z.array(z.object({ date: z.string(), sales: z.number().int(), orders: z.number().int() })),

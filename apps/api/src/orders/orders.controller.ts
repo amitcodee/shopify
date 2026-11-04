@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   cancelOrderInputSchema,
@@ -78,6 +78,18 @@ export class OrdersController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<OrderDetail> {
     return this.orders.fulfill(store, orderId, body, user, meta);
+  }
+
+  @Post(':orderId/cash-collected')
+  @HttpCode(200)
+  @RequirePermission('orders:write')
+  cashCollected(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @Param('orderId', UuidParam) orderId: string,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<OrderDetail> {
+    return this.orders.recordCashCollected(store, orderId, user, meta);
   }
 
   @Post(':orderId/cancel')

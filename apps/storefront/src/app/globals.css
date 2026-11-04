@@ -428,6 +428,89 @@ body {
   --eyebrow-tracking: 0.2em;
 }
 
+[data-style='spotlight'] {
+  --display-weight: 700;
+  --display-tracking: -0.045em;
+  --display-leading: 0.98;
+  --title-weight: 650;
+  --card-weight: 550;
+  --price-weight: 600;
+  --btn-weight: 650;
+}
+[data-style='duo'] {
+  --display-weight: 500;
+  --display-tracking: -0.03em;
+  --display-leading: 1.02;
+  --title-weight: 500;
+  --card-weight: 500;
+  --price-weight: 400;
+  --eyebrow-tracking: 0.2em;
+  --btn-case: uppercase;
+  --btn-tracking: 0.14em;
+  --btn-weight: 600;
+}
+[data-style='lookbook'] {
+  --display-weight: 400;
+  --display-tracking: -0.04em;
+  --display-leading: 0.98;
+  --title-weight: 400;
+  --card-font: var(--store-heading-font);
+  --card-size: 1rem;
+  --card-weight: 400;
+  --price-weight: 400;
+  --eyebrow-tracking: 0.22em;
+  --btn-case: uppercase;
+  --btn-tracking: 0.16em;
+  --btn-weight: 500;
+}
+[data-style='ticker'] {
+  --display-weight: 800;
+  --display-tracking: -0.01em;
+  --display-leading: 0.92;
+  --title-weight: 800;
+  --card-size: 0.8125rem;
+  --card-weight: 700;
+  --card-case: uppercase;
+  --card-tracking: 0.05em;
+  --price-weight: 700;
+  --btn-case: uppercase;
+  --btn-tracking: 0.1em;
+  --btn-weight: 800;
+}
+[data-style='pop'] {
+  --display-weight: 800;
+  --display-tracking: -0.03em;
+  --display-leading: 1;
+  --title-weight: 750;
+  --card-weight: 600;
+  --price-weight: 700;
+  --btn-weight: 700;
+}
+[data-style='swiss'] {
+  --display-weight: 600;
+  --display-tracking: -0.05em;
+  --display-leading: 0.96;
+  --title-weight: 600;
+  --title-tracking: -0.03em;
+  --card-size: 0.8125rem;
+  --card-weight: 500;
+  --price-weight: 500;
+  --eyebrow-tracking: 0.08em;
+  --btn-weight: 600;
+}
+
+/* The moving headline band on the Ticker style. */
+@keyframes store-ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .store-ticker {
+    animation: store-ticker 60s linear infinite;
+  }
+}
+
 /* The template wall on the template store: columns drifting in opposite directions. */
 @keyframes tpl-wall-up {
   to {
@@ -870,6 +953,8 @@ html:has(body[data-theme]) {
 [data-style='market'],
 [data-style='rail'],
 [data-style='mosaic'],
+[data-style='ticker'],
+[data-style='pop'],
 [data-style='fresh'] {
   --logo-weight: 800;
 }

@@ -46,7 +46,8 @@ export class RazorpayPaymentProvider implements PaymentProvider {
   ) {}
 
   async createPayment(input: CreatePaymentInput): Promise<CreatedPayment> {
-    const transfer = input.amount - input.destination.applicationFee;
+    const destination = input.destination;
+    const transfer = destination ? input.amount - destination.applicationFee : 0;
     const link = await this.client.request<PaymentLink>('POST', '/v1/payment_links', {
       amount: input.amount,
       currency: input.currency,
@@ -61,22 +62,26 @@ export class RazorpayPaymentProvider implements PaymentProvider {
       callback_method: 'get',
       expire_by: Math.floor(Date.now() / 1000) + LINK_TTL_SECONDS,
       notes: { orderId: input.orderId, storeId: input.storeId },
-      options: {
-        order: {
-          transfers:
-            transfer > 0
-              ? [
-                  {
-                    account: input.destination.accountId,
-                    amount: transfer,
-                    currency: input.currency,
-                    notes: { orderId: input.orderId },
-                    on_hold: false,
-                  },
-                ]
-              : [],
-        },
-      },
+      ...(destination
+        ? {
+            options: {
+              order: {
+                transfers:
+                  transfer > 0
+                    ? [
+                        {
+                          account: destination.accountId,
+                          amount: transfer,
+                          currency: input.currency,
+                          notes: { orderId: input.orderId },
+                          on_hold: false,
+                        },
+                      ]
+                    : [],
+              },
+            },
+          }
+        : {}),
     });
     return { providerRef: link.id, checkoutUrl: link.short_url };
   }

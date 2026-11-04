@@ -7,8 +7,16 @@ import {
 } from '@repo/contracts';
 
 /** Compositions: which way the published design leads, from its template style. */
-const OVER_PHOTO = new Set(['minimal', 'fullbleed', 'noir', 'luxe', 'catalog', 'market']);
-const CENTERED = new Set(['classic', 'editorial', 'poster']);
+const OVER_PHOTO = new Set([
+  'minimal',
+  'fullbleed',
+  'noir',
+  'luxe',
+  'catalog',
+  'market',
+  'spotlight',
+]);
+const CENTERED = new Set(['classic', 'editorial', 'poster', 'lookbook', 'swiss']);
 
 function styleOf(theme: StoreOverview['theme']): string {
   const fromTemplate = theme.settings.template.split('-').pop() ?? '';

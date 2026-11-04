@@ -33,7 +33,7 @@ export class AnalyticsService {
       const zone = knownTimeZone(timezone);
       const [totals] = await tx.$queryRaw<{ gross: number; orders: number; test: number }[]>`
         SELECT COALESCE(ROUND(SUM(total / "exchangeRate")), 0)::int AS gross, COUNT(*)::int AS orders,
-               (COUNT(*) FILTER (WHERE "paymentProvider" = 'mock'))::int AS test
+               (COUNT(*) FILTER (WHERE "paymentProvider" = 'mock' OR "paymentProvider" LIKE 'own\_%\_test'))::int AS test
         FROM "Order"
         WHERE "storeId" = ${store.id}::uuid AND "paidAt" >= ${since}`;
       const [refunds] = await tx.$queryRaw<{ refunded: number }[]>`

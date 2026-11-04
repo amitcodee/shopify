@@ -45,12 +45,12 @@ export const FEATURE_AREAS: FeatureArea[] = [
     eyebrow: 'Online store',
     headline: 'A storefront that looks made for your brand',
     subhead:
-      'Start from one of 216 templates built for 12 industries, then shape it with your colors, fonts and layout — no code involved.',
+      'Start from one of 288 templates built for 12 industries, then shape it with your colors, fonts and layout — no code involved.',
     capabilities: [
       {
         icon: 'layout',
-        title: '216 templates',
-        body: '12 industries in 18 design styles, from minimal and bento to dark “noir”. Switch whenever you like; your products and wording stay put.',
+        title: '288 templates',
+        body: '12 industries in 24 design styles, from minimal and bento to dark “noir”. Switch whenever you like; your products and wording stay put.',
       },
       {
         icon: 'file',

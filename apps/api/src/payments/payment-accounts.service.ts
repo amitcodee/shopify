@@ -16,6 +16,7 @@ import type {
   ProviderLink,
 } from '@repo/contracts';
 import type { PaymentAccount, Prisma, PrismaClient, TenantTx } from '@repo/db';
+import { findStoreGateway } from '@repo/contracts';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { ENV, type Env } from '../config/env.js';
@@ -28,6 +29,8 @@ import {
   type ConnectProvider,
   type ConnectWebhookOutcome,
 } from './connect-provider.js';
+import { OWN_ACCOUNT, parseOwnProviderName } from './store-gateways/adapters.js';
+import { StoreGatewaysService } from './store-gateways/store-gateways.service.js';
 
 const NOT_ACCEPTING = 'This store is not accepting payments yet.';
 const SUMMARY_DAYS = 30;
@@ -37,6 +40,8 @@ export interface PaymentDestination {
   provider: string;
   accountId: string;
   feeBps: number;
+  /** The gateway cannot start a payment without the shopper's phone number. */
+  requiresPhone: boolean;
 }
 
 /**
@@ -55,15 +60,20 @@ export class PaymentAccountsService {
     @Inject(ENV) private readonly env: Env,
     private readonly plans: PlansService,
     private readonly audit: AuditService,
+    private readonly storeGateways: StoreGatewaysService,
   ) {}
 
   async overview(storeId: string): Promise<PaymentsOverview> {
     const since = new Date(Date.now() - SUMMARY_DAYS * 24 * 60 * 60 * 1000);
     const data = await this.tenantDb.run(storeId, async (tx) => {
-      const [account, subscription, store] = await Promise.all([
+      const [ownGateway, account, subscription, store] = await Promise.all([
+        this.storeGateways.active(tx, storeId),
         tx.paymentAccount.findUnique({ where: { storeId } }),
         this.plans.subscriptionFor(storeId, tx),
-        tx.store.findUniqueOrThrow({ where: { id: storeId }, select: { currency: true } }),
+        tx.store.findUniqueOrThrow({
+          where: { id: storeId },
+          select: { currency: true, codEnabled: true },
+        }),
       ]);
       const [paid, refunds, lost, openDisputes, disputes] = await Promise.all([
         tx.payment.aggregate({
@@ -100,9 +110,11 @@ export class PaymentAccountsService {
         }),
       ]);
       return {
+        ownGateway,
         account,
         subscription,
         currency: store.currency,
+        codEnabled: store.codEnabled,
         paid,
         refunds,
         lost,
@@ -120,11 +132,19 @@ export class PaymentAccountsService {
     const connected = account && account.status !== 'DISCONNECTED' ? account : null;
     return {
       gateways,
-      sandbox: connected
-        ? connected.provider === 'mock'
-        : gateways.length > 0 && gateways.every((g) => g.sandbox),
+      sandbox: data.ownGateway
+        ? false
+        : connected
+          ? connected.provider === 'mock'
+          : gateways.length > 0 && gateways.every((g) => g.sandbox),
       account: account ? this.toDto(account) : null,
-      acceptingPayments: connected !== null && this.isChargeable(connected),
+      acceptingPayments:
+        data.ownGateway !== null ||
+        data.codEnabled ||
+        (connected !== null && this.isChargeable(connected)),
+      activeStoreGateway: data.ownGateway
+        ? { label: data.ownGateway.info.label, mode: data.ownGateway.mode }
+        : null,
       transactionFeeBps: data.subscription.plan.transactionFeeBps,
       summary: {
         currency: data.currency,
@@ -277,12 +297,23 @@ export class PaymentAccountsService {
   }
 
   async acceptingPayments(tx: TenantTx, storeId: string): Promise<boolean> {
+    if (await this.storeGateways.active(tx, storeId)) return true;
     const account = await tx.paymentAccount.findUnique({ where: { storeId } });
     return account !== null && this.isChargeable(account);
   }
 
   /** Checkout guard: the store's sales destination, or 409 when it cannot take payments. */
   async requireDestination(tx: TenantTx, storeId: string): Promise<PaymentDestination> {
+    const own = await this.storeGateways.active(tx, storeId);
+    if (own) {
+      // Settles straight into the merchant's account, so there is no platform share to split.
+      return {
+        provider: own.providerName,
+        accountId: OWN_ACCOUNT,
+        feeBps: 0,
+        requiresPhone: own.info.requiresPhone,
+      };
+    }
     const account = await tx.paymentAccount.findUnique({ where: { storeId } });
     if (!account || !this.isChargeable(account)) throw new ConflictException(NOT_ACCEPTING);
     const { plan } = await this.plans.subscriptionFor(storeId, tx);
@@ -290,11 +321,17 @@ export class PaymentAccountsService {
       provider: account.provider,
       accountId: account.accountId,
       feeBps: plan.transactionFeeBps,
+      requiresPhone: false,
     };
   }
 
   /** Whether the store's gateway can charge in `currency` (presentment currencies). */
   supportsCurrency(providerName: string, currency: string): boolean {
+    const own = parseOwnProviderName(providerName);
+    if (own) {
+      const currencies = findStoreGateway(own)?.currencies;
+      return !currencies || currencies.includes(currency);
+    }
     const provider = this.providers.get(providerName);
     return Boolean(provider && (!provider.currencies || provider.currencies.includes(currency)));
   }
@@ -306,6 +343,14 @@ export class PaymentAccountsService {
         `This store cannot take payments in ${currency}. Switch currency to continue.`,
       ),
     );
+  }
+
+  /** The Payment.provider sales currently run on, for currency checks; null when none. */
+  async currentProviderName(tx: TenantTx, storeId: string): Promise<string | null> {
+    const own = await this.storeGateways.active(tx, storeId);
+    if (own) return own.providerName;
+    const account = await tx.paymentAccount.findUnique({ where: { storeId } });
+    return account?.provider ?? null;
   }
 
   /** Applies a verified Connect webhook. Unknown accounts are ignored (logged). */

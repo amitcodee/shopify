@@ -33,6 +33,8 @@ export interface PaidOutcome {
  */
 /** Provider name of payments collected outside the platform (see markPaidManually). */
 export const MANUAL_PAYMENT = 'manual';
+/** Order.paymentProvider of orders the shopper pays in cash when they are delivered. */
+export const CASH_ON_DELIVERY = 'cod';
 /** Provider name of the part of an order paid with a gift card (settled at checkout). */
 export const GIFT_CARD_PAYMENT = 'gift_card';
 
@@ -476,6 +478,50 @@ export class OrderLifecycle {
     await this.issuePurchasedGiftCards(tx, storeId, order);
     await this.webhooks.emitOrder(tx, storeId, 'orders/paid', order.id);
     await this.sendOrderEmails(tx, storeId, order);
+  }
+
+  /** A cash-on-delivery order is confirmed right away and stays unpaid until the cash is in. */
+  async confirmCashOnDelivery(tx: TenantTx, storeId: string, order: OrderWithLines): Promise<void> {
+    await tx.order.update({
+      where: { id: order.id },
+      data: { status: 'OPEN', expiresAt: null },
+    });
+    if (order.discountCode) await this.discounts.redeem(tx, storeId, order.discountCode);
+    if (order.cartId) await tx.cart.deleteMany({ where: { id: order.cartId, storeId } });
+    await this.event(
+      tx,
+      storeId,
+      order.id,
+      'cod_confirmed',
+      'Cash on delivery: payment is due on delivery.',
+    );
+    await this.sendOrderEmails(tx, storeId, order);
+  }
+
+  /** The merchant received the cash for a cash-on-delivery order. */
+  async recordCashCollected(
+    tx: TenantTx,
+    storeId: string,
+    order: OrderWithLines,
+    actorUserId: string,
+  ): Promise<void> {
+    await tx.payment.create({
+      data: {
+        storeId,
+        orderId: order.id,
+        provider: MANUAL_PAYMENT,
+        providerRef: `cod-${order.id}`,
+        amount: order.total - order.giftCardAmount,
+        currency: order.currency,
+        status: 'SUCCEEDED',
+      },
+    });
+    await tx.order.update({
+      where: { id: order.id },
+      data: { financialStatus: 'PAID', paidAt: new Date() },
+    });
+    await this.event(tx, storeId, order.id, 'paid', 'Cash collected on delivery.', { actorUserId });
+    await this.webhooks.emitOrder(tx, storeId, 'orders/paid', order.id);
   }
 
   /**

@@ -5,6 +5,7 @@ import { ActionForm, CheckboxField, Field, SubmitButton } from '@/components/for
 import { DisputeSummary } from '@/components/disputes';
 import { Icon } from '@/components/icons';
 import {
+  Badge,
   Alert,
   buttonClass,
   Card,
@@ -18,7 +19,13 @@ import { api, ApiError } from '@/lib/api';
 import { getStore } from '@/lib/session';
 import { ConfirmButton } from '../../confirm-button';
 import { SmallAction } from '../../settings/small-action';
-import { cancelOrderAction, fulfillAction, refundAction, sandboxDisputeAction } from '../actions';
+import {
+  cancelOrderAction,
+  fulfillAction,
+  recordCashAction,
+  refundAction,
+  sandboxDisputeAction,
+} from '../actions';
 import { FinancialBadge, FulfillmentBadge, OrderStatusBadge } from '../badges';
 import { ReturnsCard } from '../returns-card';
 
@@ -54,6 +61,7 @@ export default async function OrderPage({
             <OrderStatusBadge status={order.status} />
             <FinancialBadge status={order.financialStatus} />
             <FulfillmentBadge status={order.fulfillmentStatus} />
+            {order.cashOnDelivery ? <Badge tone="blue">Cash on delivery</Badge> : null}
           </>
         }
         actions={
@@ -183,6 +191,20 @@ export default async function OrderPage({
               ) : null}
             </dl>
           </Card>
+
+          {canWrite &&
+          order.cashOnDelivery &&
+          order.status === 'OPEN' &&
+          order.financialStatus === 'PENDING' ? (
+            <Card
+              title="Cash on delivery"
+              description={`Collect ${money(order.total - order.giftCardAmount)} on delivery, then record it here. It counts as a sale from that moment.`}
+            >
+              <ActionForm action={recordCashAction.bind(null, storeId, orderId)}>
+                <SubmitButton>Cash received</SubmitButton>
+              </ActionForm>
+            </Card>
+          ) : null}
 
           {canWrite && order.status === 'OPEN' && order.fulfillmentStatus === 'UNFULFILLED' ? (
             <Card

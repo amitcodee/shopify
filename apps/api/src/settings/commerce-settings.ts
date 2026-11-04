@@ -200,9 +200,9 @@ export class CommerceSettingsService {
       if (currencies.some((c) => c.currency === store.currency)) {
         throw new BadRequestException(`${store.currency} is the store currency already.`);
       }
-      const account = await tx.paymentAccount.findUnique({ where: { storeId } });
-      const unsupported = account
-        ? currencies.filter((c) => !this.payments.supportsCurrency(account.provider, c.currency))
+      const provider = await this.payments.currentProviderName(tx, storeId);
+      const unsupported = provider
+        ? currencies.filter((c) => !this.payments.supportsCurrency(provider, c.currency))
         : [];
       if (unsupported.length > 0) {
         throw new BadRequestException(

@@ -3,6 +3,7 @@ import {
   type PaymentAccount,
   type PaymentAccountStatus,
   type PaymentsOverview,
+  type StoreGatewaysOverview,
 } from '@repo/contracts';
 import Link from 'next/link';
 import { DisputeSummary } from '@/components/disputes';
@@ -22,6 +23,7 @@ import { ConfirmButton } from '../../confirm-button';
 import { SmallAction } from '../small-action';
 import { disconnectPaymentsAction, openPaymentsDashboardAction } from './actions';
 import { ConnectGateways } from './connect-gateways';
+import { StoreGateways } from './store-gateways';
 
 export const metadata = { title: 'Payments · Merchant Admin' };
 
@@ -66,6 +68,7 @@ export default async function PaymentsPage({
         api<PaymentsOverview>(base),
       )
     : await api<PaymentsOverview>(base);
+  const ownGateways = await api<StoreGatewaysOverview>(`/admin/stores/${storeId}/store-gateways`);
   const { account, summary } = payments;
   const money = (n: number) => formatMoney(n, summary.currency);
   const fee = `${(payments.transactionFeeBps / 100).toFixed(1)}%`;
@@ -75,6 +78,12 @@ export default async function PaymentsPage({
 
   return (
     <div className="space-y-6">
+      {payments.activeStoreGateway?.mode === 'test' ? (
+        <Alert tone="warning">
+          {payments.activeStoreGateway.label} is on test keys: shoppers can only use test cards and
+          no real money moves. Save your live keys to start selling.
+        </Alert>
+      ) : null}
       {payments.sandbox ? (
         <Alert tone="info">
           Sandbox mode: onboarding and payments are simulated and no money moves.
@@ -102,9 +111,20 @@ export default async function PaymentsPage({
         </Alert>
       ) : null}
 
+      <StoreGateways
+        storeId={storeId}
+        overview={ownGateways}
+        currency={summary.currency}
+        canManage={canManage}
+      />
+
       <Card
-        title="Payouts account"
-        description={`Shoppers pay on a secure page hosted by your payment provider. Sales are paid out to your bank account minus a ${fee} platform fee on your plan.`}
+        title="Or get paid through the platform"
+        description={
+          payments.activeStoreGateway
+            ? `Not in use: shoppers are paying through ${payments.activeStoreGateway.label}. Deactivate it above to use this instead.`
+            : `No gateway account of your own? Shoppers pay on a secure page and sales are paid out to your bank account minus a ${fee} platform fee on your plan.`
+        }
         actions={account ? statusBadge(account) : <Badge>Not set up</Badge>}
       >
         {connectable ? (

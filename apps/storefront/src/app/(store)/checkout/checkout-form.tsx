@@ -72,6 +72,7 @@ export function CheckoutForm({
   const [state, formAction] = useActionState(placeOrderAction, undefined);
   const [preview, setPreview] = useState(initial);
   const [country, setCountry] = useState('US');
+  const [wantsCod, setWantsCod] = useState(false);
   const [region, setRegion] = useState('');
   const [shippingRateId, setShippingRateId] = useState(initial.selectedShippingRateId ?? '');
   const [discountCode, setDiscountCode] = useState('');
@@ -81,6 +82,8 @@ export function CheckoutForm({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const money = (n: number) => formatMoney(n, preview.currency);
+  // Cash when the shopper picks it, or when it is the only way this store can take the order.
+  const cod = preview.cashOnDelivery && (wantsCod || !preview.acceptingPayments);
   const err = state?.fieldErrors ?? {};
 
   function refresh(next: {
@@ -212,7 +215,13 @@ export function CheckoutForm({
               </select>
             </div>
           </div>
-          <TextField label="Phone (optional)" name="phone" type="tel" autoComplete="tel" />
+          <TextField
+            label={preview.phoneRequired || cod ? 'Phone' : 'Phone (optional)'}
+            name="phone"
+            type="tel"
+            autoComplete="tel"
+            required={preview.phoneRequired || cod}
+          />
         </section>
 
         {preview.requiresShipping ? (
@@ -410,6 +419,57 @@ export function CheckoutForm({
         ) : null}
         {preview.amountDue === 0 ? (
           <Submit pendingLabel="Placing order…">Place order</Submit>
+        ) : cod && !preview.acceptingPayments ? (
+          <>
+            <input type="hidden" name="paymentMethod" value="cod" />
+            <Submit pendingLabel="Placing order…">Place order</Submit>
+            <p className="text-center text-xs text-zinc-500">
+              Pay {money(preview.amountDue)} in cash when your order is delivered.
+            </p>
+          </>
+        ) : cod || (preview.cashOnDelivery && preview.acceptingPayments) ? (
+          <>
+            <fieldset className="space-y-2">
+              <legend className="mb-2 text-sm font-medium text-ink">
+                How would you like to pay?
+              </legend>
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-zinc-200 p-3 text-sm">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="online"
+                  checked={!cod}
+                  onChange={() => setWantsCod(false)}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block font-medium">Pay online</span>
+                  <span className="block text-xs text-zinc-500">
+                    Card, UPI or wallet on a secure payment page
+                  </span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-zinc-200 p-3 text-sm">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="cod"
+                  checked={cod}
+                  onChange={() => setWantsCod(true)}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block font-medium">Cash on delivery</span>
+                  <span className="block text-xs text-zinc-500">
+                    Pay {money(preview.amountDue)} when your order arrives
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+            <Submit pendingLabel="Placing order…">
+              {cod ? 'Place order' : 'Continue to payment'}
+            </Submit>
+          </>
         ) : preview.acceptingPayments ? (
           <>
             <Submit pendingLabel="Placing order…">Continue to payment</Submit>

@@ -56,6 +56,16 @@ export async function refundAction(
   return { success: 'Refund issued.' };
 }
 
+export async function recordCashAction(storeId: string, orderId: string): Promise<FormState> {
+  try {
+    await api(`/admin/stores/${storeId}/orders/${orderId}/cash-collected`, { method: 'POST' });
+  } catch (error) {
+    return toFormState(error);
+  }
+  revalidatePath(path(storeId, orderId));
+  return { success: 'Cash recorded. The order is now paid.' };
+}
+
 export async function cancelOrderAction(storeId: string, orderId: string): Promise<void> {
   await api(`/admin/stores/${storeId}/orders/${orderId}/cancel`, {
     method: 'POST',

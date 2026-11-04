@@ -61,6 +61,10 @@ export const checkoutPreviewSchema = checkoutTotalsSchema.extend({
   warnings: z.array(z.string()),
   /** False until the store has connected a payout account that can take payments. */
   acceptingPayments: z.boolean(),
+  /** The store's payment gateway cannot start a payment without the shopper's phone number. */
+  phoneRequired: z.boolean(),
+  /** This order can be paid in cash on delivery. */
+  cashOnDelivery: z.boolean(),
   giftCard: z
     .object({
       lastCharacters: z.string(),
@@ -83,6 +87,7 @@ export const checkoutInputSchema = z.strictObject({
   discountCode: z.string().trim().max(50).optional(),
   giftCardCode: giftCardCodeInputSchema.optional(),
   note: z.string().trim().max(500).optional(),
+  paymentMethod: z.enum(['online', 'cod']).default('online'),
   /** Generated once per checkout page; retries with the same key never create a second order. */
   idempotencyKey: z.uuid(),
 });

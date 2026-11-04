@@ -6,6 +6,11 @@ function statusLabel(order: PublicOrder): string {
   if (order.status === 'CANCELLED') return 'Cancelled';
   if (order.financialStatus === 'REFUNDED') return 'Refunded';
   if (order.status === 'PENDING_PAYMENT') return 'Awaiting payment';
+  if (order.cashOnDelivery && order.financialStatus === 'PENDING') {
+    return order.fulfillmentStatus === 'FULFILLED'
+      ? 'Shipped — pay in cash on delivery'
+      : 'Confirmed — pay in cash on delivery';
+  }
   return order.fulfillmentStatus === 'FULFILLED' ? 'Shipped' : 'Confirmed — preparing your order';
 }
 

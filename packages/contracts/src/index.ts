@@ -17,6 +17,7 @@ export * from './orders.js';
 export * from './settings.js';
 export * from './platform.js';
 export * from './payments.js';
+export * from './store-gateways.js';
 export * from './security-headers.js';
 export * from './redirects.js';
 export * from './online-store.js';

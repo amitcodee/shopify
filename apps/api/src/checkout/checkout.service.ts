@@ -34,11 +34,17 @@ import {
 import { ENV, type Env } from '../config/env.js';
 import { TenantDb } from '../database/database.module.js';
 import { GiftCardLedger } from '../gift-cards/gift-card-ledger.js';
-import { GIFT_CARD_PAYMENT, OrderLifecycle } from '../orders/order-lifecycle.service.js';
+import {
+  CASH_ON_DELIVERY,
+  GIFT_CARD_PAYMENT,
+  OrderLifecycle,
+} from '../orders/order-lifecycle.service.js';
 import { PlanLimits } from '../platform/plans.service.js';
 import { StoreUrls } from '../orders/store-urls.js';
 import { applicationFee } from '../payments/connect-provider.js';
 import { PaymentAccountsService } from '../payments/payment-accounts.service.js';
+import { OWN_ACCOUNT } from '../payments/store-gateways/adapters.js';
+import { StoreGatewaysService } from '../payments/store-gateways/store-gateways.service.js';
 import { PAYMENT_PROVIDERS, type PaymentProvider } from '../payments/payment-provider.js';
 import { CartService, lineCustomization } from '../storefront/cart.service.js';
 import { type ShopContext, shopAmount, shopPrice } from '../storefront/store-resolver.js';
@@ -96,6 +102,7 @@ export class CheckoutService {
     private readonly urls: StoreUrls,
     private readonly limits: PlanLimits,
     private readonly paymentAccounts: PaymentAccountsService,
+    private readonly storeGateways: StoreGatewaysService,
     private readonly giftCards: GiftCardLedger,
     @Inject(PAYMENT_PROVIDERS) private readonly providers: Map<string, PaymentProvider>,
     @Inject(ENV) private readonly env: Env,
@@ -129,6 +136,8 @@ export class CheckoutService {
           : null,
         warnings: cart.warnings,
         acceptingPayments: await this.paymentAccounts.acceptingPayments(tx, shop.id),
+        phoneRequired: (await this.storeGateways.active(tx, shop.id))?.info.requiresPhone ?? false,
+        cashOnDelivery: await this.codAvailable(tx, shop, quote),
         giftCard: quote.giftCard,
         giftCardError: quote.giftCardError,
         amountDue: quote.amountDue,
@@ -211,8 +220,20 @@ export class CheckoutService {
       if (quote.giftCardError) throw new BadRequestException(quote.giftCardError);
       // Paid orders need somewhere to settle: no stock is reserved for a store that cannot
       // take payments yet.
+      const cod = input.paymentMethod === 'cod' && quote.amountDue > 0;
+      if (cod && !(await this.codAvailable(tx, shop, quote))) {
+        throw new BadRequestException('Cash on delivery is not available for this order.');
+      }
+      if (cod && !input.shippingAddress.phone) {
+        throw new BadRequestException('Enter a phone number for delivery.');
+      }
       const destination =
-        quote.amountDue > 0 ? await this.paymentAccounts.requireDestination(tx, shop.id) : null;
+        quote.amountDue > 0 && !cod
+          ? await this.paymentAccounts.requireDestination(tx, shop.id)
+          : null;
+      if (destination?.requiresPhone && !input.shippingAddress.phone) {
+        throw new BadRequestException('Enter a phone number to pay for this order.');
+      }
       if (destination && shop.currency !== shop.baseCurrency) {
         await this.paymentAccounts.requireCurrency(destination.provider, shop.currency);
       }
@@ -263,7 +284,7 @@ export class CheckoutService {
           accessTokenHash: hashToken(`pending:${input.idempotencyKey}`),
           checkoutKey: input.idempotencyKey,
           cartId: cartRow.id,
-          paymentProvider: destination?.provider ?? 'none',
+          paymentProvider: cod ? CASH_ON_DELIVERY : (destination?.provider ?? 'none'),
           note: input.note ?? null,
           expiresAt: new Date(Date.now() + this.env.ORDER_PAYMENT_TIMEOUT_MINUTES * 60_000),
           lines: {
@@ -307,14 +328,40 @@ export class CheckoutService {
 
       if (placed.total - placed.giftCardAmount === 0) {
         await this.lifecycle.markFreeOrderPaid(tx, shop.id, placed);
+      } else if (cod) {
+        await this.lifecycle.confirmCashOnDelivery(tx, shop.id, placed);
       }
       return placed;
     });
 
+    if (order.paymentProvider === CASH_ON_DELIVERY) {
+      return {
+        orderNumber: order.number,
+        paymentUrl: `${this.statusUrl(host, order.id)}?from=checkout`,
+      };
+    }
     if (order.total - order.giftCardAmount === 0) {
       return { orderNumber: order.number, paymentUrl: this.statusUrl(host, order.id) };
     }
     return this.openPayment(shop, host, order);
+  }
+
+  /**
+   * Cash can only change hands on a delivery, in the store's own currency. Gift cards are issued
+   * on payment, so buying one in cash would need the code emailed before the money arrives.
+   */
+  private async codAvailable(tx: TenantTx, shop: ShopContext, quote: Quote): Promise<boolean> {
+    if (quote.amountDue <= 0 || !quote.requiresShipping || shop.currency !== shop.baseCurrency) {
+      return false;
+    }
+    if (quote.lines.some((l) => l.isGiftCard)) return false;
+    const store = await tx.store.findUniqueOrThrow({
+      where: { id: shop.id },
+      select: { codEnabled: true, codMaxAmount: true },
+    });
+    return (
+      store.codEnabled && (store.codMaxAmount === null || quote.amountDue <= store.codMaxAmount)
+    );
   }
 
   async getMockPayment(shop: ShopContext, reference: string): Promise<MockPayment> {
@@ -547,7 +594,17 @@ export class CheckoutService {
       this.paymentAccounts.requireDestination(tx, shop.id),
     );
     const fee = applicationFee(amount, destination.feeBps);
-    const provider = this.providers.get(destination.provider);
+    const own = destination.accountId === OWN_ACCOUNT;
+    const provider = own
+      ? await this.storeGateways.forProviderName(shop.id, destination.provider)
+      : this.providers.get(destination.provider);
+    const address = await this.tenantDb.run(shop.id, async (tx) => {
+      const row = await tx.order.findUniqueOrThrow({
+        where: { id: order.id },
+        select: { shippingAddress: true },
+      });
+      return row.shippingAddress as { name?: string; phone?: string };
+    });
     if (!provider) throw new BadGatewayException('The payment provider is unavailable.');
     let created;
     try {
@@ -558,10 +615,12 @@ export class CheckoutService {
         amount,
         currency: order.currency,
         email: order.email,
+        phone: address.phone,
+        customerName: address.name,
         successUrl: `${this.statusUrl(host, order.id)}?from=checkout`,
         cancelUrl: `${origin}${cancelPath}`,
         idempotencyKey: `checkout-${order.id}`,
-        destination: { accountId: destination.accountId, applicationFee: fee },
+        destination: own ? null : { accountId: destination.accountId, applicationFee: fee },
       });
     } catch (error) {
       this.logger.error(`Payment session failed for order ${order.id}: ${String(error)}`);
@@ -625,6 +684,7 @@ export function toPublicOrder(
     returnableQuantity: Math.max(0, l.quantity - (returned.get(l.id) ?? 0)),
   }));
   return {
+    cashOnDelivery: order.paymentProvider === CASH_ON_DELIVERY,
     number: order.number,
     storeName,
     status: order.status,

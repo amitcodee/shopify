@@ -103,6 +103,8 @@ const envSchema = z
     DNS_VERIFIER: z.enum(['dns', 'mock']).optional(),
     /** Hostname merchants point their custom domains at (CNAME target). */
     PLATFORM_CNAME_TARGET: z.string().min(1).default('stores.localhost'),
+    /** IPv4 address bare domains (example.com) point an A record at, when the platform has one. */
+    PLATFORM_APEX_IP: z.ipv4().optional(),
     /** Key material for encrypting secrets at rest and signing short-lived tokens (≥ 32 chars). */
     APP_ENCRYPTION_KEY: z.string().min(32),
     /** Let webhooks reach private/loopback addresses (default: only outside production). */

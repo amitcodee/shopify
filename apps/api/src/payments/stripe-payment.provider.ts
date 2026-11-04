@@ -56,10 +56,14 @@ export class StripePaymentProvider implements PaymentProvider {
         metadata,
         payment_intent_data: {
           metadata,
-          on_behalf_of: input.destination.accountId,
-          transfer_data: { destination: input.destination.accountId },
-          ...(input.destination.applicationFee > 0
-            ? { application_fee_amount: input.destination.applicationFee }
+          ...(input.destination
+            ? {
+                on_behalf_of: input.destination.accountId,
+                transfer_data: { destination: input.destination.accountId },
+                ...(input.destination.applicationFee > 0
+                  ? { application_fee_amount: input.destination.applicationFee }
+                  : {}),
+              }
             : {}),
         },
       },

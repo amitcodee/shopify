@@ -33,9 +33,9 @@ const pick = (ids: string[]) =>
 
 /** Three columns of real template screens drifting past each other behind the headline. */
 const WALL = [
-  pick(['fashion-luxe', 'food-fresh', 'jewelry-noir', 'home-arch']),
-  pick(['beauty-arch', 'electronics-rail', 'sports-mosaic', 'art-editorial']),
-  pick(['home-showroom', 'kids-bento', 'books-classic', 'pets-market']),
+  pick(['fashion-lookbook', 'food-pop', 'electronics-spotlight', 'home-arch']),
+  pick(['beauty-duo', 'electronics-rail', 'sports-ticker', 'art-swiss']),
+  pick(['home-showroom', 'kids-pop', 'jewelry-noir', 'fashion-mosaic']),
 ];
 
 function WallScreen({ template }: { template: ThemeTemplate }) {

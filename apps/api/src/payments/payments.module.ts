@@ -22,6 +22,14 @@ import { PaymentWebhooksService } from './payment-webhooks.service.js';
 import { type FetchLike, RazorpayClient } from './razorpay/razorpay-client.js';
 import { RazorpayConnectProvider } from './razorpay/razorpay-connect.provider.js';
 import { RazorpayPaymentProvider } from './razorpay/razorpay-payment.provider.js';
+import {
+  StoreGatewayPublicController,
+  StoreGatewaysController,
+} from './store-gateways/store-gateways.controller.js';
+import {
+  STORE_GATEWAY_FETCH,
+  StoreGatewaysService,
+} from './store-gateways/store-gateways.service.js';
 import { StripeConnectProvider } from './stripe-connect.provider.js';
 import { StripePaymentProvider } from './stripe-payment.provider.js';
 
@@ -91,15 +99,32 @@ export const GATEWAYS = Symbol('GATEWAYS');
 
 @Module({
   imports: [OrdersCoreModule],
-  controllers: [PaymentWebhooksController, PaymentAccountsController, ConnectWebhooksController],
+  controllers: [
+    PaymentWebhooksController,
+    PaymentAccountsController,
+    ConnectWebhooksController,
+    StoreGatewaysController,
+    StoreGatewayPublicController,
+  ],
   providers: [
     { provide: GATEWAYS, inject: [ENV], useFactory: (env: Env) => createGateways(env) },
     { provide: PAYMENT_PROVIDERS, inject: [GATEWAYS], useFactory: (g: Gateways) => g.payments },
     { provide: CONNECT_PROVIDERS, inject: [GATEWAYS], useFactory: (g: Gateways) => g.connect },
+    {
+      provide: STORE_GATEWAY_FETCH,
+      useValue: (url: string, init: RequestInit) => fetch(url, init),
+    },
+    StoreGatewaysService,
     PaymentWebhooksService,
     PaymentAccountsService,
     ConnectWebhooksService,
   ],
-  exports: [PAYMENT_PROVIDERS, CONNECT_PROVIDERS, PaymentWebhooksService, PaymentAccountsService],
+  exports: [
+    PAYMENT_PROVIDERS,
+    CONNECT_PROVIDERS,
+    PaymentWebhooksService,
+    PaymentAccountsService,
+    StoreGatewaysService,
+  ],
 })
 export class PaymentsModule {}
