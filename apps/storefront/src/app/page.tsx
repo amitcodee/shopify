@@ -132,7 +132,15 @@ export default async function HomePage() {
         <FeaturedCollections
           collections={features}
           dense={preset === 'catalog'}
-          captionBelow={['editorial', 'classic', 'luxe', 'showroom', 'arch', 'lookbook', 'duo'].includes(style)}
+          captionBelow={[
+            'editorial',
+            'classic',
+            'luxe',
+            'showroom',
+            'arch',
+            'lookbook',
+            'duo',
+          ].includes(style)}
         />
       ) : null,
     featuredProducts: settings.showFeatured ? (

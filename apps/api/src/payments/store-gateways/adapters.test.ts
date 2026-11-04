@@ -219,7 +219,7 @@ describe('PhonePe', () => {
     const pay = calls.at(-1);
     expect(pay?.url).toBe('https://api-preprod.phonepe.com/apis/pg-sandbox/checkout/v2/pay');
     expect(new Headers(pay?.init.headers).get('authorization')).toBe('O-Bearer T');
-    const body = JSON.parse(String(pay?.init.body));
+    const body = JSON.parse(pay?.init.body as string);
     expect(body.amount).toBe(10050);
     expect(body.paymentFlow.merchantUrls.redirectUrl).toBe(
       `https://api.example/return?reference=${created.providerRef}`,

@@ -44,8 +44,9 @@ test('merchant turns on cash on delivery; shopper orders with it; merchant recor
   await merchant.getByRole('link', { name: '#1001' }).click();
   await expect(merchant.getByText('Cash on delivery').first()).toBeVisible();
   await merchant.getByRole('button', { name: 'Cash received' }).click();
-  await expect(merchant.getByText('Cash recorded. The order is now paid.')).toBeVisible();
   await expect(merchant.getByRole('button', { name: 'Cash received' })).toHaveCount(0);
+  await expect(merchant.getByText('Cash collected on delivery.')).toBeVisible();
+  await expect(merchant.getByText('Paid', { exact: true }).first()).toBeVisible();
 });
 
 test('Connect opens the gateway keys page and the keys form in one click', async ({ browser }) => {
