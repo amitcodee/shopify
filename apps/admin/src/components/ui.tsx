@@ -60,7 +60,7 @@ export function ButtonLink({
 
 /** Inline text link in the accent colour. */
 export const linkClass =
-  'font-medium text-indigo-600 underline-offset-2 hover:text-indigo-500 hover:underline';
+  'font-medium text-indigo-600 underline decoration-slate-300 underline-offset-2 hover:decoration-current';
 
 /** Shared look for hand-placed inputs/selects (forms built without <Field>). */
 export const inputClass =

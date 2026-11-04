@@ -1,9 +1,11 @@
 @import 'tailwindcss';
+@source '../../../../packages/template-preview/src';
 
 /*
- * Admin design tokens. Neutrals are Tailwind's slate scale; the single brand accent is indigo
- * (it matches the logo). Semantic colours: emerald = success, amber = attention, red = critical,
- * sky = informational.
+ * Admin design tokens. Neutrals are Tailwind's slate scale. The accent is near-black: screens are
+ * written with the indigo utilities, and this file remaps that scale to neutrals, so one place
+ * sets the look. Semantic colours: emerald = success, amber = attention, red = critical,
+ * sky = informational. Blue is kept for chart data only (--chart-current).
  */
 @theme {
   /* Motion: shared easings (ease-out-soft, ease-spring utilities); durations on :root below. */
@@ -12,7 +14,18 @@
   --font-sans:
     'Inter', 'Inter var', 'Segoe UI Variable Text', 'Segoe UI', ui-sans-serif, system-ui,
     -apple-system, 'Helvetica Neue', Arial, sans-serif;
-  --color-canvas: #f5f6f8;
+  --color-canvas: #f7f7f8;
+  --color-indigo-50: #f4f4f5;
+  --color-indigo-100: #e8e8ea;
+  --color-indigo-200: #d6d6da;
+  --color-indigo-300: #b4b4bb;
+  --color-indigo-400: #7a7a84;
+  --color-indigo-500: #3f3f46;
+  --color-indigo-600: #18181b;
+  --color-indigo-700: #27272a;
+  --color-indigo-800: #18181b;
+  --color-indigo-900: #18181b;
+  --color-indigo-950: #09090b;
   /* Darker than Tailwind's slate so small muted text stays readable (WCAG AA). */
   --color-slate-400: #66758a;
   --color-slate-500: #556379;
@@ -150,6 +163,19 @@
   }
 }
 
+/* Chart data colors (validated for color-blind separation) and the striped bar fill. */
+:root {
+  --chart-current: #2563eb;
+  --chart-previous: #71717a;
+}
+.bar-hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, currentColor 88%, transparent) 0 3px,
+    color-mix(in srgb, currentColor 62%, transparent) 3px 5px
+  );
+}
+
 /*
  * Dark theme. Every screen is written with the slate scale and white, so remapping those variables
  * themes the whole admin. The root layout sets data-mode before first paint.
@@ -171,12 +197,18 @@
   --color-slate-950: #f8fafc;
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-raised: 0 1px 2px 0 rgb(0 0 0 / 0.4), 0 6px 16px -4px rgb(0 0 0 / 0.5);
-  --color-indigo-50: #1c1f47;
-  --color-indigo-100: #262a5c;
-  --color-indigo-200: #343a78;
-  --color-indigo-700: #c7d2fe;
-  --color-indigo-800: #c7d2fe;
-  --color-indigo-900: #e0e7ff;
+  --color-indigo-50: #1d2630;
+  --color-indigo-100: #2a3541;
+  --color-indigo-200: #3c4957;
+  --color-indigo-300: #66758a;
+  --color-indigo-400: #8493a3;
+  --color-indigo-500: #475462;
+  --color-indigo-600: #36424f;
+  --color-indigo-700: #cad3dc;
+  --color-indigo-800: #dde3e9;
+  --color-indigo-900: #eff2f5;
+  --chart-current: #3b82f6;
+  --chart-previous: #8493a3;
   --color-red-50: #34161a;
   --color-red-100: #451c21;
   --color-red-200: #642a30;
@@ -221,7 +253,7 @@
 
 /* These colors also fill buttons, so only their text uses are lightened. */
 [data-mode='dark'] :is(.text-indigo-500, .text-indigo-600, .hover\:text-indigo-600:hover) {
-  color: #a5b4fc;
+  color: #dde3e9;
 }
 [data-mode='dark']
   :is(

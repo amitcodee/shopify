@@ -26,6 +26,9 @@ importers:
       '@repo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@repo/template-preview':
+        specifier: workspace:*
+        version: link:../../packages/template-preview
       next:
         specifier: 16.4.4
         version: 16.4.4(@opentelemetry/api@1.10.0)(@playwright/test@1.64.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -169,6 +172,9 @@ importers:
       '@repo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@repo/template-preview':
+        specifier: workspace:*
+        version: link:../../packages/template-preview
       next:
         specifier: 16.4.4
         version: 16.4.4(@opentelemetry/api@1.10.0)(@playwright/test@1.64.1)(@types/node@24.19.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -291,6 +297,19 @@ importers:
       typescript-eslint:
         specifier: 8.71.2
         version: 8.71.2(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)
+
+  packages/template-preview:
+    dependencies:
+      '@repo/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      '@types/react':
+        specifier: 19.3.0
+        version: 19.3.0
+      react:
+        specifier: 19.3.1
+        version: 19.3.1
 
   packages/tsconfig: {}
 

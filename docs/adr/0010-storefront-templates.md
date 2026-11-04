@@ -18,8 +18,8 @@ our CSP and tenant-isolation guarantees.
   header, product card, image shape, spacing and footer styles, a 2–5 column grid, and short
   plain-text copy. Every field has a default, so themes saved before a field existed still parse.
 - **Templates** are named bundles of those settings, generated in `@repo/contracts`
-  (`THEME_TEMPLATES`): 12 industries (palettes, fonts, safe default copy) × 14 design styles
-  (layout tokens) = 168 templates. Each style has its own hero composition and typographic
+  (`THEME_TEMPLATES`): 12 industries (palettes, fonts, safe default copy) × 18 design styles
+  (layout tokens) = 216 templates. Each style has its own hero composition and typographic
   voice in the storefront, keyed by the style id in `settings.template`; new styles reuse the
   nearest `preset`, so adding one needs no schema or data change. Applying one is an ordinary theme save; the merchant's own
   headline, tagline, button label, section title and announcement are kept when set

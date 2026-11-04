@@ -1,0 +1,19 @@
+{
+  "name": "@repo/template-preview",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Miniature storefronts drawn from template settings, shared by the marketing site and the admin.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@repo/contracts": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "*"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "react": "19.3.1"
+  }
+}

@@ -1,17 +1,18 @@
 'use client';
 
 import {
+  TEMPLATE_LOOKS,
   THEME_INDUSTRIES,
   THEME_PREVIEW_PARAM,
   THEME_STYLES,
   THEME_TEMPLATES,
   type ThemeTemplate,
 } from '@repo/contracts';
+import { TemplateScreen } from '@repo/template-preview';
 import { useActionState, useDeferredValue, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Alert, Badge, buttonClass, inputClass } from '@/components/ui';
 import type { FormState } from '@/lib/form';
-import { TemplateThumbnail } from './template-thumbnail';
 
 type ApplyAction = (state: FormState, formData: FormData) => Promise<FormState>;
 
@@ -34,6 +35,7 @@ export function TemplateGallery({
   applyAction?: ApplyAction;
 }) {
   const [industry, setIndustry] = useState('all');
+  const [look, setLook] = useState('all');
   const [style, setStyle] = useState('all');
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
@@ -44,17 +46,55 @@ export function TemplateGallery({
   const [dismissed, setDismissed] = useState<FormState>(undefined);
 
   const needle = deferredQuery.trim().toLowerCase();
+  const lookStyles: readonly string[] | undefined = TEMPLATE_LOOKS.find(
+    (l) => l.id === look,
+  )?.styles;
+  const styleOptions = lookStyles
+    ? THEME_STYLES.filter((s) => lookStyles.includes(s.id))
+    : THEME_STYLES;
   const visible = THEME_TEMPLATES.filter(
     (t) =>
+      (!lookStyles || lookStyles.includes(t.style)) &&
       (industry === 'all' || t.industry === industry) &&
       (style === 'all' || t.style === style) &&
       (!needle || t.name.toLowerCase().includes(needle)),
   );
-  const filtered = industry !== 'all' || style !== 'all' || needle !== '';
+  const filtered = look !== 'all' || industry !== 'all' || style !== 'all' || needle !== '';
 
   return (
     <div className="space-y-4">
       <div className="space-y-3">
+        <div
+          role="group"
+          aria-label="Look"
+          className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6"
+        >
+          {[{ id: 'all', label: 'All looks', description: 'Every design' }, ...TEMPLATE_LOOKS].map(
+            (l) => (
+              <button
+                key={l.id}
+                type="button"
+                aria-pressed={look === l.id}
+                onClick={() => {
+                  setLook(l.id);
+                  setStyle('all');
+                }}
+                className={`rounded-xl border p-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${
+                  look === l.id
+                    ? 'border-slate-900 bg-slate-900 text-white'
+                    : 'border-slate-200 bg-white text-slate-900 hover:border-slate-400'
+                }`}
+              >
+                <span className="block text-[13px] leading-5 font-semibold">{l.label}</span>
+                <span
+                  className={`mt-0.5 line-clamp-2 block text-xs leading-4 ${look === l.id ? 'text-white opacity-75' : 'text-slate-500'}`}
+                >
+                  {l.description}
+                </span>
+              </button>
+            ),
+          )}
+        </div>
         <div
           role="group"
           aria-label="Industry"
@@ -95,7 +135,7 @@ export function TemplateGallery({
               className={`${inputClass} w-full py-2`}
             >
               <option value="all">All styles</option>
-              {THEME_STYLES.map((s) => (
+              {styleOptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.label}
                 </option>
@@ -133,6 +173,7 @@ export function TemplateGallery({
           <button
             type="button"
             onClick={() => {
+              setLook('all');
               setIndustry('all');
               setStyle('all');
               setQuery('');
@@ -198,24 +239,22 @@ function TemplateCard({
   return (
     <li
       // Off-screen cards skip layout and paint until scrolled near.
-      style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 390px' }}
-      className={`group flex min-w-0 flex-col overflow-hidden rounded-xl border bg-white shadow-card transition-shadow hover:shadow-raised ${
-        current ? 'border-indigo-500 ring-2 ring-indigo-500/25' : 'border-slate-200/90'
+      style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 450px' }}
+      className={`group/template flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-white shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:shadow-raised ${
+        current ? 'border-slate-900 ring-2 ring-slate-900/20' : 'border-slate-200/90'
       }`}
     >
       <div className="border-b border-slate-100">
-        <TemplateThumbnail
-          photos={template.industry}
-          preset={template.preset}
-          settings={template.settings}
-          storeName={template.name}
-          heroTitle={template.sample.heroTitle}
-          announcement={template.sample.announcement}
-        />
+        <div aria-hidden className="flex items-center gap-1.5 bg-slate-100 px-3 py-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+          <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+          <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+        </div>
+        <TemplateScreen template={template} height="19rem" />
       </div>
       <div className="flex flex-1 flex-col gap-1 px-4 pt-3 pb-4">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="truncate text-sm font-semibold text-slate-900">{template.name}</h3>
+          <h3 className="truncate text-[15px] font-semibold text-slate-900">{template.name}</h3>
           {current ? <Badge tone="indigo">Current</Badge> : null}
         </div>
         <p className="text-xs font-medium text-slate-500">

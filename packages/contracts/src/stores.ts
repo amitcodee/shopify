@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { currencyCodeSchema, emailSchema } from './common.js';
-import { permissionSchema, storeRoleSchema } from './permissions.js';
+import { permissionSchema, type StoreRole, storeRoleSchema } from './permissions.js';
+import type { Theme } from './settings.js';
 
 export const RESERVED_SUBDOMAINS = [
   'www',
@@ -79,3 +80,30 @@ export const storeDetailSchema = storeSummarySchema.extend({
   createdAt: z.iso.datetime(),
 });
 export type StoreDetail = z.infer<typeof storeDetailSchema>;
+
+/**
+ * One card on the store picker. Every number is gated by the same permission as the page it comes
+ * from, so a field is null when this member may not see it (or the store is suspended).
+ */
+export interface StoreOverview extends StoreSummary {
+  createdAt: string;
+  currency: string;
+  timezone: string;
+  passwordProtected: boolean;
+  /** The published theme and up to four product photos, to draw a preview of the store. */
+  theme: Theme;
+  photos: { url: string; alt: string }[];
+  metrics: {
+    /** Products on sale now. */
+    products: number | null;
+    customers: number | null;
+    /** Paid orders, all time. */
+    orders: number | null;
+    lastOrderAt: string | null;
+    /** Gross sales from orders paid in the last 30 days, in minor units. */
+    sales30d: number | null;
+  };
+  /** Up to five names, earliest member first; `count` is the whole team. */
+  team: { count: number; members: { name: string; role: StoreRole }[] } | null;
+  plan: { name: string; status: string; trialEndsAt: string | null } | null;
+}

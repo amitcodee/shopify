@@ -1,4 +1,4 @@
-import { findThemeTemplate, parseTheme, type Theme } from '@repo/contracts';
+import { findThemeTemplate, parseTheme, type StoreOverview, type Theme } from '@repo/contracts';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { buttonClass, Card } from '@/components/ui';
@@ -8,7 +8,7 @@ import { storefrontUrlFor } from '@/lib/storefront';
 import { applyTemplateAction } from '../commerce-actions';
 import { CustomizeForm } from './customize-form';
 import { TemplateGallery } from './template-gallery';
-import { TemplateThumbnail } from './template-thumbnail';
+import { StorePreview } from '../../../../stores/store-preview';
 
 type Tab = 'templates' | 'customize';
 
@@ -21,9 +21,10 @@ export default async function ThemePage({
 }) {
   const [{ storeId }, { tab: rawTab }] = await Promise.all([params, searchParams]);
   const tab: Tab = rawTab === 'customize' ? 'customize' : 'templates';
-  const [store, saved] = await Promise.all([
+  const [store, saved, overview] = await Promise.all([
     getStore(storeId),
     api<Theme>(`/admin/stores/${storeId}/theme`),
+    api<StoreOverview[]>('/admin/stores/overview'),
   ]);
   // Fills defaults for any field the stored theme predates, so every control has a value.
   const theme = parseTheme(saved.preset, saved.settings);
@@ -37,14 +38,13 @@ export default async function ThemePage({
     <div className="space-y-6">
       <section className="flex flex-col gap-5 rounded-xl border border-slate-200/90 bg-white p-4 shadow-card sm:flex-row sm:items-center sm:p-5">
         <div className="w-full shrink-0 overflow-hidden rounded-lg border border-slate-200 shadow-xs sm:w-60">
-          <TemplateThumbnail
-            photos={current?.industry}
-            preset={theme.preset}
-            settings={s}
-            storeName={store.name}
-            heroTitle={s.heroTitle || store.name}
-            announcement={s.announcement}
-            height={140}
+          <StorePreview
+            store={{
+              name: store.name,
+              theme,
+              photos: overview.find((item) => item.id === storeId)?.photos ?? [],
+            }}
+            address={storefrontUrlFor(store.subdomain)}
           />
         </div>
         <div className="min-w-0 flex-1">

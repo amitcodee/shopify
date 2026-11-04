@@ -1,8 +1,16 @@
 /* eslint-disable @next/next/no-img-element -- static same-origin photos with explicit sizes; next/image adds nothing here. */
 import { contrastingText, THEME_FONT_STACKS as FONTS, type ThemeTemplate } from '@repo/contracts';
 import type { CSSProperties, ReactNode } from 'react';
-import { industryPhoto, productPhoto } from './photos';
 import { sampleCategories, sampleProduct } from './template-samples';
+
+function industryPhoto(industry: string): string {
+  return `/media/templates/${industry}/hero.webp`;
+}
+
+/** Product photo `n` (1-4, wrapping) for an industry. */
+function productPhoto(industry: string, n: number): string {
+  return `/media/templates/${industry}/p${((((n - 1) % 4) + 4) % 4) + 1}.webp`;
+}
 
 /** Corner radius per template setting, in em of the thumbnail's base size. */
 const RADII = { none: 0, small: 0.25, medium: 0.55, large: 1, pill: 1.3 } as const;
@@ -93,6 +101,7 @@ export function TemplateThumb({
   scale = 10,
   priority = false,
   phone = false,
+  fullPage = false,
 }: {
   template: ThemeTemplate;
   tiles?: number;
@@ -106,6 +115,8 @@ export function TemplateThumb({
   priority?: boolean;
   /** Phone layout: stacked hero and a two-column grid. */
   phone?: boolean;
+  /** Also draw the sections below the products: collections, story, newsletter and footer. */
+  fullPage?: boolean;
 }) {
   const s = template.settings;
   const r = `${RADII[s.radius]}em`;
@@ -880,6 +891,177 @@ export function TemplateThumb({
         </div>
       );
       break;
+    case 'rail':
+      hero = (
+        <div className={phone ? 'grid' : 'grid grid-cols-[1fr_3.4fr]'} style={{ gap: '0.45em' }}>
+          {phone ? null : (
+            <div style={{ border: `1px solid ${tint(s.textColor, 14)}`, borderRadius: r }}>
+              <p
+                style={{
+                  background: s.brandColor,
+                  color: onBrand,
+                  fontSize: '0.5em',
+                  fontWeight: 650,
+                  margin: 0,
+                  padding: '0.7em 0.9em',
+                }}
+              >
+                Collections
+              </p>
+              {[...categories, 'New in', 'Sale'].map((c) => (
+                <p
+                  key={c}
+                  className="flex items-center justify-between truncate"
+                  style={{ fontSize: '0.5em', margin: 0, padding: '0.7em 0.9em', fontWeight: 500 }}
+                >
+                  {c}
+                  <Icon name="arrow" size={0.9} />
+                </p>
+              ))}
+            </div>
+          )}
+          <div>
+            <div
+              className="relative flex items-center overflow-hidden"
+              style={{ minHeight: phone ? '10em' : '10.5em', borderRadius: r, background: '#111' }}
+            >
+              <div style={fill}>
+                <Img src={hero1} priority={priority} />
+              </div>
+              <div
+                style={{
+                  ...fill,
+                  background:
+                    'linear-gradient(to right, rgb(0 0 0 / 0.72), rgb(0 0 0 / 0.35), transparent)',
+                }}
+              />
+              <div className="relative" style={{ padding: '1em 1.2em', maxWidth: '68%' }}>
+                {title('#fff', phone ? 1.35 : 1.5)}
+                {subtitle('#fff')}
+                {cta('#fff', '#111')}
+              </div>
+            </div>
+            {phone ? null : (
+              <div className="grid grid-cols-3" style={{ gap: '0.45em', marginTop: '0.45em' }}>
+                {[1, 2, 3].map((n) => (
+                  <div key={n}>{photo(extra(n), { borderRadius: r, aspectRatio: '16 / 9' })}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+      break;
+    case 'mosaic': {
+      const block = (label: string, bg: string, fg: string) => (
+        <div
+          className="flex flex-col justify-between"
+          style={{ background: bg, color: fg, padding: '0.8em', minHeight: '5.5em' }}
+        >
+          <span style={{ ...heading, fontSize: '0.8em', fontWeight: 700 }}>{label}</span>
+          <Icon name="arrow" size={1} />
+        </div>
+      );
+      hero = (
+        <div className="grid grid-cols-2">
+          <div style={{ background: s.brandColor, padding: '1.2em 1.1em' }}>
+            {title(onBrand, phone ? 1.3 : 1.6)}
+            {subtitle(onBrand)}
+            {cta(onBrand, s.brandColor)}
+          </div>
+          {photo(hero1, { minHeight: '8em' })}
+          <div className="grid grid-cols-2">
+            {photo(extra(1), { minHeight: '5.5em' })}
+            {block(categories[0] ?? 'New in', s.accentColor, onAccent)}
+          </div>
+          <div className="grid grid-cols-2">
+            {photo(extra(2), { minHeight: '5.5em' })}
+            {block(categories[1] ?? 'Sale', s.textColor, s.backgroundColor)}
+          </div>
+        </div>
+      );
+      break;
+    }
+    case 'showroom':
+      hero = (
+        <div style={{ background: s.surfaceColor, borderRadius: r, padding: '1.3em' }}>
+          <div
+            className={phone ? 'grid' : 'grid grid-cols-[1fr_1.35fr] items-end'}
+            style={{ gap: '1.2em' }}
+          >
+            <div>
+              {eyebrow(template.name, muted)}
+              {title(s.brandColor, phone ? 1.35 : 1.6, { fontWeight: 600 })}
+              {subtitle(muted)}
+              {cta()}
+            </div>
+            {photo(hero1, { aspectRatio: '4 / 3', borderRadius: r })}
+          </div>
+          {phone ? null : (
+            <div
+              className="grid grid-cols-[1fr_1fr_1.2fr] items-end"
+              style={{ gap: '1em', marginTop: '0.9em' }}
+            >
+              {photo(extra(1), { aspectRatio: '1', borderRadius: r })}
+              {photo(extra(2), { aspectRatio: '1', borderRadius: r })}
+              <div>
+                {categories.map((c) => (
+                  <p
+                    key={c}
+                    className="flex items-center justify-between"
+                    style={{
+                      borderTop: `1px solid ${tint(s.textColor, 18)}`,
+                      fontSize: '0.52em',
+                      fontWeight: 550,
+                      margin: 0,
+                      padding: '0.55em 0',
+                    }}
+                  >
+                    {c}
+                    <Icon name="arrow" size={0.9} />
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+      break;
+    case 'arch':
+      hero = (
+        <div
+          className={phone ? 'grid' : 'grid grid-cols-[1fr_1.25fr] items-end'}
+          style={{
+            background: s.surfaceColor,
+            borderRadius: `calc(${r} * 1.6)`,
+            padding: '1.4em 1.4em 0',
+            gap: '1em',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ paddingBottom: phone ? 0 : '1.2em' }}>
+            {eyebrow(template.name, s.accentColor)}
+            {title(s.brandColor, phone ? 1.4 : 1.7, { fontWeight: 500 })}
+            {subtitle(s.textColor)}
+            {cta()}
+          </div>
+          <div className="grid grid-cols-3 items-end" style={{ gap: '0.3em' }}>
+            {[extra(1), hero1, extra(2)].map((src, i) => (
+              <div
+                key={src}
+                className="relative overflow-hidden"
+                style={{
+                  borderRadius: '99em 99em 0 0',
+                  aspectRatio: i === 1 ? '3 / 5.4' : i === 0 ? '3 / 4' : '3 / 4.6',
+                }}
+              >
+                <Img src={src} priority={priority} />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+      break;
     default:
       // minimal: one large photo with the headline set into its lower corner.
       hero = (
@@ -1138,6 +1320,143 @@ export function TemplateThumb({
     </span>
   );
 
+  // The rest of the homepage, in the storefront's default section order.
+  const sectionTitle = (text: string, label: string) => (
+    <div style={{ marginTop: `${pad * 1.5}em`, marginBottom: '0.7em' }}>
+      {eyebrow(label, muted)}
+      <p
+        style={{
+          ...heading,
+          fontSize: '1em',
+          fontWeight: 700,
+          margin: '0.2em 0 0',
+          lineHeight: 1.1,
+        }}
+      >
+        {text}
+      </p>
+    </div>
+  );
+  const belowProducts = fullPage ? (
+    <>
+      {sectionTitle('Collections', 'Shop by category')}
+      <div className="grid grid-cols-3" style={{ gap: `${pad * 0.7}em` }}>
+        {categories.slice(0, 3).map((name, i) => (
+          <div
+            key={name}
+            className="relative flex items-end overflow-hidden"
+            style={{ aspectRatio: '4 / 5', borderRadius: r, background: s.surfaceColor }}
+          >
+            <div style={fill}>
+              <Img src={productPhoto(ind, i + 2 + offset)} square priority={priority} />
+            </div>
+            <div
+              style={{
+                ...fill,
+                background: 'linear-gradient(to top, rgb(0 0 0 / 0.65), transparent 55%)',
+              }}
+            />
+            <span
+              className="relative truncate"
+              style={{ color: '#ffffff', fontSize: '0.7em', fontWeight: 650, padding: '0.8em' }}
+            >
+              {name}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div
+        className="grid grid-cols-2 items-stretch overflow-hidden"
+        style={{ marginTop: `${pad * 1.5}em`, background: s.surfaceColor, borderRadius: r }}
+      >
+        {photo(hero1, { minHeight: '11em' })}
+        <div className="flex flex-col justify-center" style={{ padding: '1.4em' }}>
+          {eyebrow('Our story', muted)}
+          <p
+            style={{
+              ...heading,
+              color: s.brandColor,
+              fontSize: '1.2em',
+              fontWeight: 700,
+              lineHeight: 1.1,
+              margin: '0.3em 0 0',
+            }}
+          >
+            Made with care
+          </p>
+          <p style={{ fontSize: '0.58em', lineHeight: 1.6, margin: '0.8em 0 0', opacity: 0.75 }}>
+            Tell shoppers who you are, what you make and why it matters.
+          </p>
+        </div>
+      </div>
+      <div
+        className="text-center"
+        style={{
+          background: s.brandColor,
+          color: onBrand,
+          borderRadius: r,
+          marginTop: `${pad * 1.5}em`,
+          padding: '1.6em 1.2em',
+        }}
+      >
+        <p style={{ ...heading, fontSize: '1.1em', fontWeight: 700, margin: 0 }}>
+          {s.newsletterTitle}
+        </p>
+        <div className="flex justify-center" style={{ gap: '0.35em', marginTop: '0.8em' }}>
+          <span
+            style={{
+              background: s.backgroundColor,
+              borderRadius: r,
+              color: muted,
+              fontSize: '0.55em',
+              padding: '0.6em 1em',
+              width: '20em',
+              textAlign: 'left',
+            }}
+          >
+            Email address
+          </span>
+          <span style={button(onBrand, s.brandColor)}>Subscribe</span>
+        </div>
+      </div>
+    </>
+  ) : null;
+  const footerDark = s.footerStyle === 'dark';
+  const footer = fullPage ? (
+    <div
+      style={{
+        background: footerDark ? s.textColor : s.surfaceColor,
+        color: footerDark ? s.backgroundColor : s.textColor,
+        padding: `${pad * 1.2}em ${pad}em`,
+      }}
+    >
+      {s.footerStyle === 'simple' ? (
+        <p className="flex justify-between" style={{ fontSize: '0.56em', margin: 0 }}>
+          <span style={{ fontWeight: 700 }}>{template.name}</span>
+          <span style={{ opacity: 0.7 }}>Shop · About · Contact</span>
+        </p>
+      ) : (
+        <div className="grid grid-cols-4" style={{ gap: '1em', fontSize: '0.56em' }}>
+          <p style={{ fontWeight: 700, margin: 0 }}>{template.name}</p>
+          {[
+            ['Shop', ...categories.slice(0, 2)],
+            ['Help', 'Shipping', 'Returns'],
+            ['About', 'Our story', 'Contact'],
+          ].map(([head, ...links]) => (
+            <div key={head}>
+              <p style={{ fontWeight: 650, margin: 0 }}>{head}</p>
+              {links.map((link) => (
+                <p key={link} style={{ margin: '0.5em 0 0', opacity: 0.7 }}>
+                  {link}
+                </p>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  ) : null;
+
   let header: ReactNode;
   if (phone) {
     header = (
@@ -1253,7 +1572,9 @@ export function TemplateThumb({
         >
           {Array.from({ length: phone ? 4 : tiles * 2 }, (_, i) => card(i))}
         </div>
+        {belowProducts}
       </div>
+      {footer}
     </div>
   );
 }

@@ -700,6 +700,261 @@ export function Hero(props: HeroProps) {
       );
     }
 
+    case 'rail': {
+      const rail = tiles.slice(0, 6);
+      const offers = extras.slice(0, 3);
+      return (
+        <section
+          className={`store-section grid gap-3 ${rail.length > 0 ? 'lg:grid-cols-[15rem_minmax(0,1fr)]' : ''}`}
+        >
+          {rail.length > 0 ? (
+            <nav
+              aria-label="Shop by collection"
+              className="rounded-md border border-[color-mix(in_oklab,var(--store-text)_12%,transparent)]"
+            >
+              <p className="hidden bg-brand px-4 py-3 text-sm font-semibold text-brand-contrast lg:block lg:rounded-t-md">
+                Shop by collection
+              </p>
+              <ul className="flex gap-1 overflow-x-auto p-2 lg:block lg:space-y-0.5 lg:overflow-visible">
+                {rail.map((tile) => (
+                  <li key={tile.href} className="shrink-0">
+                    <Link
+                      href={tile.href}
+                      className="flex items-center justify-between gap-3 rounded-sm px-3 py-2.5 text-sm font-medium text-ink hover:bg-surface"
+                    >
+                      <span className="break-words">{tile.label}</span>
+                      <span aria-hidden="true" className="hidden text-zinc-500 lg:inline">
+                        →
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+                <li className="shrink-0">
+                  <Link
+                    href="/collections/all"
+                    className="block rounded-sm px-3 py-2.5 text-sm font-semibold text-ink underline underline-offset-4"
+                  >
+                    All products
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+          ) : null}
+          <div className="min-w-0 space-y-3">
+            <div
+              className={`relative flex min-h-[20rem] overflow-hidden rounded-md sm:min-h-[24rem] ${
+                image ? 'bg-[#111111] text-[#ffffff]' : 'bg-surface text-ink'
+              }`}
+            >
+              {image ? (
+                <>
+                  <Photo image={image} />
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#000000b8] via-[#00000059] to-transparent" />
+                </>
+              ) : (
+                <Wash className="opacity-50" />
+              )}
+              <div className="relative flex max-w-lg flex-col justify-center p-6 sm:p-10">
+                <h1
+                  className={`t-display text-3xl break-words sm:text-5xl ${image ? 'on-photo' : 'text-brand'}`}
+                >
+                  {title}
+                </h1>
+                <p
+                  className={`mt-4 text-sm leading-relaxed sm:text-base ${image ? 'opacity-90' : 'text-zinc-600'}`}
+                >
+                  {subtitle}
+                </p>
+                <div>
+                  <Cta label={cta} variant={image ? 'btn-on-image' : ''} className="mt-6" />
+                </div>
+              </div>
+            </div>
+            {offers.length === 3 ? (
+              <div className="hidden grid-cols-3 gap-3 sm:grid">
+                {offers.map((photo) => (
+                  <Link
+                    key={photo.src}
+                    href="/collections/all"
+                    className="relative block aspect-[16/9] overflow-hidden rounded-md bg-surface"
+                  >
+                    <Photo
+                      image={{ ...photo, alt: '' }}
+                      eager={false}
+                      sizes="(min-width: 1024px) 24vw, 33vw"
+                      className="media-zoom"
+                    />
+                    <span className="sr-only">Shop all products</span>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </section>
+      );
+    }
+
+    case 'mosaic': {
+      const blocks = tiles.slice(0, 2);
+      const [first, second, third] = extras;
+      return (
+        <section className="store-section grid grid-cols-2 md:grid-cols-4 md:grid-rows-[repeat(2,minmax(16rem,auto))]">
+          <div className="col-span-2 flex flex-col justify-center bg-brand p-7 text-brand-contrast sm:p-10">
+            <h1 className="t-display text-4xl break-words sm:text-5xl lg:text-6xl">{title}</h1>
+            <p className="mt-5 max-w-sm text-base leading-relaxed opacity-90">{subtitle}</p>
+            <div>
+              <Cta label={cta} variant="btn-on-brand" className="mt-7" />
+            </div>
+          </div>
+          <div className="relative col-span-2 min-h-[16rem] bg-surface">
+            {image ? <Photo image={image} sizes={HALF} /> : <Wash />}
+          </div>
+          {first ? (
+            <div className="relative min-h-[12rem] bg-surface">
+              <Photo
+                image={{ ...first, alt: '' }}
+                eager={false}
+                sizes="(min-width: 768px) 25vw, 50vw"
+              />
+            </div>
+          ) : null}
+          {blocks[0] ? (
+            <Link
+              href={blocks[0].href}
+              className="group flex min-h-[12rem] flex-col justify-between bg-accent p-5 text-accent-contrast sm:p-7"
+            >
+              <span className="t-title text-2xl break-words">{blocks[0].label}</span>
+              <span aria-hidden="true" className="text-2xl transition group-hover:translate-x-1">
+                →
+              </span>
+            </Link>
+          ) : null}
+          {second ? (
+            <div className="relative min-h-[12rem] bg-surface">
+              <Photo
+                image={{ ...second, alt: '' }}
+                eager={false}
+                sizes="(min-width: 768px) 25vw, 50vw"
+              />
+            </div>
+          ) : null}
+          {blocks[1] ? (
+            <Link
+              href={blocks[1].href}
+              className="group flex min-h-[12rem] flex-col justify-between bg-ink p-5 text-[var(--store-bg)] sm:p-7"
+            >
+              <span className="t-title text-2xl break-words">{blocks[1].label}</span>
+              <span aria-hidden="true" className="text-2xl transition group-hover:translate-x-1">
+                →
+              </span>
+            </Link>
+          ) : third ? (
+            <div className="relative min-h-[12rem] bg-surface">
+              <Photo
+                image={{ ...third, alt: '' }}
+                eager={false}
+                sizes="(min-width: 768px) 25vw, 50vw"
+              />
+            </div>
+          ) : null}
+        </section>
+      );
+    }
+
+    case 'showroom': {
+      const pieces = extras.slice(0, 2);
+      return (
+        <section className="store-section rounded-md bg-surface p-6 sm:p-10 lg:p-14">
+          <div className="grid items-end gap-8 md:grid-cols-[1fr_1.35fr] lg:gap-14">
+            <div className="pb-2">
+              <p className="eyebrow text-zinc-500">{shopName}</p>
+              <h1 className="t-display mt-4 text-4xl text-brand break-words sm:text-5xl lg:text-6xl">
+                {title}
+              </h1>
+              <p className="mt-5 max-w-sm text-base leading-relaxed text-zinc-600">{subtitle}</p>
+              <Cta label={cta} className="mt-7" />
+            </div>
+            <figure>
+              <div className="relative aspect-[4/3] overflow-hidden rounded-sm bg-[var(--store-bg)]">
+                {image ? <Photo image={image} sizes={HALF} /> : <Wash className="opacity-50" />}
+              </div>
+              {image?.alt ? (
+                <figcaption className="mt-2.5 text-xs text-zinc-500">{image.alt}</figcaption>
+              ) : null}
+            </figure>
+          </div>
+          {pieces.length === 2 ? (
+            <div className="mt-8 hidden grid-cols-[1fr_1fr_1.2fr] items-start gap-6 md:grid lg:gap-10">
+              {pieces.map((photo) => (
+                <figure key={photo.src}>
+                  <div className="relative aspect-square overflow-hidden rounded-sm bg-[var(--store-bg)]">
+                    <Photo image={photo} eager={false} sizes="25vw" />
+                  </div>
+                  {photo.alt ? (
+                    <figcaption className="mt-2.5 text-xs text-zinc-500">{photo.alt}</figcaption>
+                  ) : null}
+                </figure>
+              ))}
+              <ul className="space-y-0 self-end border-t border-[color-mix(in_oklab,var(--store-text)_18%,transparent)]">
+                {tiles.slice(0, 3).map((tile) => (
+                  <li
+                    key={tile.href}
+                    className="border-b border-[color-mix(in_oklab,var(--store-text)_18%,transparent)]"
+                  >
+                    <Link
+                      href={tile.href}
+                      className="flex items-center justify-between gap-3 py-3 text-sm font-medium text-ink"
+                    >
+                      <span className="break-words">{tile.label}</span>
+                      <span aria-hidden="true">→</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+      );
+    }
+
+    case 'arch': {
+      const steps = image ? [extras[0], image, extras[1]] : [];
+      return (
+        <section className="store-section overflow-hidden rounded-[2rem] bg-surface">
+          <div className="grid items-end gap-8 px-6 pt-10 sm:px-12 sm:pt-14 md:grid-cols-[1fr_1.25fr] lg:px-16">
+            <div className="pb-4 sm:pb-14">
+              <p className="eyebrow text-accent">{shopName}</p>
+              <h1 className="t-display mt-4 text-[2.6rem] text-brand break-words sm:text-6xl">
+                {title}
+              </h1>
+              <p className="mt-5 max-w-md text-lg leading-relaxed text-zinc-700">{subtitle}</p>
+              <Cta label={cta} />
+            </div>
+            <div className="grid grid-cols-3 items-end gap-2 sm:gap-3">
+              {steps.map((photo, i) =>
+                photo ? (
+                  <div
+                    key={photo.src}
+                    className={`relative overflow-hidden rounded-t-full bg-[var(--store-bg)] ${
+                      i === 1 ? 'aspect-[3/5.4]' : i === 0 ? 'aspect-[3/4]' : 'aspect-[3/4.6]'
+                    }`}
+                  >
+                    <Photo
+                      image={i === 1 ? photo : { ...photo, alt: '' }}
+                      eager={i === 1}
+                      sizes="(min-width: 768px) 18vw, 30vw"
+                    />
+                  </div>
+                ) : (
+                  <span key={i} />
+                ),
+              )}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     default:
       // Minimal: one large photo with the headline set into its lower corner.
       return image ? (

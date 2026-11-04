@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
   reactStrictMode: true,
   poweredByHeader: false,
+  // Shipped as TypeScript source, not a build (see packages/template-preview).
+  transpilePackages: ['@repo/template-preview'],
   // Photos in public/media keep their names, so cache for a week rather than forever.
   async headers() {
     return [

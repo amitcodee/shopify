@@ -73,6 +73,10 @@ export const THEME_INDUSTRIES = [
       'Linen',
       'Street',
       'Cashmere',
+      'Boulevard',
+      'Patchwork',
+      'Mannequin',
+      'Drape',
     ],
   },
   {
@@ -106,6 +110,10 @@ export const THEME_INDUSTRIES = [
       'Charge',
       'Amp',
       'Titanium',
+      'Terminal',
+      'Matrix',
+      'Prototype',
+      'Arcade',
     ],
   },
   {
@@ -139,6 +147,10 @@ export const THEME_INDUSTRIES = [
       'Aloe',
       'Lipstick',
       'Silk',
+      'Counter',
+      'Tint',
+      'Vitrine',
+      'Dew',
     ],
   },
   {
@@ -175,6 +187,10 @@ export const THEME_INDUSTRIES = [
       'Linden',
       'Gable',
       'Marble',
+      'Homestore',
+      'Tile',
+      'Atrium',
+      'Archway',
     ],
   },
   {
@@ -208,6 +224,10 @@ export const THEME_INDUSTRIES = [
       'Greengrocer',
       'Spice',
       'Saffron',
+      'Aisle',
+      'Patch',
+      'Tasting',
+      'Hearthstone',
     ],
   },
   {
@@ -241,6 +261,10 @@ export const THEME_INDUSTRIES = [
       'Pearl',
       'Statement',
       'Velour',
+      'Vault',
+      'Inlay',
+      'Cabinet',
+      'Cameo',
     ],
   },
   {
@@ -274,6 +298,10 @@ export const THEME_INDUSTRIES = [
       'Trail',
       'Turbo',
       'Apex',
+      'Clubhouse',
+      'Scoreboard',
+      'Podium',
+      'Basecamp',
     ],
   },
   {
@@ -307,6 +335,10 @@ export const THEME_INDUSTRIES = [
       'Sprout',
       'Kaboom',
       'Lullaby',
+      'Playroom',
+      'Blocks',
+      'Treehouse',
+      'Hopscotch',
     ],
   },
   {
@@ -340,6 +372,10 @@ export const THEME_INDUSTRIES = [
       'Fable',
       'Headline',
       'Vellum',
+      'Stacks',
+      'Bookends',
+      'Reading Room',
+      'Cloister',
     ],
   },
   {
@@ -376,6 +412,10 @@ export const THEME_INDUSTRIES = [
       'Meadow',
       'Woof',
       'Mane',
+      'Petmart',
+      'Patches',
+      'Groomer',
+      'Den',
     ],
   },
   {
@@ -409,6 +449,10 @@ export const THEME_INDUSTRIES = [
       'Botanica',
       'Pulse',
       'Serene',
+      'Dispensary',
+      'Mandala',
+      'Retreat',
+      'Solace',
     ],
   },
   {
@@ -445,6 +489,10 @@ export const THEME_INDUSTRIES = [
       'Fresco',
       'Mural',
       'Gilt',
+      'Supply',
+      'Tessera',
+      'Salon',
+      'Alcove',
     ],
   },
 ] as const satisfies readonly Industry[];
@@ -738,9 +786,128 @@ export const THEME_STYLES = [
       headingCase: 'normal',
     },
   },
+  {
+    id: 'rail',
+    label: 'Department',
+    description: 'A category rail beside a promo banner and offer tiles, built for big catalogs',
+    preset: 'catalog',
+    palette: 1,
+    tokens: {
+      headerStyle: 'stacked',
+      cardStyle: 'bordered',
+      radius: 'small',
+      buttonStyle: 'solid',
+      imageRatio: 'square',
+      gridColumns: 5,
+      density: 'compact',
+      footerStyle: 'columns',
+      headingCase: 'normal',
+    },
+  },
+  {
+    id: 'mosaic',
+    label: 'Mosaic',
+    description: 'A checkerboard of photos and solid color blocks with sharp corners',
+    preset: 'fullbleed',
+    palette: 2,
+    headingFont: 'geometric',
+    tokens: {
+      headerStyle: 'inline',
+      cardStyle: 'plain',
+      radius: 'none',
+      buttonStyle: 'solid',
+      imageRatio: 'portrait',
+      gridColumns: 4,
+      density: 'comfortable',
+      footerStyle: 'dark',
+      headingCase: 'normal',
+    },
+  },
+  {
+    id: 'showroom',
+    label: 'Showroom',
+    description: 'Pieces on a soft gallery wall with small captions and plenty of air',
+    preset: 'minimal',
+    palette: 0,
+    tokens: {
+      headerStyle: 'inline',
+      cardStyle: 'plain',
+      radius: 'small',
+      buttonStyle: 'outline',
+      imageRatio: 'square',
+      gridColumns: 3,
+      density: 'spacious',
+      footerStyle: 'simple',
+      headingCase: 'normal',
+    },
+  },
+  {
+    id: 'arch',
+    label: 'Arch',
+    description: 'Stepped arched photo frames on a warm panel, soft and natural',
+    preset: 'split',
+    palette: 1,
+    headingFont: 'serif',
+    tokens: {
+      headerStyle: 'centered',
+      cardStyle: 'framed',
+      radius: 'large',
+      buttonStyle: 'solid',
+      imageRatio: 'portrait',
+      gridColumns: 4,
+      density: 'comfortable',
+      footerStyle: 'columns',
+      headingCase: 'normal',
+    },
+  },
 ] as const satisfies readonly Style[];
 
 export type ThemeStyleId = (typeof THEME_STYLES)[number]['id'];
+
+/** Style groups for browsing by feel: every style belongs to exactly one look. */
+export const TEMPLATE_LOOKS = [
+  {
+    id: 'editorial',
+    label: 'Editorial & luxury',
+    description: 'Serif type, quiet space and a magazine pace',
+    styles: ['editorial', 'luxe', 'arch', 'classic'],
+    sample: 'fashion-luxe',
+  },
+  {
+    id: 'graphic',
+    label: 'Bold & graphic',
+    description: 'Big type and strong color that stop the scroll',
+    styles: ['poster', 'mosaic', 'bold', 'fullbleed'],
+    sample: 'sports-mosaic',
+  },
+  {
+    id: 'catalog',
+    label: 'Big catalogs',
+    description: 'Category rails, offers and dense product grids',
+    styles: ['rail', 'market', 'catalog'],
+    sample: 'electronics-rail',
+  },
+  {
+    id: 'soft',
+    label: 'Soft & modern',
+    description: 'Rounded shapes and a light, friendly feel',
+    styles: ['bento', 'fresh', 'banner', 'split', 'showroom', 'minimal'],
+    sample: 'home-showroom',
+  },
+  {
+    id: 'dark',
+    label: 'Dark & dramatic',
+    description: 'High contrast with photos that glow',
+    styles: ['noir'],
+    sample: 'jewelry-noir',
+  },
+] as const satisfies readonly {
+  id: string;
+  label: string;
+  description: string;
+  styles: readonly ThemeStyleId[];
+  sample: string;
+}[];
 
 export interface ThemeTemplate {
   id: string;
@@ -785,7 +952,7 @@ function buildTemplate(industry: Industry, style: Style, index: number): ThemeTe
   };
 }
 
-/** Every template, grouped by industry then style (168 in all). */
+/** Every template, grouped by industry then style (216 in all). */
 export const THEME_TEMPLATES: readonly ThemeTemplate[] = THEME_INDUSTRIES.flatMap((industry) =>
   THEME_STYLES.map((style, index) => buildTemplate(industry, style, index)),
 );

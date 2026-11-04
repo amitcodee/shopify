@@ -560,5 +560,20 @@ describe('Checkout, payments & orders', () => {
       topProducts: [{ title: 'Lamp', quantity: 3, revenue: 6000 }],
     });
     expect(stats.body.daily.at(-1)).toMatchObject({ sales: 6000, orders: 2 });
+    expect(stats.body.testOrderCount).toBe(2);
+
+    // Days follow the store's time zone: at UTC+14 "today" is a different date most of the day.
+    const zone = 'Pacific/Kiritimati';
+    await ctx.http().patch(admin).set(merchant.auth).send({ timezone: zone }).expect(200);
+    const zoned = await ctx.http().get(`${admin}/analytics`).set(merchant.auth).expect(200);
+    expect(zoned.body.daily.at(-1).date).toBe(
+      new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date()),
+    );
+    const zonedTotal = zoned.body.daily.reduce(
+      (sum: number, day: { sales: number }) => sum + day.sales,
+      0,
+    );
+    expect(zonedTotal).toBe(zoned.body.grossSales);
+    await ctx.http().patch(admin).set(merchant.auth).send({ timezone: 'UTC' }).expect(200);
   });
 });

@@ -11,7 +11,14 @@ function initialOf(text: string): string {
 }
 
 /** The signed-in user: avatar + email (to account security), plus Sign out. */
-export function UserMenu({ user }: { user: CurrentUser }) {
+export function UserMenu({
+  user,
+  accountClassName = 'flex',
+}: {
+  user: CurrentUser;
+  /** Display of the avatar link, for shells that show the account elsewhere on some widths. */
+  accountClassName?: string;
+}) {
   return (
     <div className="flex items-center gap-1 text-sm">
       {user.platformRole === 'SUPER_ADMIN' ? (
@@ -24,11 +31,11 @@ export function UserMenu({ user }: { user: CurrentUser }) {
       ) : null}
       <Link
         href="/account/security"
-        className="flex min-w-0 items-center gap-2 rounded-lg py-1 pr-2 pl-1 text-slate-600 hover:bg-slate-900/5 hover:text-slate-900"
+        className={`${accountClassName} min-w-0 items-center gap-2 rounded-lg py-1 pr-2 pl-1 text-slate-600 hover:bg-slate-900/5 hover:text-slate-900`}
       >
         <span
           aria-hidden
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-xs font-semibold text-white"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white"
         >
           {initialOf(user.name || user.email)}
         </span>

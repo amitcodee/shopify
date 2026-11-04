@@ -48,16 +48,22 @@ export function SideNav({ items, permissions }: { items: NavItem[]; permissions:
                   key={item.href}
                   href={item.href}
                   aria-current={active ? 'page' : undefined}
-                  className={`group/nav relative flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors ${
+                  className={`group/nav relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors ${
                     active
-                      ? 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-900/[0.07]'
+                      ? 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-200'
                       : 'text-slate-600 hover:bg-slate-900/[0.04] hover:text-slate-900'
                   }`}
                 >
+                  {active ? (
+                    <span
+                      aria-hidden
+                      className="absolute top-1/2 -left-2.5 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-slate-900"
+                    />
+                  ) : null}
                   {item.icon ? (
                     <Icon
                       name={item.icon}
-                      className={`h-4 w-4 ${active ? 'text-indigo-600' : 'text-slate-400 group-hover/nav:text-slate-600'}`}
+                      className={`h-4 w-4 ${active ? 'text-slate-900' : 'text-slate-500 group-hover/nav:text-slate-700'}`}
                       strokeWidth={active ? 2 : 1.75}
                     />
                   ) : null}
@@ -106,7 +112,7 @@ export function MobileNav({
           {current?.label ?? 'Overview'}
         </span>
       </summary>
-      <div className="fixed inset-x-0 top-14 bottom-0 z-40 overflow-y-auto border-t border-slate-200 bg-[#fafafb] px-3 pt-3 pb-8">
+      <div className="fixed inset-x-0 top-14 bottom-0 z-40 overflow-y-auto border-t border-slate-200 bg-white px-3 pt-3 pb-8">
         {header ? <div className="mb-4">{header}</div> : null}
         <SideNav items={items} permissions={permissions} />
         <a

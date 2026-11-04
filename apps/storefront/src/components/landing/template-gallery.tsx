@@ -1,7 +1,7 @@
 'use client';
 
 /* eslint-disable @next/next/no-img-element -- static same-origin photos with explicit sizes; next/image adds nothing here. */
-import { THEME_INDUSTRIES, THEME_STYLES, THEME_TEMPLATES } from '@repo/contracts';
+import { TEMPLATE_LOOKS, THEME_INDUSTRIES, THEME_STYLES, THEME_TEMPLATES } from '@repo/contracts';
 import { useDeferredValue, useEffect, useState } from 'react';
 import { industryPhoto } from './photos';
 import { TemplateCard } from './template-card';
@@ -10,22 +10,27 @@ const focusRing =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg';
 
 const perIndustry = THEME_STYLES.length;
+const displayHeading =
+  'font-[family-name:var(--font-display)] text-[2rem] leading-[1.08] font-normal tracking-[-0.03em] sm:text-[2.75rem]';
 const PAGE = 24;
 
-/** Client-side filters (industry chips, style pills, search) over the full template catalog. */
+/** Client-side filters (look, industry, style, search) over the full template catalog. */
 export function TemplateGallery({
   initialIndustry,
   initialStyle,
+  initialLook,
   demoStoreUrl,
   signupUrl,
 }: {
   initialIndustry: string;
   initialStyle: string;
+  initialLook: string;
   demoStoreUrl: string;
   signupUrl: string;
 }) {
   const [industry, setIndustry] = useState(initialIndustry);
   const [style, setStyle] = useState(initialStyle);
+  const [lookId, setLookId] = useState(initialLook);
   const [query, setQuery] = useState('');
   const search = useDeferredValue(query.trim().toLowerCase());
 
@@ -35,15 +40,22 @@ export function TemplateGallery({
     for (const [key, value] of [
       ['industry', industry],
       ['style', style],
+      ['look', lookId],
     ] as const) {
       if (value) url.searchParams.set(key, value);
       else url.searchParams.delete(key);
     }
     window.history.replaceState(null, '', url);
-  }, [industry, style]);
+  }, [industry, style, lookId]);
 
+  const look = TEMPLATE_LOOKS.find((l) => l.id === lookId);
+  const lookStyles: readonly string[] | undefined = look?.styles;
+  const stylePills = lookStyles
+    ? THEME_STYLES.filter((s) => lookStyles.includes(s.id))
+    : THEME_STYLES;
   const shown = THEME_TEMPLATES.filter(
     (t) =>
+      (!lookStyles || lookStyles.includes(t.style)) &&
       (!industry || t.industry === industry) &&
       (!style || t.style === style) &&
       (!search ||
@@ -52,19 +64,42 @@ export function TemplateGallery({
           .includes(search)),
   );
   // Rendered a page at a time (every card is a full miniature store); new filters start over.
-  const filterKey = `${industry}|${style}|${search}`;
+  const filterKey = `${industry}|${style}|${lookId}|${search}`;
   const [more, setMore] = useState({ key: filterKey, count: PAGE });
   const count = more.key === filterKey ? more.count : PAGE;
   const clear = () => {
     setIndustry('');
     setStyle('');
+    setLookId('');
     setQuery('');
   };
 
   return (
     <section aria-label="Template catalog" className="bg-mk-surface pb-24">
       <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-        <h2 className="text-sm font-semibold text-mk-fg">Shop by industry</h2>
+        <h2 className={`text-mk-fg ${displayHeading}`}>Browse every template</h2>
+        <ul aria-label="Looks" className="mt-6 flex flex-wrap gap-2">
+          {[{ id: '', label: 'All looks' }, ...TEMPLATE_LOOKS].map((l) => (
+            <li key={l.id}>
+              <button
+                type="button"
+                aria-pressed={lookId === l.id}
+                onClick={() => {
+                  setLookId(l.id);
+                  setStyle('');
+                }}
+                className={`rounded-full px-4 py-2 text-sm font-semibold ring-1 transition ${focusRing} ${
+                  lookId === l.id
+                    ? 'bg-mk-fg text-mk-bg ring-mk-fg'
+                    : 'text-mk-fg-soft ring-mk-line hover:bg-mk-surface-2'
+                }`}
+              >
+                {l.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <h3 className="mt-8 text-sm font-semibold text-mk-fg">Shop by industry</h3>
         <ul
           className="-mx-4 mt-4 flex gap-4 overflow-x-auto px-4 pb-3 sm:gap-5 lg:mx-0 lg:justify-between lg:overflow-visible lg:px-0"
           aria-label="Industries"
@@ -128,7 +163,7 @@ export function TemplateGallery({
             aria-label="Styles"
             className="-mx-4 flex min-w-0 flex-1 gap-1.5 overflow-x-auto px-4 [mask-image:linear-gradient(to_right,black_88%,transparent)] pr-10 lg:mx-0 lg:pl-0 [&::-webkit-scrollbar]:hidden"
           >
-            {[{ id: '', label: 'All styles' }, ...THEME_STYLES].map((st) => (
+            {[{ id: '', label: 'All styles' }, ...stylePills].map((st) => (
               <li key={st.id} className="shrink-0">
                 <button
                   type="button"
@@ -189,7 +224,7 @@ export function TemplateGallery({
           </div>
         ) : (
           <>
-            <ul className="grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid gap-x-7 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
               {shown.slice(0, count).map((t) => (
                 <li key={t.id}>
                   <TemplateCard template={t} demoStoreUrl={demoStoreUrl} signupUrl={signupUrl} />
@@ -212,9 +247,6 @@ export function TemplateGallery({
             ) : null}
           </>
         )}
-        <p className="mt-20 text-center text-sm text-mk-muted">
-          Pick one when you create your store, and switch any time from your admin.
-        </p>
       </div>
     </section>
   );

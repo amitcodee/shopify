@@ -1,5 +1,5 @@
 import { THEME_PREVIEW_PARAM, type ThemeTemplate } from '@repo/contracts';
-import { TemplateThumb } from './template-thumb';
+import { TemplateScreen } from '@repo/template-preview';
 
 // Not imported from page-parts: that module is server-only and this card also renders in the
 // client-side gallery.
@@ -25,13 +25,29 @@ export function Swatches({ template: t }: { template: ThemeTemplate }) {
   );
 }
 
+/** The dots and address bar above a template screen. */
+export function BrowserBar({ name }: { name: string }) {
+  return (
+    <div aria-hidden="true" className="flex items-center gap-3 bg-[#e9ebee] px-3.5 py-2">
+      <span className="flex gap-1.5">
+        <span className="size-2 rounded-full bg-[#c4c8ce]" />
+        <span className="size-2 rounded-full bg-[#c4c8ce]" />
+        <span className="size-2 rounded-full bg-[#c4c8ce]" />
+      </span>
+      <span className="mx-auto w-full max-w-[60%] truncate rounded-md bg-[#ffffff] px-2 py-0.5 text-center text-[10px] leading-4 text-[#5b6470]">
+        {name.toLowerCase().replaceAll(' ', '')}.store
+      </span>
+    </div>
+  );
+}
+
 const pill =
   'inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition';
 
 /**
- * One template in a grid: its storefront thumbnail on a pastel panel, with start/preview actions
- * that fade in on hover or focus (always shown on touch screens). The panel and name link to the
- * detail page.
+ * One template in a grid: a whole storefront page in a browser window that scrolls on hover, with
+ * start/preview actions that fade in on hover or focus (always shown on touch screens). The window
+ * and name link to the detail page.
  */
 export function TemplateCard({
   template: t,
@@ -49,29 +65,25 @@ export function TemplateCard({
 }) {
   const lg = size === 'lg';
   return (
-    <div className="group flex flex-col">
-      <div className="relative transition duration-300 group-hover:-translate-y-1">
+    <div className="group/template flex flex-col">
+      <div className="relative">
         <a
           href={`/templates/${t.id}`}
           tabIndex={-1}
           aria-hidden="true"
-          className="block overflow-hidden rounded-[1.75rem] px-3 pt-3 ring-1 ring-mk-line transition duration-300 group-hover:shadow-[0_28px_56px_-28px_rgb(15_23_42/0.5)] sm:px-4 sm:pt-4"
-          style={{ background: templateTint(t) }}
+          className="block overflow-hidden rounded-2xl shadow-[0_18px_40px_-24px_rgb(5_15_30/0.55)] ring-1 ring-mk-line transition duration-300 group-hover/template:-translate-y-1 group-hover/template:shadow-[0_34px_70px_-30px_var(--template-glow)]"
+          style={{
+            ['--template-glow' as string]: `color-mix(in srgb, ${t.settings.accentColor} 70%, transparent)`,
+          }}
         >
-          <div className="overflow-hidden rounded-t-[1.1rem] shadow-[0_12px_32px_-16px_rgb(15_23_42/0.45)] ring-1 ring-mk-line">
-            <TemplateThumb
-              template={t}
-              tiles={t.settings.gridColumns >= 4 ? 4 : 3}
-              scale={lg ? 9 : 6.5}
-              className={`${lg ? 'h-72 sm:h-80' : 'h-48 sm:h-56'} transition duration-700 group-hover:scale-[1.03]`}
-            />
-          </div>
+          <BrowserBar name={t.name} />
+          <TemplateScreen template={t} height={lg ? '23rem' : '15rem'} />
         </a>
         {lg ? (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center gap-2 rounded-b-[1.75rem] bg-gradient-to-t from-slate-950/45 to-transparent px-4 pt-16 pb-4 opacity-0 transition duration-300 group-focus-within:opacity-100 group-hover:opacity-100 *:pointer-events-auto [@media(hover:none)]:opacity-100">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center gap-2 rounded-b-2xl bg-gradient-to-t from-[#020617a6] to-transparent px-4 pt-20 pb-4 opacity-0 transition duration-300 group-focus-within/template:opacity-100 group-hover/template:opacity-100 *:pointer-events-auto [@media(hover:none)]:opacity-100">
             <a
               href={`${signupUrl}?template=${t.id}`}
-              className={`${pill} bg-mk-fg text-mk-bg hover:opacity-85 ${focusRing}`}
+              className={`${pill} bg-[#ffffff] text-[#0b1220] hover:bg-[#e6e8ec] ${focusRing}`}
             >
               Use template<span className="sr-only">: {t.name}</span>
             </a>
@@ -79,7 +91,7 @@ export function TemplateCard({
               href={`${demoStoreUrl}/?${THEME_PREVIEW_PARAM}=${t.id}`}
               target="_blank"
               rel="noreferrer"
-              className={`${pill} mk-dark bg-navy-950/80 text-mk-fg ring-1 ring-mk-line backdrop-blur hover:bg-mk-fg hover:text-mk-bg ${focusRing}`}
+              className={`${pill} bg-[#0b1220cc] text-[#ffffff] ring-1 ring-[#ffffff40] backdrop-blur hover:bg-[#0b1220] ${focusRing}`}
             >
               Live preview
               <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" className="size-3.5">
@@ -93,15 +105,12 @@ export function TemplateCard({
       <div className="mt-4 flex items-start justify-between gap-3 px-1">
         <div className="min-w-0">
           <H className={`${lg ? 'text-lg' : 'text-base'} font-semibold tracking-tight text-mk-fg`}>
-            <a
-              href={`/templates/${t.id}`}
-              className={`rounded group-hover:text-mk-fg ${focusRing}`}
-            >
+            <a href={`/templates/${t.id}`} className={`rounded ${focusRing}`}>
               {t.name}
             </a>
           </H>
           <p className="mt-0.5 truncate text-sm text-mk-dim">
-            {t.industryLabel} · {t.styleLabel}
+            {t.industryLabel.split(' & ')[0]} · {t.styleLabel}
           </p>
         </div>
         <span className="mt-1.5 shrink-0">

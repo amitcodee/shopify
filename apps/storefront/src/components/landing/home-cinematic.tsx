@@ -12,7 +12,7 @@ import { FeatureMock } from './mocks';
 import { displayFace } from './page-parts';
 import { Photo, productPhoto } from './photos';
 import { HeroWord, StoreTabs } from './store-tabs';
-import { TemplateThumb } from './template-thumb';
+import { TemplateThumb } from '@repo/template-preview';
 import { apiDocsUrl, signupUrl } from './urls';
 
 /**

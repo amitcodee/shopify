@@ -17,5 +17,11 @@ export default async function Page({
   if (!isRootHost(await requestHost())) notFound();
   const params = await searchParams;
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? '';
-  return <TemplatesPage industry={first(params.industry)} style={first(params.style)} />;
+  return (
+    <TemplatesPage
+      industry={first(params.industry)}
+      style={first(params.style)}
+      look={first(params.look)}
+    />
+  );
 }

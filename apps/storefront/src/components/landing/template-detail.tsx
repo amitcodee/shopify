@@ -14,7 +14,7 @@ import {
   textLink,
 } from './page-parts';
 import { TemplateCard } from './template-card';
-import { TemplateThumb } from './template-thumb';
+import { TemplateThumb } from '@repo/template-preview';
 import { demoStoreUrl, signupUrl } from './urls';
 
 const FONT_NAMES: Record<string, string> = {
@@ -44,6 +44,10 @@ const LAYOUTS: Record<string, string> = {
   fresh: 'Fresh — a curved color band with category cards',
   poster: 'Poster — oversized type above a photo strip',
   luxe: 'Luxe — a wide soft-faded photo and round collection chips',
+  rail: 'Department — a category rail beside a banner and offer tiles',
+  mosaic: 'Mosaic — a checkerboard of photos and color blocks',
+  showroom: 'Showroom — pieces on a gallery wall with captions',
+  arch: 'Arch — stepped arched photo frames on a warm panel',
 };
 
 const words = {

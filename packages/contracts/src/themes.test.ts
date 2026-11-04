@@ -6,6 +6,7 @@ import {
   findThemeTemplate,
   THEME_INDUSTRIES,
   THEME_STYLES,
+  TEMPLATE_LOOKS,
   THEME_TEMPLATES,
 } from './themes.js';
 
@@ -101,5 +102,11 @@ describe('theme settings', () => {
     expect(parse('javascript:alert(1)')).toBe(false);
     expect(parse('http://instagram.com/shop')).toBe(false);
     expect(parse('https://')).toBe(false);
+  });
+
+  it('puts every style in exactly one look, each with a real sample template', () => {
+    const grouped = TEMPLATE_LOOKS.flatMap((look) => [...look.styles]);
+    expect([...grouped].sort()).toEqual(THEME_STYLES.map((s) => s.id as string).sort());
+    for (const look of TEMPLATE_LOOKS) expect(findThemeTemplate(look.sample)).toBeDefined();
   });
 });

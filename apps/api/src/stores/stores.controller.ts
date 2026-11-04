@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   type AuditLogEntry,
@@ -8,12 +18,13 @@ import {
   type PaginationQuery,
   paginationQuerySchema,
   type StoreDetail,
+  type StoreOverview,
   type StoreSummary,
   type UpdateStoreInput,
   updateStoreInputSchema,
 } from '@repo/contracts';
 import { AuditService } from '../audit/audit.service.js';
-import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
+import type { AppRequest, AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { ApiZodBody, ZodPipe } from '../common/zod.js';
 import {
@@ -42,6 +53,15 @@ export class StoresController {
   @Get()
   list(@CurrentUser() user: AuthUser): Promise<StoreSummary[]> {
     return this.stores.listForUser(user.id);
+  }
+
+  /** The store picker's cards. Sessions only: an access token belongs to a single store. */
+  @Get('overview')
+  overview(@CurrentUser() user: AuthUser, @Req() req: AppRequest): Promise<StoreOverview[]> {
+    if (req.auth?.apiToken) {
+      throw new ForbiddenException('Access tokens cannot read the store overview.');
+    }
+    return this.stores.overviewForUser(user.id);
   }
 }
 

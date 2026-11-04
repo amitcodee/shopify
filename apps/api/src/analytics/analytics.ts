@@ -8,16 +8,32 @@ import { ZodPipe } from '../common/zod.js';
 import { TenantDb } from '../database/database.module.js';
 import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
 
+/** The zone if the database will accept it (the setting is free text), otherwise UTC. */
+function knownTimeZone(zone: string): string {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: zone });
+    return zone;
+  } catch {
+    return 'UTC';
+  }
+}
+
 @Injectable()
 export class AnalyticsService {
   constructor(private readonly tenantDb: TenantDb) {}
 
-  /** Sales metrics from paid orders (by payment date, UTC days). */
+  /** Sales metrics from paid orders, by payment date in days of the store's own time zone. */
   async summary(store: StoreContext, days: number): Promise<Analytics> {
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     return this.tenantDb.run(store.id, async (tx) => {
-      const [totals] = await tx.$queryRaw<{ gross: number; orders: number }[]>`
-        SELECT COALESCE(ROUND(SUM(total / "exchangeRate")), 0)::int AS gross, COUNT(*)::int AS orders
+      const { timezone } = await tx.store.findUniqueOrThrow({
+        where: { id: store.id },
+        select: { timezone: true },
+      });
+      const zone = knownTimeZone(timezone);
+      const [totals] = await tx.$queryRaw<{ gross: number; orders: number; test: number }[]>`
+        SELECT COALESCE(ROUND(SUM(total / "exchangeRate")), 0)::int AS gross, COUNT(*)::int AS orders,
+               (COUNT(*) FILTER (WHERE "paymentProvider" = 'mock'))::int AS test
         FROM "Order"
         WHERE "storeId" = ${store.id}::uuid AND "paidAt" >= ${since}`;
       const [refunds] = await tx.$queryRaw<{ refunded: number }[]>`
@@ -28,9 +44,15 @@ export class AnalyticsService {
         SELECT to_char(d.day, 'YYYY-MM-DD') AS date,
                COALESCE(ROUND(SUM(o.total / o."exchangeRate")), 0)::int AS sales,
                COUNT(o.id)::int AS orders
-        FROM generate_series(date_trunc('day', ${since}::timestamp), date_trunc('day', now()), interval '1 day') AS d(day)
+        FROM generate_series(
+          date_trunc('day', ${since}::timestamptz AT TIME ZONE ${zone}),
+          date_trunc('day', now() AT TIME ZONE ${zone}),
+          interval '1 day'
+        ) AS d(day)
         LEFT JOIN "Order" o ON o."storeId" = ${store.id}::uuid
-          AND o."paidAt" >= d.day AND o."paidAt" < d.day + interval '1 day'
+          AND o."paidAt" >= ${since}
+          AND o."paidAt" >= (d.day AT TIME ZONE ${zone}) AT TIME ZONE 'UTC'
+          AND o."paidAt" < ((d.day + interval '1 day') AT TIME ZONE ${zone}) AT TIME ZONE 'UTC'
         GROUP BY d.day ORDER BY d.day`;
       const topProducts = await tx.$queryRaw<
         { title: string; quantity: number; revenue: number }[]
@@ -50,6 +72,7 @@ export class AnalyticsService {
         refunded,
         netSales: gross - refunded,
         orderCount,
+        testOrderCount: totals?.test ?? 0,
         averageOrderValue: orderCount ? Math.round(gross / orderCount) : 0,
         daily,
         topProducts,

@@ -193,11 +193,11 @@ export default async function StoreLayout({
   const switcher = (
     <Link
       href="/stores"
-      className="group flex items-center gap-2.5 rounded-lg p-1.5 hover:bg-slate-900/[0.04]"
+      className="group flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xs hover:bg-slate-50"
     >
       <span
         aria-hidden
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-semibold text-white shadow-xs ring-1 ring-black/5"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-sm font-semibold text-white"
       >
         {(store.name.trim()[0] ?? 'S').toUpperCase()}
       </span>
@@ -212,65 +212,84 @@ export default async function StoreLayout({
   );
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-slate-200/80 bg-[#fafafb] md:flex">
-        <div className="flex h-14 items-center border-b border-slate-200/70 px-2.5">{switcher}</div>
+    <div className="min-h-screen bg-white">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-white md:flex">
+        <div className="px-2.5 pt-3 pb-1">{switcher}</div>
         <div className="flex-1 overflow-y-auto px-2.5 py-4">
           <SideNav items={items} permissions={store.permissions} />
         </div>
-        <div className="border-t border-slate-200/70 p-2.5">
+        <div className="space-y-1.5 p-2.5">
           <a
             href={storefrontUrl}
             target="_blank"
             rel="noreferrer"
             className="flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium text-slate-600 hover:bg-slate-900/[0.04] hover:text-slate-900"
           >
-            <Icon name="external" className="h-4 w-4 text-slate-400" />
+            <Icon name="external" className="h-4 w-4 text-slate-500" />
             View storefront
           </a>
+          <Link
+            href="/account/security"
+            className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xs hover:bg-slate-50"
+          >
+            <span
+              aria-hidden
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-semibold text-slate-700"
+            >
+              {(user.name.trim()[0] ?? user.email[0] ?? '?').toUpperCase()}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm leading-5 font-semibold text-slate-900">
+                {user.name}
+              </span>
+              <span className="block truncate text-xs leading-4 text-slate-500">{user.email}</span>
+            </span>
+          </Link>
         </div>
       </aside>
-      <div className="md:pl-60">
-        {/* No backdrop-filter here: it would trap the fixed mobile drawer inside the header. */}
-        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white">
-          <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-            <div className="flex min-w-0 flex-1 items-center gap-2.5">
-              <Link href="/stores" className="shrink-0 rounded-lg md:hidden">
-                <LogoMark className="h-7 w-7" />
-                <span className="sr-only">All stores</span>
-              </Link>
-              <div className="md:hidden">
-                <MobileNav
-                  items={items}
-                  permissions={store.permissions}
-                  storefrontUrl={storefrontUrl}
-                  header={switcher}
-                />
+      <div className="md:pt-2 md:pr-2 md:pl-60">
+        <div className="min-h-screen bg-canvas md:rounded-t-2xl md:border md:border-b-0 md:border-slate-200">
+          {/* No backdrop-filter here: it would trap the fixed mobile drawer inside the header. */}
+          <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white md:rounded-t-2xl">
+            <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+              <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                <Link href="/stores" className="shrink-0 rounded-lg md:hidden">
+                  <LogoMark className="h-7 w-7" />
+                  <span className="sr-only">All stores</span>
+                </Link>
+                <div className="md:hidden">
+                  <MobileNav
+                    items={items}
+                    permissions={store.permissions}
+                    storefrontUrl={storefrontUrl}
+                    header={switcher}
+                  />
+                </div>
+                <div className="hidden min-w-0 flex-1 md:block">
+                  <PageSearchButton />
+                </div>
               </div>
-              <div className="hidden min-w-0 flex-1 md:block">
-                <PageSearchButton />
+              <CommandPaletteButton />
+              <UserMenu user={user} accountClassName="flex md:hidden" />
+            </div>
+          </header>
+          <main className="mx-auto max-w-[1360px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            {notice.adminNotice ? (
+              <div className="mb-6">
+                <Alert tone="info">{notice.adminNotice}</Alert>
               </div>
-            </div>
-            <CommandPaletteButton />
-            <UserMenu user={user} />
-          </div>
-        </header>
-        <main className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          {notice.adminNotice ? (
-            <div className="mb-6">
-              <Alert tone="info">{notice.adminNotice}</Alert>
-            </div>
-          ) : null}
-          {store.status === 'SUSPENDED' ? (
-            // The API blocks store data while suspended; explain instead of rendering failing pages.
-            <Alert tone="error">
-              This store is suspended by the platform. Your storefront is offline and the admin is
-              locked. Contact {notice.supportEmail} to resolve this.
-            </Alert>
-          ) : (
-            children
-          )}
-        </main>
+            ) : null}
+            {store.status === 'SUSPENDED' ? (
+              // The API blocks store data while suspended; explain instead of rendering failing pages.
+              <Alert tone="error">
+                This store is suspended by the platform. Your storefront is offline and the admin is
+                locked. Contact {notice.supportEmail} to resolve this.
+              </Alert>
+            ) : (
+              children
+            )}
+          </main>
+        </div>
       </div>
       <CommandPalette commands={commands} />
     </div>

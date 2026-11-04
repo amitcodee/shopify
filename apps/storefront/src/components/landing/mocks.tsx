@@ -2,7 +2,7 @@ import { findThemeTemplate } from '@repo/contracts';
 import type { ReactNode } from 'react';
 import type { MockKind } from './features-data';
 import { Icon } from './icons';
-import { TemplateThumb } from './template-thumb';
+import { TemplateThumb } from '@repo/template-preview';
 
 /** Decorative product illustrations drawn in HTML/CSS for the feature pages. */
 

@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@source '../../../../packages/template-preview/src';
 
 /*
  * Theme tokens arrive as --store-* custom properties on <body> (see src/lib/theme.ts), so these
@@ -383,6 +384,71 @@ body {
   --btn-case: uppercase;
   --btn-tracking: 0.16em;
   --btn-weight: 500;
+}
+
+[data-style='rail'] {
+  --store-page-width: 90rem;
+  --display-weight: 700;
+  --display-tracking: -0.025em;
+  --display-leading: 1.05;
+  --title-weight: 700;
+  --card-size: 0.8125rem;
+  --card-weight: 500;
+  --price-weight: 700;
+  --eyebrow-tracking: 0.1em;
+}
+[data-style='mosaic'] {
+  --display-weight: 800;
+  --display-tracking: -0.04em;
+  --display-leading: 0.98;
+  --title-weight: 750;
+  --card-weight: 600;
+  --price-weight: 600;
+  --btn-weight: 700;
+}
+[data-style='showroom'] {
+  --display-weight: 500;
+  --display-tracking: -0.035em;
+  --display-leading: 1.02;
+  --title-weight: 500;
+  --card-weight: 500;
+  --price-weight: 400;
+  --eyebrow-tracking: 0.2em;
+  --btn-weight: 500;
+}
+[data-style='arch'] {
+  --display-weight: 400;
+  --display-tracking: -0.025em;
+  --display-leading: 1.03;
+  --title-weight: 400;
+  --card-font: var(--store-heading-font);
+  --card-size: 1.0625rem;
+  --card-weight: 400;
+  --price-weight: 500;
+  --eyebrow-tracking: 0.2em;
+}
+
+/* The template wall on the template store: columns drifting in opposite directions. */
+@keyframes tpl-wall-up {
+  to {
+    transform: translateY(calc(-50% - 0.5rem));
+  }
+}
+@keyframes tpl-wall-down {
+  from {
+    transform: translateY(calc(-50% - 0.5rem));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tpl-wall-up {
+    animation: tpl-wall-up 70s linear infinite;
+  }
+  .tpl-wall-down {
+    animation: tpl-wall-down 80s linear infinite;
+  }
 }
 
 @layer components {
@@ -802,6 +868,8 @@ html:has(body[data-theme]) {
 }
 [data-style='catalog'],
 [data-style='market'],
+[data-style='rail'],
+[data-style='mosaic'],
 [data-style='fresh'] {
   --logo-weight: 800;
 }
