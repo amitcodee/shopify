@@ -113,3 +113,5 @@ marketing mein mat dalna; asli merchants ke case studies zyada kaam aayenge.
    par Phase 1 badal jayega.
 2. **Revenue model:** free plan par kya rule rahe? Suggestion: free plan sirf trial ya chhoti limit ke liye
    ho, aur apna gateway paid plan par mile. Isse signups thode ghat sakte hain, par kamai ka hole band hoga.
+   test key - rzp_test_TzCvEgDgNcfhxf
+   test key secrate - CqFsT9MHnET7qudavTVrOUpf
