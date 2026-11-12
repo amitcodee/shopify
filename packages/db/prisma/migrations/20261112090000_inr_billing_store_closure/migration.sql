@@ -40,7 +40,7 @@ INSERT INTO "Plan" ("id", "code", "name", "priceMonthly", "currency", "trialDays
   "introCycles", "maxProducts", "maxStaff", "maxOrdersPerMonth", "transactionFeeBps", "active",
   "isDefault", "sortOrder", "updatedAt")
 VALUES (gen_random_uuid(), 'standard', 'Standard', 79900, 'INR', 7, 9900, 3, NULL, 5, NULL, 0,
-  true, true, 1, now())
+  true, true, 1, (now() AT TIME ZONE 'UTC'))
 ON CONFLICT ("code") DO NOTHING;
 
 -- Stores that were on the free plan (or a mock-billed plan) start a fresh 7-day trial on the
@@ -48,9 +48,9 @@ ON CONFLICT ("code") DO NOTHING;
 UPDATE "Subscription" s
 SET "planId" = (SELECT "id" FROM "Plan" WHERE "code" = 'standard'),
     "status" = 'TRIALING',
-    "currentPeriodStart" = now(),
-    "currentPeriodEnd" = now() + interval '7 days',
-    "trialEndsAt" = now() + interval '7 days',
+    "currentPeriodStart" = (now() AT TIME ZONE 'UTC'),
+    "currentPeriodEnd" = (now() AT TIME ZONE 'UTC') + interval '7 days',
+    "trialEndsAt" = (now() AT TIME ZONE 'UTC') + interval '7 days',
     "pendingPlanId" = NULL,
     "provider" = 'none',
     "providerRef" = NULL

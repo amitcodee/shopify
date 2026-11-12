@@ -64,7 +64,7 @@ export function BillingBanner({ store }: { store: StoreDetail }) {
           {days === 0
             ? 'Your free trial ends today.'
             : `${days} day${days === 1 ? '' : 's'} left in your free trial.`}{' '}
-          Subscribe now and keep the rest of your trial: ₹99/month for your first 3 months. {cta}
+          Subscribe now and keep the rest of your trial — you are only charged when it ends. {cta}
         </Alert>
       </div>
     );

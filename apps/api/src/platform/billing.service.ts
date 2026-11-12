@@ -86,12 +86,13 @@ export class BillingService {
         graceEndsAt: subscription.graceEndsAt?.toISOString() ?? null,
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
         introAvailable: !subscription.introUsed && hasIntro(plan),
+        // The next charge is at the intro price (intro mandate, or intro months not used up).
         onIntroPrice:
           subscription.providerPhase === 'intro' ||
           (subscription.introUsed &&
-            subscription.status === 'ACTIVE' &&
-            invoices.filter((i) => i.status === 'PAID').length <= plan.introCycles &&
-            hasIntro(plan)),
+            hasIntro(plan) &&
+            ['TRIALING', 'ACTIVE', 'PAST_DUE'].includes(subscription.status) &&
+            invoices.filter((i) => i.status === 'PAID').length < plan.introCycles),
         action: state.action,
         usage,
         plans: plans.map(toPlanDto),
@@ -589,11 +590,20 @@ export class BillingService {
         await razorpay.cancelSubscription(sub.providerRef, atCycleEnd);
       }
     }
+    // Cancelled before anything was charged: the launch offer was never really used.
+    const charged = await this.platformDb.platformInvoice.count({
+      where: { subscriptionId: sub.id, status: 'PAID' },
+    });
     await this.platformDb.subscription.update({
       where: { id: sub.id },
       data:
         sub.status === 'TRIALING'
-          ? { provider: 'none', providerRef: null, providerPhase: null }
+          ? {
+              provider: 'none',
+              providerRef: null,
+              providerPhase: null,
+              ...(charged === 0 ? { introUsed: false } : {}),
+            }
           : { cancelAtPeriodEnd: true },
     });
     await this.tenantDb.run(store.id, (tx) =>

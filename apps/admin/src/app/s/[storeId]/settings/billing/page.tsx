@@ -62,7 +62,9 @@ function statusBadge(billing: BillingOverview) {
 function statusText(billing: BillingOverview): string {
   const plan = billing.plan;
   const first =
-    billing.introAvailable && plan.introPrice !== null ? plan.introPrice : plan.priceMonthly;
+    (billing.introAvailable || billing.onIntroPrice) && plan.introPrice !== null
+      ? plan.introPrice
+      : plan.priceMonthly;
   if (billing.locked) {
     return 'Your storefront is offline because there is no active subscription. Your data is safe; subscribe to bring the store back online right away.';
   }
@@ -188,7 +190,10 @@ export default async function BillingPage({
       >
         {billing.plans.map((p) => {
           const current = p.id === billing.plan.id;
-          const intro = billing.introAvailable && p.introPrice !== null && p.introCycles > 0;
+          const intro =
+            (billing.introAvailable || (current && billing.onIntroPrice)) &&
+            p.introPrice !== null &&
+            p.introCycles > 0;
           const showSubscribe = canManage && (!current || !subscribed);
           return (
             <section
