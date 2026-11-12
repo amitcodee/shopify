@@ -330,7 +330,11 @@ export function shouldRunJobs(env: Env): boolean {
 
 /** Parses and validates configuration; fails fast at startup on invalid values. */
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const result = envSchema.safeParse(source);
+  // Compose files pass optional settings as `${NAME:-}`: an empty value means "not set".
+  const cleaned = Object.fromEntries(
+    Object.entries(source).filter(([, value]) => value !== undefined && value.trim() !== ''),
+  );
+  const result = envSchema.safeParse(cleaned);
   if (!result.success) {
     throw new Error(`Invalid environment configuration:\n${z.prettifyError(result.error)}`);
   }
