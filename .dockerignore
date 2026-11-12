@@ -5,7 +5,8 @@
 **/.env
 **/.env.*
 !**/.env.example
-**/storage
+# Local uploads (dev storage adapter), not the storage module's source code.
+apps/api/storage
 packages/db/src/generated
 test-results
 playwright-report
