@@ -2,6 +2,9 @@ import type { MetadataRoute } from 'next';
 import { requestHost } from '@/lib/api';
 import { getShop, isRootHost, storeOrigin } from '@/lib/shop';
 
+/** Depends on the request host (each store has its own), so never prerendered at build time. */
+export const dynamic = 'force-dynamic';
+
 /** Shopper-specific pages (carts, checkout, accounts, order and invoice links) stay unindexed. */
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const shop = await getShop();

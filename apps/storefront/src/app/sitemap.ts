@@ -6,6 +6,9 @@ import { LEGAL_DOCS } from '@/components/landing/legal-data';
 import { requestHost, sf } from '@/lib/api';
 import { getShop, isRootHost, storeOrigin } from '@/lib/shop';
 
+/** Depends on the request host (each store has its own), so never prerendered at build time. */
+export const dynamic = 'force-dynamic';
+
 /** The platform's own marketing pages, for the root host's sitemap. */
 function platformSitemap(origin: string): MetadataRoute.Sitemap {
   const paths = [
