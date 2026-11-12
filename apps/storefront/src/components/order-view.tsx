@@ -5,7 +5,9 @@ const countryName = new Intl.DisplayNames(['en'], { type: 'region' });
 function statusLabel(order: PublicOrder): string {
   if (order.status === 'CANCELLED') return 'Cancelled';
   if (order.financialStatus === 'REFUNDED') return 'Refunded';
-  if (order.status === 'PENDING_PAYMENT') return 'Awaiting payment';
+  if (order.status === 'PENDING_PAYMENT') {
+    return order.cashOnDelivery ? 'Waiting for your confirmation' : 'Awaiting payment';
+  }
   if (order.cashOnDelivery && order.financialStatus === 'PENDING') {
     return order.fulfillmentStatus === 'FULFILLED'
       ? 'Shipped — pay in cash on delivery'

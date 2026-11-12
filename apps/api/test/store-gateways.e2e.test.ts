@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { OrderLifecycle } from '../src/orders/order-lifecycle.service.js';
+import { StoreUrls } from '../src/orders/store-urls.js';
 import { STORE_GATEWAY_FETCH } from '../src/payments/store-gateways/store-gateways.service.js';
 import {
   createStore,
@@ -252,7 +254,7 @@ describe('Store gateways (merchant-owned keys)', () => {
       .expect((res) => expect(res.status, JSON.stringify(res.body)).toBeLessThan(300));
   });
 
-  it('sells on cash on delivery: confirmed at once, a sale only when the cash is in', async () => {
+  it('sells on cash on delivery: confirmed at once when the merchant allows it, a sale only when the cash is in', async () => {
     const { store, auth } = await merchant();
     const admin = `/api/v1/admin/stores/${store.id}`;
     const product = await ctx
@@ -303,7 +305,7 @@ describe('Store gateways (merchant-owned keys)', () => {
       .http()
       .put(`${base(store.id)}/cod`)
       .set(auth)
-      .send({ enabled: true, maxAmount: null })
+      .send({ enabled: true, maxAmount: null, requireConfirmation: false })
       .expect(204);
     expect((await preview()).body.cashOnDelivery).toBe(true);
     const payments = await ctx.http().get(`${admin}/payments`).set(auth).expect(200);
@@ -342,5 +344,106 @@ describe('Store gateways (merchant-owned keys)', () => {
     expect(stats.body.grossSales).toBe(row.total);
     expect(stats.body.testOrderCount).toBe(0);
     await ctx.http().post(`${admin}/orders/${row.id}/cash-collected`).set(auth).expect(409);
+  });
+  it('protects cash on delivery from fake orders: email confirmation, expiry, phone limit, quota', async () => {
+    const { store, auth } = await merchant();
+    const admin = `/api/v1/admin/stores/${store.id}`;
+    const product = await ctx
+      .http()
+      .post(`${admin}/products`)
+      .set(auth)
+      .send({
+        title: 'Kurta',
+        status: 'ACTIVE',
+        variants: [{ price: 99_900, inventoryQuantity: 20, sku: 'KURTA' }],
+      })
+      .expect(201);
+    // Email confirmation is the default.
+    await ctx
+      .http()
+      .put(`${base(store.id)}/cod`)
+      .set(auth)
+      .send({ enabled: true, maxAmount: null })
+      .expect(204);
+    const gateways = await ctx.http().get(base(store.id)).set(auth).expect(200);
+    expect(gateways.body.cod).toEqual({
+      enabled: true,
+      maxAmount: null,
+      requireConfirmation: true,
+    });
+
+    const sf = storefrontClient(ctx, `${store.subdomain}.localhost:3200`);
+    const place = async (email: string, phone: string) => {
+      const cart = (await sf('post', '/cart').expect(201)).body.token as string;
+      await sf('post', '/cart/lines', { cart })
+        .send({ variantId: product.body.variants[0].id, quantity: 1 })
+        .expect(201);
+      return sf('post', '/checkout', { cart }).send({
+        idempotencyKey: randomUUID(),
+        email,
+        paymentMethod: 'cod',
+        shippingAddress: {
+          name: 'Ravi',
+          line1: '2 Link Road',
+          city: 'Mumbai',
+          postalCode: '400001',
+          country: 'IN',
+          phone,
+        },
+      });
+    };
+    const orderRow = (number: number) =>
+      ctx.platform.order.findFirstOrThrow({ where: { storeId: store.id, number } });
+
+    const placed = await place('ravi@example.com', '+91 98200 11111');
+    expect(placed.status, JSON.stringify(placed.body)).toBeLessThan(300);
+    const pending = await orderRow(placed.body.orderNumber);
+    expect(pending).toMatchObject({ status: 'PENDING_PAYMENT', paymentProvider: 'cod' });
+    const hours = (pending.expiresAt!.getTime() - Date.now()) / 3_600_000;
+    expect(hours).toBeGreaterThan(11.9);
+    expect(hours).toBeLessThanOrEqual(12);
+    const emails = await ctx.platform.outboxMessage.findMany({ where: { tenantId: store.id } });
+    expect(JSON.stringify(emails.map((e) => e.payload))).toContain(
+      'Confirm your cash on delivery order',
+    );
+    // Not a confirmed order yet: it does not use up the monthly quota.
+    const usage = async () =>
+      (await ctx.http().get(`${admin}/billing`).set(auth).expect(200)).body.usage.ordersThisMonth;
+    expect(await usage()).toBe(0);
+
+    // A forged or wrong token is rejected; the real one confirms once.
+    await sf('post', `/orders/confirm/${pending.id}.forged`).expect(404);
+    const token = ctx.app.get(StoreUrls).codConfirmationToken(pending.id);
+    const confirmed = await sf('post', `/orders/confirm/${token}`).expect(200);
+    expect(confirmed.body).toMatchObject({ orderNumber: pending.number, alreadyConfirmed: false });
+    expect(await orderRow(pending.number)).toMatchObject({ status: 'OPEN', expiresAt: null });
+    expect((await sf('post', `/orders/confirm/${token}`).expect(200)).body.alreadyConfirmed).toBe(
+      true,
+    );
+    expect(await usage()).toBe(1);
+
+    // Unconfirmed orders expire and release their stock.
+    const ghost = await place('ghost@example.com', '9000000001');
+    const ghostRow = await orderRow(ghost.body.orderNumber);
+    await ctx.platform.order.update({
+      where: { id: ghostRow.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    await ctx.app.get(OrderLifecycle).expireStaleOrders();
+    expect(await orderRow(ghost.body.orderNumber)).toMatchObject({
+      status: 'CANCELLED',
+      cancelReason: 'cod_not_confirmed',
+    });
+    await sf(
+      'post',
+      `/orders/confirm/${ctx.app.get(StoreUrls).codConfirmationToken(ghostRow.id)}`,
+    ).expect(404);
+
+    // One phone number can hold at most 3 open cash orders (written any way).
+    expect((await place('a1@example.com', '98200 11111')).status).toBeLessThan(300);
+    expect((await place('a2@example.com', '+919820011111')).status).toBeLessThan(300);
+    const blocked = await place('a3@example.com', '098200-11111');
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.detail).toMatch(/cash on delivery orders waiting/);
   });
 });

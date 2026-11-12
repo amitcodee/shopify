@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { createPrismaClient, withTenant } from '@repo/db';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { PlansService } from '../src/platform/plans.service.js';
 import { CONNECT_PROVIDERS, type ConnectProvider } from '../src/payments/connect-provider.js';
 import { type MockConnectProvider } from '../src/payments/mock-connect.provider.js';
 import { MOCK_SIGNATURE_HEADER } from '../src/payments/mock-payment.provider.js';
@@ -31,6 +32,12 @@ describe('Payments (Connect payout accounts)', () => {
   beforeAll(async () => {
     ctx = await createTestApp();
     await resetDatabase(ctx.owner);
+    // The default plan takes no fee; these tests cover the fee mechanics an operator can enable.
+    await ctx.app.get(PlansService).ensureDefaults();
+    await ctx.platform.plan.update({
+      where: { code: 'standard' },
+      data: { transactionFeeBps: 200 },
+    });
     const providers = (ctx.app as INestApplication).get<Map<string, ConnectProvider>>(
       CONNECT_PROVIDERS,
     );

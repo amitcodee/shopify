@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { ConsoleLogger, Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
+import { initErrorReporting } from './common/error-reporting.js';
 import { loadEnv } from './config/env.js';
 
 /** Touched every 30 seconds; read by the worker's container health check. */
@@ -17,6 +18,7 @@ const WORKER_HEARTBEAT_FILE = join(tmpdir(), 'worker-heartbeat');
 async function bootstrap(): Promise<void> {
   if (existsSync('.env')) process.loadEnvFile('.env');
   const env = loadEnv({ ...process.env, RUN_JOBS: 'true' });
+  initErrorReporting(env, 'worker');
   const app = await NestFactory.createApplicationContext(AppModule.register(env), {
     logger: new ConsoleLogger({ json: env.NODE_ENV === 'production' }),
   });

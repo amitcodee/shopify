@@ -19,7 +19,7 @@ import { Prisma, type PrismaClient, setTenant } from '@repo/db';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { APP_DB, TenantDb } from '../database/database.module.js';
-import { PlansService } from '../platform/plans.service.js';
+import { billingState, PlansService } from '../platform/plans.service.js';
 import { renditionKey } from '../storage/storage.js';
 import { MediaUrls } from '../storage/storage.module.js';
 
@@ -231,8 +231,12 @@ export class StoresService {
   }
 
   async get(ctx: StoreContext): Promise<StoreDetail> {
-    const store = await this.db.store.findUnique({ where: { id: ctx.id } });
+    const store = await this.db.store.findUnique({
+      where: { id: ctx.id },
+      include: { subscription: true },
+    });
     if (!store) throw new NotFoundException('Store not found.');
+    const billing = store.subscription ? billingState(store.subscription) : null;
     return {
       id: store.id,
       name: store.name,
@@ -244,6 +248,14 @@ export class StoresService {
       timezone: store.timezone,
       abandonedCheckoutDelayHours: store.abandonedCheckoutDelayHours,
       permissions: ctx.permissions,
+      billingLocked: store.billingLocked,
+      trialEndsAt:
+        store.subscription?.status === 'TRIALING'
+          ? (store.subscription.trialEndsAt?.toISOString() ?? null)
+          : null,
+      billingAction: billing?.action ?? null,
+      closedAt: store.closedAt?.toISOString() ?? null,
+      deletionScheduledAt: store.deletionScheduledAt?.toISOString() ?? null,
       createdAt: store.createdAt.toISOString(),
     };
   }

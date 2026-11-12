@@ -6,6 +6,7 @@ export interface StartSubscriptionInput {
   planId: string;
   planName: string;
   priceMonthly: number;
+  currency: string;
   email: string;
   successUrl: string;
   cancelUrl: string;
@@ -21,6 +22,7 @@ export interface StartSubscriptionResult {
 export type BillingWebhookOutcome =
   | { kind: 'activated'; eventId: string; storeId: string; planId: string; providerRef: string }
   | { kind: 'invoice_paid'; eventId: string; providerRef: string; amount: number; currency: string }
+  | { kind: 'payment_failed'; eventId: string; providerRef: string }
   | { kind: 'cancelled'; eventId: string; providerRef: string }
   | { kind: 'ignored'; eventId: string };
 
@@ -64,7 +66,7 @@ export class StripeBillingProvider implements BillingProvider {
         {
           quantity: 1,
           price_data: {
-            currency: 'usd',
+            currency: input.currency.toLowerCase(),
             unit_amount: input.priceMonthly,
             recurring: { interval: 'month' },
             product_data: { name: `${input.planName} plan` },
@@ -121,6 +123,13 @@ export class StripeBillingProvider implements BillingProvider {
           amount: invoice.amount_paid,
           currency: invoice.currency.toUpperCase(),
         };
+      }
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        const parent = invoice.parent?.subscription_details?.subscription;
+        const subscription = typeof parent === 'string' ? parent : parent?.id;
+        if (!subscription) return { kind: 'ignored', eventId: event.id };
+        return { kind: 'payment_failed', eventId: event.id, providerRef: subscription };
       }
       case 'customer.subscription.deleted':
         return { kind: 'cancelled', eventId: event.id, providerRef: event.data.object.id };

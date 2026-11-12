@@ -13,6 +13,8 @@ export function contentSecurityPolicy(options: {
   frameAncestors?: "'none'" | "'self'" | string[];
   /** Origins this page may frame (e.g. the theme editor's storefront preview). */
   frameOrigins?: string[];
+  /** Origins scripts may call (e.g. a payment provider's checkout). */
+  connectOrigins?: string[];
 }): string {
   const ancestors = Array.isArray(options.frameAncestors)
     ? options.frameAncestors.join(' ') || "'none'"
@@ -23,7 +25,9 @@ export function contentSecurityPolicy(options: {
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob: ${options.imageOrigins.join(' ')}`.trim(),
     `font-src 'self' data:`,
-    `connect-src 'self'${options.dev ? ' ws: wss:' : ''}`,
+    `connect-src 'self' ${(options.connectOrigins ?? []).join(' ')}${options.dev ? ' ws: wss:' : ''}`
+      .replace(/\s+/g, ' ')
+      .trim(),
     `frame-src 'self' ${(options.frameOrigins ?? []).join(' ')}`.trim(),
     `frame-ancestors ${ancestors}`,
     `form-action 'self' ${(options.formActionOrigins ?? []).join(' ')}`.trim(),

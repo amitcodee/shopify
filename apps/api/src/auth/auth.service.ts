@@ -17,7 +17,7 @@ import type { PrismaClient, TenantTx, User } from '@repo/db';
 import { createHash } from 'node:crypto';
 import { decryptSecret, encryptSecret, signToken, verifyToken } from '../common/crypto.js';
 import type { AuthUser, RequestMeta } from '../common/request.js';
-import { ENV, type Env } from '../config/env.js';
+import { ENV, type Env, decryptionKeys } from '../config/env.js';
 import { APP_DB } from '../database/database.module.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import { PlatformSettingsService } from '../platform/platform-settings.service.js';
@@ -273,7 +273,7 @@ export class AuthService {
   /** Verifies a TOTP code and records its time step so it cannot be replayed. */
   private async consumeCode(user: User, code: string): Promise<void> {
     if (!user.totpSecretEnc) throw new UnauthorizedException(INVALID_CODE);
-    const secret = decryptSecret(this.env.APP_ENCRYPTION_KEY, user.totpSecretEnc);
+    const secret = decryptSecret(decryptionKeys(this.env), user.totpSecretEnc);
     const step = verifyTotp(secret, code);
     if (step === null || (user.totpLastStep !== null && step <= user.totpLastStep)) {
       throw new UnauthorizedException(INVALID_CODE);

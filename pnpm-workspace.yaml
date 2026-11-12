@@ -23,3 +23,7 @@ ignoredBuiltDependencies:
 # when `settings.next.rootDir` is set (we never set it); tinyglobby offers the same call without braces.
 overrides:
   '@next/eslint-plugin-next>fast-glob': 'npm:tinyglobby@0.2.17'
+  # High advisories reached through @nestjs/platform-express (GHSA-27r3-jxmh-p828,
+  # GHSA-q7qp-rjg7-q26m); patch releases with the same API.
+  'body-parser@>=2.0.0 <2.4.0': '^2.4.0'
+  'multer@>=2.0.0 <2.5.0': '^2.5.0'

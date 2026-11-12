@@ -21,7 +21,15 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'What fees will I pay?',
-    a: 'Your plan’s monthly price plus the platform fee on sales shown for your plan. Your payment provider charges its own card processing fees separately.',
+    a: 'Only your plan: free for 7 days, ₹99 a month for your first 3 months, then ₹799 a month, GST included. We take no fee on your sales. Your payment gateway charges its own processing fees separately.',
+  },
+  {
+    q: 'Which payment methods can my customers use?',
+    a: 'Connect your own Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal account so money settles straight to your bank, and offer cash on delivery. Cash orders are confirmed by the shopper from their email, and each phone number is limited to a few open cash orders, which cuts fake orders.',
+  },
+  {
+    q: 'What happens when my trial ends?',
+    a: 'Subscribe any time during the trial with UPI AutoPay or a card; the first charge happens when the trial ends. If you do not subscribe, the storefront pauses and your data is kept until you do.',
   },
   {
     q: 'Can I bring my existing products?',

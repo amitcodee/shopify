@@ -12,7 +12,7 @@ import type {
 import { parseCustomizations } from '@repo/contracts';
 import { Prisma, type TenantTx } from '@repo/db';
 import { decryptSecret } from '../common/crypto.js';
-import { ENV, type Env } from '../config/env.js';
+import { ENV, type Env, decryptionKeys } from '../config/env.js';
 import { TenantDb } from '../database/database.module.js';
 import { imageRenditions } from '../catalog/product-mapper.js';
 import { LIVE_PRODUCT_SQL, liveProductWhere } from '../catalog/product-visibility.js';
@@ -138,7 +138,7 @@ export class StorefrontCatalogService {
       tx.store.findUniqueOrThrow({ where: { id: shop.id } }),
     );
     const current = store.storefrontPasswordEncrypted
-      ? decryptSecret(this.env.APP_ENCRYPTION_KEY, store.storefrontPasswordEncrypted)
+      ? decryptSecret(decryptionKeys(this.env), store.storefrontPasswordEncrypted)
       : null;
     const a = createHash('sha256').update(password).digest();
     const b = createHash('sha256')

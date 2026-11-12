@@ -2,6 +2,7 @@ import {
   type CanActivate,
   type ExecutionContext,
   ForbiddenException,
+  HttpException,
   Inject,
   Injectable,
   NotFoundException,
@@ -15,6 +16,8 @@ import { APP_DB } from '../database/database.module.js';
 
 const REQUIRED_PERMISSION = 'tenancy:requiredPermission';
 const ALLOW_SUSPENDED = 'tenancy:allowSuspended';
+const ALLOW_BILLING_LOCKED = 'tenancy:allowBillingLocked';
+const ALLOW_CLOSED = 'tenancy:allowClosed';
 
 /** Requires the caller's role in the target store to grant `permission`. */
 export const RequirePermission = (permission: Permission) =>
@@ -22,6 +25,27 @@ export const RequirePermission = (permission: Permission) =>
 
 /** Lets a read-only route work while the store is suspended (so the UI can explain why). */
 export const AllowSuspendedStore = () => SetMetadata(ALLOW_SUSPENDED, true);
+
+/** Lets a route work while billing has locked the store (billing pages, closing the store). */
+export const AllowBillingLocked = () => SetMetadata(ALLOW_BILLING_LOCKED, true);
+
+/** Lets a route work for a store its owner closed (reopening it, reading its details). */
+export const AllowClosedStore = () => SetMetadata(ALLOW_CLOSED, true);
+
+/** HTTP 402 with a machine-readable code so the admin can send the merchant to billing. */
+export class BillingRequiredException extends HttpException {
+  constructor() {
+    super(
+      {
+        title: 'Subscription required',
+        code: 'billing_required',
+        detail:
+          'Your trial has ended or your subscription lapsed. Choose a plan to keep using your store.',
+      },
+      402,
+    );
+  }
+}
 
 /**
  * Authorizes `/admin/stores/:storeId/*`. The URL store id is only a request: it is honoured
@@ -43,7 +67,7 @@ export class StoreAccessGuard implements CanActivate {
 
     const member = await this.db.storeMember.findUnique({
       where: { storeId_userId: { storeId, userId } },
-      include: { store: { select: { status: true, currency: true } } },
+      include: { store: { select: { status: true, currency: true, billingLocked: true } } },
     });
     if (!member) throw new NotFoundException('Store not found.');
 
@@ -53,6 +77,20 @@ export class StoreAccessGuard implements CanActivate {
       !this.reflector.getAllAndOverride<boolean>(ALLOW_SUSPENDED, targets)
     ) {
       throw new ForbiddenException('This store is suspended. Contact platform support.');
+    }
+    if (
+      member.store.status === 'CLOSED' &&
+      !this.reflector.getAllAndOverride<boolean>(ALLOW_CLOSED, targets)
+    ) {
+      throw new ForbiddenException('This store is closed. Reopen it to make changes.');
+    }
+    if (
+      member.store.billingLocked &&
+      member.store.status === 'ACTIVE' &&
+      !this.reflector.getAllAndOverride<boolean>(ALLOW_BILLING_LOCKED, targets) &&
+      !this.reflector.getAllAndOverride<boolean>(ALLOW_SUSPENDED, targets)
+    ) {
+      throw new BillingRequiredException();
     }
 
     // An access token acts as staff with its own permissions, capped by its creator's role.

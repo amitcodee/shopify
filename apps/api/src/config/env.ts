@@ -38,13 +38,21 @@ const SECRET_KEYS = [
   'STRIPE_CONNECT_WEBHOOK_SECRET',
   'RAZORPAY_KEY_SECRET',
   'RAZORPAY_WEBHOOK_SECRET',
+  'BILLING_RAZORPAY_KEY_SECRET',
+  'BILLING_RAZORPAY_WEBHOOK_SECRET',
   'POSTMARK_SERVER_TOKEN',
   'ANTHROPIC_API_KEY',
+  'S3_SECRET_ACCESS_KEY',
 ] as const;
 
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    /**
+     * "staging": a production build on a test server. Emails go to the local mailbox folder
+     * instead of Postmark and the demo seed may run (with passwords from the environment).
+     */
+    APP_STAGE: z.enum(['production', 'staging']).default('production'),
     API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
     APP_VERSION: z.string().min(1).default('0.0.0-dev'),
     CORS_ORIGINS: originList.default(['http://localhost:3100', 'http://localhost:3200']),
@@ -61,6 +69,24 @@ const envSchema = z
     ADMIN_PUBLIC_URL: z.url().default('http://localhost:3100'),
     /** Local directory for the disk storage adapter (uploads, dev mailbox). */
     STORAGE_DIR: z.string().min(1).default('storage'),
+    /**
+     * Where media is stored: "local" disk (one server) or "s3" (AWS S3, Cloudflare R2,
+     * DigitalOcean Spaces, MinIO), which every API instance shares.
+     */
+    STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+    S3_BUCKET: z.string().min(3).optional(),
+    S3_REGION: z.string().min(1).default('auto'),
+    /** Endpoint of an S3-compatible store, e.g. https://<account>.r2.cloudflarestorage.com. */
+    S3_ENDPOINT: z.url().optional(),
+    S3_ACCESS_KEY_ID: z.string().min(3).optional(),
+    S3_SECRET_ACCESS_KEY: z.string().min(8).optional(),
+    S3_FORCE_PATH_STYLE: z.enum(['true', 'false']).optional(),
+    /** Public CDN base URL for media (e.g. https://cdn.example.com); unset = served by the API. */
+    MEDIA_PUBLIC_URL: z.url().optional(),
+    /** Error reporting (Sentry). Unset: errors are only logged. */
+    SENTRY_DSN: z.url().optional(),
+    /** Sentry environment name, e.g. "production" or "staging". */
+    SENTRY_ENVIRONMENT: z.string().min(1).optional(),
     EMAIL_FROM: z.string().min(3).default('Commerce Platform <no-reply@localhost>'),
     /** Email adapter: the local mailbox folder (development) or Postmark (production). */
     EMAIL_TRANSPORT: z.enum(['mailbox', 'postmark']).default('mailbox'),
@@ -93,6 +119,19 @@ const envSchema = z
     RAZORPAY_KEY_ID: z.string().startsWith('rzp_').optional(),
     RAZORPAY_KEY_SECRET: z.string().min(8).optional(),
     RAZORPAY_WEBHOOK_SECRET: z.string().min(8).optional(),
+    /**
+     * Who charges merchants for their platform subscription: "razorpay" (INR, UPI/card mandates),
+     * "stripe", or "mock" (development: plans switch at once with a paid invoice). Default: mock
+     * outside production.
+     */
+    BILLING_PROVIDER: z.enum(['mock', 'stripe', 'razorpay']).optional(),
+    /** The platform's own Razorpay account for subscriptions (rzp_test_… in development). */
+    BILLING_RAZORPAY_KEY_ID: z.string().startsWith('rzp_').optional(),
+    BILLING_RAZORPAY_KEY_SECRET: z.string().min(8).optional(),
+    /** Secret of the webhook added in the Razorpay Dashboard for /api/v1/webhooks/billing/razorpay. */
+    BILLING_RAZORPAY_WEBHOOK_SECRET: z.string().min(8).optional(),
+    /** Days a store keeps working after a subscription payment fails, before billing locks it. */
+    BILLING_GRACE_DAYS: z.coerce.number().int().min(0).max(30).default(7),
     /** Where rate-limit counters live: PostgreSQL (shared by all instances) or process memory. */
     RATE_LIMIT_STORE: z.enum(['postgres', 'memory']).default('postgres'),
     /** Unpaid orders release reserved stock after this many minutes. */
@@ -107,14 +146,37 @@ const envSchema = z
     PLATFORM_APEX_IP: z.ipv4().optional(),
     /** Key material for encrypting secrets at rest and signing short-lived tokens (≥ 32 chars). */
     APP_ENCRYPTION_KEY: z.string().min(32),
+    /**
+     * Previous encryption keys, comma-separated, still accepted for decryption while a rotation
+     * is in progress (see docs/runbook.md, "Rotating APP_ENCRYPTION_KEY").
+     */
+    APP_ENCRYPTION_KEYS_PREVIOUS: z
+      .string()
+      .optional()
+      .transform((value) =>
+        (value ?? '')
+          .split(',')
+          .map((k) => k.trim())
+          .filter(Boolean),
+      )
+      .pipe(z.array(z.string().min(32))),
     /** Let webhooks reach private/loopback addresses (default: only outside production). */
     WEBHOOK_ALLOW_PRIVATE_URLS: z.enum(['true', 'false']).optional(),
     /** Require platform admins to use two-factor authentication (default: on in production). */
     REQUIRE_PLATFORM_2FA: z.enum(['true', 'false']).optional(),
   })
-  .transform(({ PAYMENT_PROVIDER, PAYMENT_PROVIDERS, ...env }) => ({
+  .transform(({ PAYMENT_PROVIDER, PAYMENT_PROVIDERS, BILLING_PROVIDER, ...env }) => ({
     ...env,
     PAYMENT_PROVIDERS: PAYMENT_PROVIDERS ?? [PAYMENT_PROVIDER ?? 'mock'],
+    BILLING_PROVIDER:
+      BILLING_PROVIDER ??
+      (env.BILLING_RAZORPAY_KEY_ID
+        ? ('razorpay' as const)
+        : (PAYMENT_PROVIDERS ?? [PAYMENT_PROVIDER]).includes('stripe') &&
+            env.STRIPE_SECRET_KEY &&
+            env.STRIPE_WEBHOOK_SECRET
+          ? ('stripe' as const)
+          : ('mock' as const)),
   }))
   .superRefine((env, ctx) => {
     if (
@@ -136,6 +198,37 @@ const envSchema = z
         code: 'custom',
         path: ['RAZORPAY_KEY_ID'],
         message: 'Razorpay needs RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET',
+      });
+    }
+    if (
+      env.BILLING_PROVIDER === 'razorpay' &&
+      (!env.BILLING_RAZORPAY_KEY_ID ||
+        !env.BILLING_RAZORPAY_KEY_SECRET ||
+        !env.BILLING_RAZORPAY_WEBHOOK_SECRET)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['BILLING_RAZORPAY_KEY_ID'],
+        message:
+          'Razorpay billing needs BILLING_RAZORPAY_KEY_ID, BILLING_RAZORPAY_KEY_SECRET and BILLING_RAZORPAY_WEBHOOK_SECRET',
+      });
+    }
+    if (
+      env.BILLING_PROVIDER === 'stripe' &&
+      (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['BILLING_PROVIDER'],
+        message: 'Stripe billing needs STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET',
+      });
+    }
+    if (env.NODE_ENV === 'production' && env.BILLING_PROVIDER === 'mock') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['BILLING_PROVIDER'],
+        message:
+          'Mock billing would give plans away for free; use razorpay or stripe in production',
       });
     }
     if (env.NODE_ENV === 'production' && env.PAYMENT_PROVIDERS.includes('mock')) {
@@ -168,6 +261,16 @@ const envSchema = z
         });
       }
     }
+    if (
+      env.STORAGE_DRIVER === 's3' &&
+      (!env.S3_BUCKET || !env.S3_ACCESS_KEY_ID || !env.S3_SECRET_ACCESS_KEY)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['S3_BUCKET'],
+        message: 'STORAGE_DRIVER=s3 needs S3_BUCKET, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY',
+      });
+    }
     if (env.EMAIL_TRANSPORT === 'postmark' && !env.POSTMARK_SERVER_TOKEN) {
       ctx.addIssue({
         code: 'custom',
@@ -175,7 +278,11 @@ const envSchema = z
         message: 'EMAIL_TRANSPORT=postmark needs POSTMARK_SERVER_TOKEN',
       });
     }
-    if (env.NODE_ENV === 'production' && env.EMAIL_TRANSPORT === 'mailbox') {
+    if (
+      env.NODE_ENV === 'production' &&
+      env.APP_STAGE === 'production' &&
+      env.EMAIL_TRANSPORT === 'mailbox'
+    ) {
       ctx.addIssue({
         code: 'custom',
         path: ['EMAIL_TRANSPORT'],
@@ -228,4 +335,9 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     throw new Error(`Invalid environment configuration:\n${z.prettifyError(result.error)}`);
   }
   return result.data;
+}
+
+/** Keys that can decrypt stored secrets: the current one first, then any previous ones. */
+export function decryptionKeys(env: Env): string[] {
+  return [env.APP_ENCRYPTION_KEY, ...env.APP_ENCRYPTION_KEYS_PREVIOUS];
 }

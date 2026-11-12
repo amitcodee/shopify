@@ -11,6 +11,10 @@ export interface PublicPlan {
   code: string;
   name: string;
   priceMonthly: number;
+  currency: string;
+  trialDays: number;
+  introPrice: number | null;
+  introCycles: number;
   maxProducts: number | null;
   maxStaff: number | null;
   maxOrdersPerMonth: number | null;
@@ -35,6 +39,10 @@ export class PublicPlansController {
       code: p.code,
       name: p.name,
       priceMonthly: p.priceMonthly,
+      currency: p.currency,
+      trialDays: p.trialDays,
+      introPrice: p.introPrice,
+      introCycles: p.introCycles,
       maxProducts: p.maxProducts,
       maxStaff: p.maxStaff,
       maxOrdersPerMonth: p.maxOrdersPerMonth,

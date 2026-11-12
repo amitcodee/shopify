@@ -8,6 +8,8 @@ export const problemDetailsSchema = z.object({
   title: z.string(),
   status: z.number().int(),
   detail: z.string().optional(),
+  /** Machine-readable reason, e.g. "billing_required". */
+  code: z.string().optional(),
   errors: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
 });
 export type ProblemDetails = z.infer<typeof problemDetailsSchema>;

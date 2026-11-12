@@ -55,6 +55,11 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
   if (res.status === 401 && auth) redirect('/login?expired=1');
   if (!res.ok) {
     const problem = (await res.json().catch(() => null)) as ProblemDetails | null;
+    // Trial over or subscription lapsed: everything but billing is locked, so go there.
+    const storeId = /^\/admin\/stores\/([0-9a-f-]{36})\//.exec(path)?.[1];
+    if (res.status === 402 && problem?.code === 'billing_required' && storeId) {
+      redirect(`/s/${storeId}/settings/billing?locked=1`);
+    }
     throw new ApiError(
       res.status,
       problem ?? { type: 'about:blank', title: res.statusText, status: res.status },

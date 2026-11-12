@@ -1,48 +1,78 @@
 import { HttpException, Inject, Injectable } from '@nestjs/common';
-import type { Plan as PlanDto, PlanInput, Usage } from '@repo/contracts';
+import type { BillingAction, Plan as PlanDto, PlanInput, Usage } from '@repo/contracts';
 import { type Plan, Prisma, type PrismaClient, type Subscription, type TenantTx } from '@repo/db';
 import { APP_DB } from '../database/database.module.js';
 
-const TRIAL_DAYS = 14;
 const PERIOD_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** A paid period whose renewal we have not confirmed yet keeps working this long (sync lag). */
+const RENEWAL_LEEWAY_MS = 2 * DAY_MS;
 
-/** Plans every platform starts with (idempotently created when the table is empty). */
+/**
+ * Plans every platform starts with (idempotently created when the table is empty).
+ *
+ * One plan, INR, everything included: a 7-day free trial without a card, ₹99/month for the first
+ * 3 months, then ₹799/month. No free-forever plan and no platform fee on sales: merchants pay a
+ * flat subscription whichever gateway (or cash on delivery) they use, so revenue does not leak
+ * through own gateways or COD. Operators can add tiers in the platform console.
+ */
 export const DEFAULT_PLANS: Required<PlanInput>[] = [
   {
-    code: 'starter',
-    name: 'Starter',
-    priceMonthly: 0,
-    maxProducts: 25,
-    maxStaff: 2,
-    maxOrdersPerMonth: 100,
-    transactionFeeBps: 200,
+    code: 'standard',
+    name: 'Standard',
+    priceMonthly: 79_900,
+    currency: 'INR',
+    trialDays: 7,
+    introPrice: 9_900,
+    introCycles: 3,
+    razorpayOfferId: null,
+    maxProducts: null,
+    maxStaff: 5,
+    maxOrdersPerMonth: null,
+    transactionFeeBps: 0,
     active: true,
     sortOrder: 1,
   },
-  {
-    code: 'growth',
-    name: 'Growth',
-    priceMonthly: 2900,
-    maxProducts: 1000,
-    maxStaff: 10,
-    maxOrdersPerMonth: null,
-    transactionFeeBps: 100,
-    active: true,
-    sortOrder: 2,
-  },
-  {
-    code: 'pro',
-    name: 'Pro',
-    priceMonthly: 9900,
-    maxProducts: null,
-    maxStaff: null,
-    maxOrdersPerMonth: null,
-    transactionFeeBps: 50,
-    active: true,
-    sortOrder: 3,
-  },
 ];
+
+export interface BillingState {
+  /** Storefront offline and admin limited to billing. */
+  locked: boolean;
+  action: BillingAction | null;
+}
+
+/**
+ * Whether a subscription still entitles the store to run, and what the merchant must do next.
+ * Pure (time is a parameter) so the sweep job, the guard and the billing page agree.
+ */
+export function billingState(sub: Subscription, now = new Date()): BillingState {
+  const t = now.getTime();
+  const subscribed = sub.provider !== 'none' && sub.providerPhase !== 'pending_auth';
+  switch (sub.status) {
+    case 'TRIALING': {
+      const ends = (sub.trialEndsAt ?? sub.currentPeriodEnd).getTime();
+      // A merchant who authorised a mandate is charged when the trial ends; give the first charge
+      // time to land before locking.
+      const locked = t > ends + (subscribed ? RENEWAL_LEEWAY_MS : 0);
+      return { locked, action: subscribed ? null : 'subscribe' };
+    }
+    case 'ACTIVE': {
+      const locked = t > sub.currentPeriodEnd.getTime() + RENEWAL_LEEWAY_MS;
+      if (sub.providerPhase === 'pending_auth') return { locked, action: 'authorize' };
+      if (sub.cancelAtPeriodEnd) return { locked, action: 'subscribe' };
+      return { locked, action: locked ? 'subscribe' : null };
+    }
+    case 'PAST_DUE':
+      return {
+        locked: t > (sub.graceEndsAt ?? sub.currentPeriodEnd).getTime(),
+        action: sub.providerPhase === 'pending_auth' ? 'authorize' : 'update_payment',
+      };
+    case 'CANCELLED':
+      return { locked: t > sub.currentPeriodEnd.getTime(), action: 'subscribe' };
+    case 'EXPIRED':
+      return { locked: true, action: 'subscribe' };
+  }
+}
 
 type Db = PrismaClient | TenantTx;
 
@@ -52,6 +82,11 @@ export function toPlanDto(p: Plan): PlanDto {
     code: p.code,
     name: p.name,
     priceMonthly: p.priceMonthly,
+    currency: p.currency,
+    trialDays: p.trialDays,
+    introPrice: p.introPrice,
+    introCycles: p.introCycles,
+    razorpayOfferId: p.razorpayOfferId,
     maxProducts: p.maxProducts,
     maxStaff: p.maxStaff,
     maxOrdersPerMonth: p.maxOrdersPerMonth,
@@ -70,6 +105,22 @@ export function startOfMonthUtc(now = new Date()): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
 
+/**
+ * Orders that use up the monthly quota: paid ones, plus confirmed cash-on-delivery orders (they
+ * are real sales even before the cash is marked received). Unpaid online checkouts and
+ * unconfirmed or cancelled COD orders do not count, so nobody can exhaust a store's quota.
+ */
+export function countedOrdersWhere(storeId: string, now = new Date()): Prisma.OrderWhereInput {
+  const since = startOfMonthUtc(now);
+  return {
+    storeId,
+    OR: [
+      { paidAt: { gte: since } },
+      { paidAt: null, paymentProvider: 'cod', status: 'OPEN', createdAt: { gte: since } },
+    ],
+  };
+}
+
 /** HTTP 402: the action needs a bigger plan. */
 export class PlanLimitError extends HttpException {
   constructor(detail: string) {
@@ -84,7 +135,7 @@ export class PlansService {
   async ensureDefaults(db: Db = this.db): Promise<void> {
     if ((await db.plan.count()) > 0) return;
     await db.plan.createMany({
-      data: DEFAULT_PLANS.map((p) => ({ ...p, isDefault: p.code === 'starter' })),
+      data: DEFAULT_PLANS.map((p) => ({ ...p, isDefault: p.code === 'standard' })),
       skipDuplicates: true,
     });
   }
@@ -120,9 +171,10 @@ export class PlansService {
           storeId,
           planId: plan.id,
           status: 'TRIALING',
+          provider: 'none',
           currentPeriodStart: now,
-          currentPeriodEnd: addDays(now, TRIAL_DAYS),
-          trialEndsAt: addDays(now, TRIAL_DAYS),
+          currentPeriodEnd: addDays(now, plan.trialDays),
+          trialEndsAt: addDays(now, plan.trialDays),
         },
         include: { plan: true },
       });
@@ -143,10 +195,7 @@ export class PlansService {
       tx.storeInvitation.count({
         where: { storeId, acceptedAt: null, expiresAt: { gt: new Date() } },
       }),
-      tx.order.count({
-        // Paid orders only: unpaid checkouts must not let anyone exhaust a store's quota.
-        where: { storeId, paidAt: { gte: startOfMonthUtc() } },
-      }),
+      tx.order.count({ where: countedOrdersWhere(storeId) }),
     ]);
     return { products, staff: members + invitations, ordersThisMonth };
   }
@@ -186,10 +235,7 @@ export class PlanLimits {
   async assertCanAcceptOrder(tx: TenantTx, storeId: string): Promise<void> {
     const { plan } = await this.plans.subscriptionFor(storeId, tx);
     if (plan.maxOrdersPerMonth === null) return;
-    // Paid orders only: unpaid checkouts must not let anyone exhaust a store's quota.
-    const ordersThisMonth = await tx.order.count({
-      where: { storeId, paidAt: { gte: startOfMonthUtc() } },
-    });
+    const ordersThisMonth = await tx.order.count({ where: countedOrdersWhere(storeId) });
     if (ordersThisMonth >= plan.maxOrdersPerMonth) {
       // Shoppers see a neutral message; the merchant sees usage in their billing page.
       throw new PlanLimitError(

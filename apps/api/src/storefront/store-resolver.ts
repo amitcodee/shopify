@@ -101,7 +101,10 @@ export class StoreResolver {
     if (!subdomain) return null;
     if (subdomain.includes('.')) return this.lookupCustomDomain(host);
     const store = await this.db.store.findUnique({ where: { subdomain } });
-    return store && store.status === 'ACTIVE' ? this.toContext(store) : null;
+    // Suspended, closed and billing-locked stores are offline.
+    return store && store.status === 'ACTIVE' && !store.billingLocked
+      ? this.toContext(store)
+      : null;
   }
 
   /** Verified custom domains (Phase 6). */
@@ -111,7 +114,7 @@ export class StoreResolver {
       where: { hostname: host, verifiedAt: { not: null } },
       include: { store: true },
     });
-    if (!domain || domain.store.status !== 'ACTIVE') return null;
+    if (!domain || domain.store.status !== 'ACTIVE' || domain.store.billingLocked) return null;
     return this.toContext(domain.store);
   }
 

@@ -1,5 +1,5 @@
 import { formatMoney, minorToDecimalString, type Plan } from '@repo/contracts';
-import { ActionForm, CheckboxField, Field, SubmitButton } from '@/components/form';
+import { ActionForm, CheckboxField, Field, SelectField, SubmitButton } from '@/components/form';
 import { Badge, Card, PageHeader } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getCurrentUser } from '@/lib/session';
@@ -10,12 +10,49 @@ function PlanFields({ plan }: { plan: Plan | null }) {
     <>
       <Field name="code" label="Code" required defaultValue={plan?.code} />
       <Field name="name" label="Name" required defaultValue={plan?.name} />
+      <SelectField
+        name="currency"
+        label="Currency"
+        defaultValue={plan?.currency ?? 'INR'}
+        options={[
+          { value: 'INR', label: 'INR (Razorpay billing)' },
+          { value: 'USD', label: 'USD' },
+        ]}
+      />
       <Field
         name="price"
-        label="Price / month (USD)"
+        label="Price / month"
         required
         inputMode="decimal"
-        defaultValue={plan ? minorToDecimalString(plan.priceMonthly, 'USD') : '0'}
+        defaultValue={plan ? minorToDecimalString(plan.priceMonthly, plan.currency) : '799'}
+        hint="Including GST"
+      />
+      <Field
+        name="trialDays"
+        label="Free trial (days)"
+        inputMode="numeric"
+        defaultValue={plan?.trialDays ?? 7}
+      />
+      <Field
+        name="introPrice"
+        label="Intro price / month"
+        inputMode="decimal"
+        defaultValue={
+          plan?.introPrice != null ? minorToDecimalString(plan.introPrice, plan.currency) : ''
+        }
+        hint="Empty = no intro offer"
+      />
+      <Field
+        name="introCycles"
+        label="Intro months"
+        inputMode="numeric"
+        defaultValue={plan?.introCycles ?? 0}
+      />
+      <Field
+        name="razorpayOfferId"
+        label="Razorpay offer id"
+        defaultValue={plan?.razorpayOfferId ?? ''}
+        hint="Optional. With an offer (Dashboard → Subscriptions → Offers) one mandate covers the intro and regular price."
       />
       <Field
         name="maxProducts"
@@ -71,7 +108,7 @@ export default async function PlansPage() {
         {plans.map((p) => (
           <Card
             key={p.id}
-            title={`${p.name} — ${p.priceMonthly === 0 ? 'Free' : `${formatMoney(p.priceMonthly, 'USD')}/mo`}`}
+            title={`${p.name} — ${p.priceMonthly === 0 ? 'Free' : `${formatMoney(p.priceMonthly, p.currency)}/mo`}${p.introPrice !== null && p.introCycles > 0 ? ` (intro ${formatMoney(p.introPrice, p.currency)} × ${p.introCycles})` : ''}`}
             actions={
               <div className="flex gap-2">
                 {p.isDefault ? <Badge tone="indigo">Default</Badge> : null}

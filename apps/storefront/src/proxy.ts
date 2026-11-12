@@ -12,7 +12,12 @@ import { type NextRequest, NextResponse } from 'next/server';
 const isProd = process.env.NODE_ENV === 'production';
 /** Mirrors THEME_PREVIEW_HEADER in src/lib/shop.ts (which is server-only, so not imported here). */
 const PREVIEW_HEADER = 'x-theme-preview';
-const mediaOrigin = new URL(process.env.API_URL ?? 'http://localhost:4000').origin;
+/** Where images load from: the API (internal and public URL) and, when set, the media CDN. */
+const mediaOrigins = [
+  process.env.API_URL ?? 'http://localhost:4000',
+  process.env.PUBLIC_API_URL,
+  process.env.MEDIA_PUBLIC_URL,
+].flatMap((url) => (url ? [new URL(url).origin] : []));
 // The marketing site's "Start for free" email form submits to the admin's sign-up page.
 const adminOrigin = new URL(process.env.ADMIN_PUBLIC_URL ?? 'http://localhost:3100').origin;
 
@@ -29,7 +34,7 @@ export function proxy(request: NextRequest) {
   const csp = contentSecurityPolicy({
     nonce,
     dev: !isProd,
-    imageOrigins: [mediaOrigin],
+    imageOrigins: mediaOrigins,
     formActionOrigins: [adminOrigin],
     frameAncestors: draftToken ? [adminOrigin] : "'none'",
   });

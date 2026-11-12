@@ -3,6 +3,7 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  HttpCode,
   Patch,
   Post,
   Query,
@@ -10,8 +11,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { z } from 'zod';
 import {
   type AuditLogEntry,
+  closeStoreInputSchema,
   type CreateStoreInput,
   createStoreInputSchema,
   type Paginated,
@@ -28,10 +31,13 @@ import type { AppRequest, AuthUser, RequestMeta, StoreContext } from '../common/
 import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { ApiZodBody, ZodPipe } from '../common/zod.js';
 import {
+  AllowBillingLocked,
+  AllowClosedStore,
   AllowSuspendedStore,
   RequirePermission,
   StoreAccessGuard,
 } from '../tenancy/store-access.guard.js';
+import { StoreClosureService } from './store-closure.service.js';
 import { StoresService } from './stores.service.js';
 
 @ApiTags('stores')
@@ -73,12 +79,41 @@ export class StoreController {
   constructor(
     private readonly stores: StoresService,
     private readonly audit: AuditService,
+    private readonly closures: StoreClosureService,
   ) {}
 
   @Get()
   @AllowSuspendedStore()
+  @AllowBillingLocked()
+  @AllowClosedStore()
   get(@CurrentStore() store: StoreContext): Promise<StoreDetail> {
     return this.stores.get(store);
+  }
+
+  /** Owner closes the store: storefront offline now, data erased after the grace period. */
+  @Post('close')
+  @HttpCode(200)
+  @AllowBillingLocked()
+  @ApiZodBody(closeStoreInputSchema)
+  close(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodPipe(closeStoreInputSchema)) body: z.output<typeof closeStoreInputSchema>,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<StoreDetail> {
+    return this.closures.close(store, body.confirmSubdomain, user, meta);
+  }
+
+  @Post('reopen')
+  @HttpCode(200)
+  @AllowBillingLocked()
+  @AllowClosedStore()
+  reopen(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<StoreDetail> {
+    return this.closures.reopen(store, user, meta);
   }
 
   @Patch()

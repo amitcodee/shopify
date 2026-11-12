@@ -5,15 +5,15 @@ import { ADMIN_URL, createStore, signUp, storefrontUrl } from './helpers';
 test('merchant upgrades their plan; platform admin suspends and reactivates the store', async ({
   browser,
 }) => {
-  // Merchant upgrades from Starter to Growth (sandbox billing).
+  // Merchant subscribes during the trial (sandbox billing: the ₹99 intro month is charged).
   const merchant = await browser.newPage();
   await signUp(merchant, 'Plan Merchant');
   const { subdomain, storeId } = await createStore(merchant, 'Plan Store');
   await merchant.goto(`${ADMIN_URL}/s/${storeId}/settings/billing`);
-  await expect(merchant.getByRole('heading', { name: 'Starter plan' })).toBeVisible();
-  await merchant.getByRole('button', { name: 'Switch to Growth' }).click();
-  await expect(merchant.getByRole('heading', { name: 'Growth plan' })).toBeVisible();
-  await expect(merchant.getByRole('cell', { name: '$29.00' })).toBeVisible();
+  await expect(merchant.getByRole('heading', { name: 'Standard plan' })).toBeVisible();
+  await expect(merchant.getByText(/days? left in your free trial/).first()).toBeVisible();
+  await merchant.getByRole('button', { name: 'Subscribe now' }).click();
+  await expect(merchant.getByRole('cell', { name: '₹99.00' })).toBeVisible();
 
   // A super-admin manages the platform.
   const adminPage = await browser.newPage();
@@ -21,11 +21,11 @@ test('merchant upgrades their plan; platform admin suspends and reactivates the 
   execFileSync(process.execPath, ['scripts/make-platform-admin.js', email], { cwd: 'packages/db' });
   await adminPage.goto(`${ADMIN_URL}/platform`);
   await expect(adminPage.getByRole('heading', { name: 'Platform overview' })).toBeVisible();
-  await expect(adminPage.getByText('$29.00')).toBeVisible(); // MRR includes the Growth store
+  await expect(adminPage.getByText('₹799.00')).toBeVisible(); // MRR includes the subscribed store
 
   await adminPage.getByRole('link', { name: 'Stores' }).click();
   const row = adminPage.getByRole('row', { name: /Plan Store/ });
-  await expect(row).toContainText('Growth');
+  await expect(row).toContainText('Standard');
   await row.getByText('Suspend…').click();
   await row.getByLabel('Reason').fill('Policy review');
   await row.getByRole('button', { name: 'Suspend store' }).click();

@@ -190,8 +190,10 @@ function CashOnDelivery({
         <Badge tone={cod.enabled ? 'green' : 'gray'}>{cod.enabled ? 'On' : 'Off'}</Badge>
       </div>
       <p className="mt-1 text-sm text-slate-600">
-        Shoppers can pay in cash when the order arrives, alongside any gateway. Orders are confirmed
-        straight away, and you mark the cash received on each order. It needs no account or keys.
+        Shoppers can pay in cash when the order arrives, alongside any gateway. You mark the cash
+        received on each order. It needs no account or keys. Each phone number can have at most 3
+        cash orders waiting for delivery, and confirmed cash orders count toward your monthly
+        orders.
       </p>
       {canManage ? (
         <ActionForm
@@ -202,6 +204,11 @@ function CashOnDelivery({
             name="enabled"
             label="Offer cash on delivery"
             defaultChecked={cod.enabled}
+          />
+          <CheckboxField
+            name="requireConfirmation"
+            label="Shoppers confirm by email (cancels fake orders after 12 hours)"
+            defaultChecked={cod.requireConfirmation}
           />
           <div className="w-56">
             <Field

@@ -87,6 +87,13 @@ interface Quote {
 }
 
 const MAX_PENDING_ORDERS_PER_EMAIL = 3;
+/** Open (undelivered, unpaid) cash-on-delivery orders one phone number may have per store. */
+const MAX_OPEN_COD_ORDERS_PER_PHONE = 3;
+
+/** Compares Indian and international numbers by their last 10 digits ("+91 98…" = "098…"). */
+export function phoneKey(phone: string): string {
+  return phone.replace(/\D/g, '').slice(-10);
+}
 
 @Injectable()
 export class CheckoutService {
@@ -227,6 +234,9 @@ export class CheckoutService {
       if (cod && !input.shippingAddress.phone) {
         throw new BadRequestException('Enter a phone number for delivery.');
       }
+      if (cod && input.shippingAddress.phone) {
+        await this.assertCodPhoneLimit(tx, shop.id, input.shippingAddress.phone);
+      }
       const destination =
         quote.amountDue > 0 && !cod
           ? await this.paymentAccounts.requireDestination(tx, shop.id)
@@ -329,7 +339,15 @@ export class CheckoutService {
       if (placed.total - placed.giftCardAmount === 0) {
         await this.lifecycle.markFreeOrderPaid(tx, shop.id, placed);
       } else if (cod) {
-        await this.lifecycle.confirmCashOnDelivery(tx, shop.id, placed);
+        const { codRequireConfirmation } = await tx.store.findUniqueOrThrow({
+          where: { id: shop.id },
+          select: { codRequireConfirmation: true },
+        });
+        if (codRequireConfirmation) {
+          await this.lifecycle.requestCashOnDeliveryConfirmation(tx, shop.id, placed);
+        } else {
+          await this.lifecycle.confirmCashOnDelivery(tx, shop.id, placed);
+        }
       }
       return placed;
     });
@@ -362,6 +380,65 @@ export class CheckoutService {
     return (
       store.codEnabled && (store.codMaxAmount === null || quote.amountDue <= store.codMaxAmount)
     );
+  }
+
+  /**
+   * Fake-order protection: a phone number with several cash orders still awaiting delivery cannot
+   * place another until those are delivered, paid or cancelled.
+   */
+  private async assertCodPhoneLimit(tx: TenantTx, storeId: string, phone: string): Promise<void> {
+    const key = phoneKey(phone);
+    if (key.length < 6) throw new BadRequestException('Enter a valid phone number for delivery.');
+    const open = await tx.order.findMany({
+      where: {
+        storeId,
+        paymentProvider: CASH_ON_DELIVERY,
+        status: { in: ['PENDING_PAYMENT', 'OPEN'] },
+        paidAt: null,
+        fulfillmentStatus: { not: 'FULFILLED' },
+        createdAt: { gt: new Date(Date.now() - 60 * 24 * 60 * 60_000) },
+      },
+      select: { shippingAddress: true },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    });
+    const samePhone = open.filter((o) => {
+      const value = (o.shippingAddress as { phone?: unknown } | null)?.phone;
+      return typeof value === 'string' && phoneKey(value) === key;
+    }).length;
+    if (samePhone >= MAX_OPEN_COD_ORDERS_PER_PHONE) {
+      throw new HttpException(
+        'This phone number already has cash on delivery orders waiting for delivery. Please pay online or wait for them to arrive.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
+  /** The shopper confirmed a cash-on-delivery order from the link in their email. */
+  async confirmCashOnDelivery(
+    shop: ShopContext,
+    host: string,
+    token: string,
+  ): Promise<{ orderNumber: number; statusUrl: string; alreadyConfirmed: boolean }> {
+    const result = await this.tenantDb.run(shop.id, async (tx) => {
+      const confirmed = await this.lifecycle.confirmCashOnDeliveryByToken(tx, shop.id, token);
+      if (!confirmed) return null;
+      const order = await tx.order.findUniqueOrThrow({
+        where: { id: confirmed.orderId },
+        select: { number: true },
+      });
+      return { ...confirmed, number: order.number };
+    });
+    if (!result) {
+      throw new NotFoundException(
+        'This confirmation link is not valid any more. The order may have expired; please order again.',
+      );
+    }
+    return {
+      orderNumber: result.number,
+      statusUrl: this.statusUrl(host, result.orderId),
+      alreadyConfirmed: result.alreadyConfirmed,
+    };
   }
 
   async getMockPayment(shop: ShopContext, reference: string): Promise<MockPayment> {

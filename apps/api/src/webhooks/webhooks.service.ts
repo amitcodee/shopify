@@ -21,7 +21,7 @@ import type { Prisma, PrismaClient, TenantTx, WebhookSubscription } from '@repo/
 import { AuditService } from '../audit/audit.service.js';
 import { decryptSecret, encryptSecret } from '../common/crypto.js';
 import type { AuthUser, RequestMeta } from '../common/request.js';
-import { allowPrivateWebhooks, ENV, type Env } from '../config/env.js';
+import { allowPrivateWebhooks, ENV, type Env, decryptionKeys } from '../config/env.js';
 import { PLATFORM_DB, TenantDb } from '../database/database.module.js';
 import { postJson } from './safe-http.js';
 
@@ -265,7 +265,7 @@ export class WebhooksService {
       return;
     }
     const body = JSON.stringify(delivery.payload);
-    const secret = decryptSecret(this.env.APP_ENCRYPTION_KEY, subscription.secretEncrypted);
+    const secret = decryptSecret(decryptionKeys(this.env), subscription.secretEncrypted);
     let status = 0;
     let error: string | null = null;
     try {

@@ -59,12 +59,24 @@ export async function savePlanAction(
   _: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const price = parseMoney(requiredString(formData, 'price'), 'USD');
+  const currency = requiredString(formData, 'currency') === 'USD' ? 'USD' : 'INR';
+  const price = parseMoney(requiredString(formData, 'price'), currency);
   if (price === null) return { error: 'Enter a valid monthly price.' };
+  const introRaw = optionalString(formData, 'introPrice');
+  const introPrice = introRaw === undefined ? null : parseMoney(introRaw, currency);
+  if (introRaw !== undefined && introPrice === null) {
+    return { error: 'Enter a valid introductory price.' };
+  }
   const body = {
     code: requiredString(formData, 'code'),
     name: requiredString(formData, 'name'),
     priceMonthly: price,
+    currency,
+    trialDays: Number.parseInt(requiredString(formData, 'trialDays') || '0', 10),
+    introPrice,
+    introCycles:
+      introPrice === null ? 0 : Number.parseInt(optionalString(formData, 'introCycles') ?? '0', 10),
+    razorpayOfferId: optionalString(formData, 'razorpayOfferId') ?? null,
     maxProducts: limit(formData, 'maxProducts'),
     maxStaff: limit(formData, 'maxStaff'),
     maxOrdersPerMonth: limit(formData, 'maxOrdersPerMonth'),

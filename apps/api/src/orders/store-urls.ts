@@ -45,6 +45,23 @@ export class StoreUrls {
     return `${orderId}.${mac}`;
   }
 
+  /** Cash-on-delivery confirmation link token (sent only to the shopper's email). */
+  codConfirmationToken(orderId: string): string {
+    const mac = createHmac('sha256', this.env.STOREFRONT_SHARED_SECRET)
+      .update(`cod-confirm:${orderId}`)
+      .digest('base64url');
+    return `${orderId}.${mac}`;
+  }
+
+  /** The order id a COD confirmation token was issued for, or null when it is not authentic. */
+  verifyCodConfirmationToken(token: string): string | null {
+    const orderId = token.split('.', 1)[0] ?? '';
+    if (!/^[0-9a-f-]{36}$/.test(orderId)) return null;
+    const expected = Buffer.from(this.codConfirmationToken(orderId));
+    const given = Buffer.from(token);
+    return given.length === expected.length && timingSafeEqual(given, expected) ? orderId : null;
+  }
+
   /** The order id a recovery token was issued for, or null when it is not authentic. */
   verifyCheckoutRecoveryToken(token: string): string | null {
     const orderId = token.split('.', 1)[0] ?? '';

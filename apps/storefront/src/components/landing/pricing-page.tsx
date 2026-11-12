@@ -14,12 +14,15 @@ import {
 import { fetchPublicPlans, type PublicPlan } from './public-api';
 import { signupUrl } from './urls';
 
-const usd = (cents: number) =>
-  new Intl.NumberFormat('en-US', {
+const money = (minor: number, currency: string) =>
+  new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
     style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
-  }).format(cents / 100);
+    currency,
+    maximumFractionDigits: minor % 100 === 0 ? 0 : 2,
+  }).format(minor / 100);
+
+const hasIntro = (p: PublicPlan) =>
+  p.introPrice !== null && p.introCycles > 0 && p.introPrice < p.priceMonthly;
 
 const count = (value: number | null) =>
   value === null ? 'Unlimited' : value.toLocaleString('en-US');
@@ -33,7 +36,8 @@ const percent = (bps: number) =>
 const fee = (bps: number) =>
   bps === 0 ? 'No platform fee on sales' : `${percent(bps)} platform fee on sales`;
 
-const price = (cents: number) => (cents === 0 ? 'Free' : usd(cents));
+const price = (p: PublicPlan) =>
+  p.priceMonthly === 0 ? 'Free' : money(p.priceMonthly, p.currency);
 
 /** Features with no plan limits: every plan gets them. */
 const INCLUDED = [
@@ -45,7 +49,8 @@ const INCLUDED = [
   'Customer accounts and segments',
   'Inventory across locations',
   'Draft orders, returns and packing slips',
-  'Stripe and Razorpay payments',
+  'Your own gateway: Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal',
+  'Cash on delivery with fake-order protection',
   'Admin API tokens and webhooks',
   'Two-factor sign-in for staff',
 ];
@@ -68,13 +73,45 @@ function Check({ className = 'size-4' }: { className?: string }) {
 }
 
 const featuredIndex = (plans: PublicPlan[]) =>
-  plans.length > 1 ? Math.floor(plans.length / 2) : -1;
+  plans.length > 2 ? Math.floor(plans.length / 2) : 0;
+
+/** Trial → intro months → regular price, as three steps. */
+function PriceTimeline({ plan }: { plan: PublicPlan }) {
+  const steps = [
+    plan.trialDays > 0
+      ? { when: `First ${plan.trialDays} days`, what: 'Free', note: 'No card needed' }
+      : null,
+    hasIntro(plan) && plan.introPrice !== null
+      ? {
+          when: `Months 1–${plan.introCycles}`,
+          what: `${money(plan.introPrice, plan.currency)}/mo`,
+          note: 'Launch offer',
+        }
+      : null,
+    {
+      when: hasIntro(plan) ? 'After that' : 'Every month',
+      what: `${money(plan.priceMonthly, plan.currency)}/mo`,
+      note: 'Cancel any time',
+    },
+  ].filter((s) => s !== null);
+  return (
+    <ol className="mt-6 grid gap-2 sm:grid-cols-3">
+      {steps.map((step) => (
+        <li key={step.when} className="rounded-lg bg-mk-subtle px-3 py-3 ring-1 ring-mk-line">
+          <p className="text-xs text-mk-dim">{step.when}</p>
+          <p className="mt-1 font-semibold text-mk-fg">{step.what}</p>
+          <p className="text-xs text-mk-dim">{step.note}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 function PlanCards({ plans }: { plans: PublicPlan[] }) {
   const featured = featuredIndex(plans);
   return (
     <ul
-      className={`mx-auto grid gap-6 ${plans.length >= 3 ? 'max-w-6xl lg:grid-cols-3' : 'max-w-3xl md:grid-cols-2'}`}
+      className={`mx-auto grid gap-6 ${plans.length >= 3 ? 'max-w-6xl lg:grid-cols-3' : plans.length === 2 ? 'max-w-4xl md:grid-cols-2' : 'max-w-xl'}`}
     >
       {plans.map((plan, i) => {
         const highlight = i === featured;
@@ -89,20 +126,36 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
           >
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">{plan.name}</h2>
-              {highlight && (
+              {hasIntro(plan) ? (
+                <p className="rounded-full bg-mk-accent-soft px-3 py-1 text-xs font-semibold text-mk-accent ring-1 ring-mk-accent/30">
+                  Launch offer
+                </p>
+              ) : highlight && plans.length > 1 ? (
                 <p className="rounded-full bg-mk-accent-soft px-3 py-1 text-xs font-semibold text-mk-accent ring-1 ring-mk-accent/30">
                   Recommended
                 </p>
-              )}
+              ) : null}
             </div>
-            <p className="mt-6 flex items-baseline gap-1.5">
-              <span className="text-5xl font-semibold tracking-[-0.03em]">
-                {price(plan.priceMonthly)}
-              </span>
-              {plan.priceMonthly > 0 && (
-                <span className={highlight ? 'text-mk-dim' : 'text-mk-dim'}>USD/month</span>
-              )}
-            </p>
+            {hasIntro(plan) && plan.introPrice !== null ? (
+              <>
+                <p className="mt-6 flex items-baseline gap-1.5">
+                  <span className="text-5xl font-semibold tracking-[-0.03em]">
+                    {money(plan.introPrice, plan.currency)}
+                  </span>
+                  <span className="text-mk-dim">/month</span>
+                </p>
+                <p className="mt-2 text-sm text-mk-muted">
+                  for your first {plan.introCycles} months, then{' '}
+                  <span className="font-semibold text-mk-fg">{price(plan)}/month</span>
+                </p>
+              </>
+            ) : (
+              <p className="mt-6 flex items-baseline gap-1.5">
+                <span className="text-5xl font-semibold tracking-[-0.03em]">{price(plan)}</span>
+                {plan.priceMonthly > 0 && <span className="text-mk-dim">/month</span>}
+              </p>
+            )}
+            <PriceTimeline plan={plan} />
             <ul
               className={`mt-8 flex-1 space-y-3.5 border-t pt-8 text-sm ${highlight ? 'border-mk-line text-mk-muted' : 'border-mk-line text-mk-muted'}`}
             >
@@ -111,7 +164,8 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
                 limit(plan.maxStaff, 'staff accounts'),
                 limit(plan.maxOrdersPerMonth, 'orders a month'),
                 fee(plan.transactionFeeBps),
-                'Every feature included',
+                'Every feature and template included',
+                'Pay by UPI AutoPay or card',
               ].map((line) => (
                 <li key={line} className="flex gap-2.5">
                   <span className={`mt-0.5 ${highlight ? 'text-mk-accent' : 'text-mk-accent'}`}>
@@ -129,7 +183,9 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
                   : 'text-mk-fg ring-2 ring-mk-fg/80 hover:bg-mk-surface-2 focus-visible:outline-mk-fg'
               }`}
             >
-              Start with {plan.name}
+              {plan.trialDays > 0
+                ? `Start your ${plan.trialDays}-day free trial`
+                : `Start with ${plan.name}`}
             </a>
           </li>
         );
@@ -141,7 +197,7 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
 function Comparison({ plans }: { plans: PublicPlan[] }) {
   const featured = featuredIndex(plans);
   const rows: { label: string; values: string[] }[] = [
-    { label: 'Monthly price', values: plans.map((p) => price(p.priceMonthly)) },
+    { label: 'Monthly price', values: plans.map((p) => price(p)) },
     { label: 'Products', values: plans.map((p) => count(p.maxProducts)) },
     { label: 'Staff accounts', values: plans.map((p) => count(p.maxStaff)) },
     { label: 'Orders per month', values: plans.map((p) => count(p.maxOrdersPerMonth)) },
@@ -233,10 +289,11 @@ export async function PricingPage() {
         />
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
           <Eyebrow className="justify-center">Pricing</Eyebrow>
-          <h1 className={`mt-5 text-mk-fg ${display}`}>Pick a plan that fits your store</h1>
+          <h1 className={`mt-5 text-mk-fg ${display}`}>One simple price. Everything included.</h1>
           <p className={`mt-6 text-mk-muted ${lead}`}>
-            Every feature is included on every plan — plans differ only in limits and the platform
-            fee on sales. Every new store starts with a 14-day trial.
+            Start free for 7 days — no card needed. Then ₹99 a month for your first 3 months, and
+            ₹799 a month after that. No fee on your sales, whichever gateway you use or cash on
+            delivery.
           </p>
         </div>
         <div className="mt-14 px-4 sm:px-6 lg:px-8">
@@ -250,13 +307,14 @@ export async function PricingPage() {
                 admin.
               </p>
               <a href={signupUrl} className={`${buttonPrimary} mt-6`}>
-                Start for free
+                Start your free trial
               </a>
             </div>
           )}
         </div>
         <p className="mt-10 px-4 text-center text-sm text-mk-dim">
-          Prices in US dollars. Card processing fees from your payment provider are separate.
+          Prices in Indian rupees, including GST. Your payment gateway&rsquo;s own processing fees
+          are separate.
         </p>
       </section>
       <section aria-labelledby="included-title" className={`${paper} pb-20 sm:pb-28`}>
@@ -277,7 +335,7 @@ export async function PricingPage() {
           </div>
         </div>
       </section>
-      {plans ? <Comparison plans={plans} /> : null}
+      {plans && plans.length > 1 ? <Comparison plans={plans} /> : null}
       <Faq />
       <CtaBand photo="packing-orders" />
     </>

@@ -217,7 +217,7 @@ export interface StoreGatewaysOverview {
   connected: ConnectedStoreGateway[];
   /** Webhook address per gateway to paste into its dashboard. */
   webhookUrls: Record<StoreGatewayId, string>;
-  cod: { enabled: boolean; maxAmount: number | null };
+  cod: { enabled: boolean; maxAmount: number | null; requireConfirmation: boolean };
 }
 
 /** Result of saving keys: the first gateway a store connects starts taking payments right away. */
@@ -228,5 +228,7 @@ export interface SavedStoreGateway {
 export const codSettingsInputSchema = z.strictObject({
   enabled: z.boolean(),
   maxAmount: z.number().int().positive().nullable(),
+  /** Shoppers confirm cash orders from their email before stock is held for long. */
+  requireConfirmation: z.boolean().default(true),
 });
 export type CodSettingsInput = z.infer<typeof codSettingsInputSchema>;

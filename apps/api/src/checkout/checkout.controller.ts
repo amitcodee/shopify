@@ -124,6 +124,18 @@ export class CheckoutController {
     return this.checkout.getMockPayment(shop, reference);
   }
 
+  /** Link from the cash-on-delivery confirmation email. */
+  @Post('orders/confirm/:token')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  confirmCashOnDelivery(
+    @CurrentShop() shop: ShopContext,
+    @Req() req: Request,
+    @Param('token') token: string,
+  ): Promise<{ orderNumber: number; statusUrl: string; alreadyConfirmed: boolean }> {
+    return this.checkout.confirmCashOnDelivery(shop, signedHost(req), token.slice(0, 200));
+  }
+
   @AllowLockedStore()
   @Get('orders/:token')
   order(@CurrentShop() shop: ShopContext, @Param('token') token: string): Promise<PublicOrder> {

@@ -10,6 +10,7 @@ import { WebhookEmitter } from '../webhooks/webhooks.service.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import { formatMoney, parseLineProperties } from '@repo/contracts';
 import {
+  codConfirmationEmail,
   disputeEmail,
   giftCardIssuedEmail,
   merchantNewOrderEmail,
@@ -35,6 +36,8 @@ export interface PaidOutcome {
 export const MANUAL_PAYMENT = 'manual';
 /** Order.paymentProvider of orders the shopper pays in cash when they are delivered. */
 export const CASH_ON_DELIVERY = 'cod';
+/** Hours a shopper has to confirm a cash-on-delivery order before it is cancelled. */
+export const COD_CONFIRMATION_HOURS = 12;
 /** Provider name of the part of an order paid with a gift card (settled at checkout). */
 export const GIFT_CARD_PAYMENT = 'gift_card';
 
@@ -498,6 +501,74 @@ export class OrderLifecycle {
     await this.sendOrderEmails(tx, storeId, order);
   }
 
+  /**
+   * Fake-order protection: a cash-on-delivery order holds its stock only for
+   * COD_CONFIRMATION_HOURS while the shopper confirms it from a link sent to their email. Unconfirmed
+   * orders are cancelled and restocked by the unpaid-order expiry job.
+   */
+  async requestCashOnDeliveryConfirmation(
+    tx: TenantTx,
+    storeId: string,
+    order: OrderWithLines,
+  ): Promise<void> {
+    await tx.order.update({
+      where: { id: order.id },
+      data: {
+        expiresAt: new Date(Date.now() + COD_CONFIRMATION_HOURS * 60 * 60_000),
+        // Not an abandoned checkout: no "you left something in your cart" email.
+        recoveryStatus: 'SKIPPED',
+      },
+    });
+    const store = await tx.store.findUniqueOrThrow({ where: { id: storeId } });
+    const primary = await tx.domain.findFirst({
+      where: { storeId, isPrimary: true, verifiedAt: { not: null } },
+    });
+    const origin = this.urls.storefrontOrigin(store.subdomain, primary?.hostname);
+    await this.outbox.enqueueEmail(
+      tx,
+      storeId,
+      codConfirmationEmail(order.email, {
+        ...this.emailData(store.name, order),
+        confirmUrl: `${origin}/orders/confirm/${this.urls.codConfirmationToken(order.id)}`,
+        hours: COD_CONFIRMATION_HOURS,
+      }),
+    );
+    await this.event(
+      tx,
+      storeId,
+      order.id,
+      'cod_confirmation_sent',
+      `Cash on delivery: waiting for ${order.email} to confirm the order by email.`,
+    );
+  }
+
+  /** The shopper clicked the confirmation link. Returns the order id, or null when not valid. */
+  async confirmCashOnDeliveryByToken(
+    tx: TenantTx,
+    storeId: string,
+    token: string,
+  ): Promise<{ orderId: string; alreadyConfirmed: boolean } | null> {
+    const orderId = this.urls.verifyCodConfirmationToken(token);
+    if (!orderId) return null;
+    const order = await tx.order.findFirst({
+      where: { id: orderId, storeId, paymentProvider: CASH_ON_DELIVERY },
+      include: { lines: true },
+    });
+    if (!order) return null;
+    if (order.status === 'OPEN') return { orderId, alreadyConfirmed: true };
+    if (order.status !== 'PENDING_PAYMENT' || (order.expiresAt && order.expiresAt < new Date())) {
+      return null;
+    }
+    // Claim the transition so a double click cannot confirm twice.
+    const claimed = await tx.order.updateMany({
+      where: { id: order.id, storeId, status: 'PENDING_PAYMENT' },
+      data: { status: 'OPEN', expiresAt: null },
+    });
+    if (claimed.count === 0) return { orderId, alreadyConfirmed: true };
+    await this.confirmCashOnDelivery(tx, storeId, order);
+    return { orderId, alreadyConfirmed: false };
+  }
+
   /** The merchant received the cash for a cash-on-delivery order. */
   async recordCashCollected(
     tx: TenantTx,
@@ -651,13 +722,14 @@ export class OrderLifecycle {
   async expireStaleOrders(limit = 50): Promise<number> {
     const stale = await this.platformDb.order.findMany({
       where: { status: 'PENDING_PAYMENT', expiresAt: { lt: new Date() } },
-      select: { id: true, storeId: true },
+      select: { id: true, storeId: true, paymentProvider: true },
       take: limit,
     });
     for (const order of stale) {
       await this.tenantDb.run(order.storeId, (tx) =>
         this.cancelInTx(tx, order.storeId, order.id, {
-          reason: 'payment_timeout',
+          reason:
+            order.paymentProvider === CASH_ON_DELIVERY ? 'cod_not_confirmed' : 'payment_timeout',
           restock: true,
           actorUserId: null,
         }),

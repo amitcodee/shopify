@@ -15,7 +15,12 @@ import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { UuidParam } from '../common/uuid-param.pipe.js';
 import { ApiZodBody, ZodPipe } from '../common/zod.js';
-import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
+import {
+  AllowBillingLocked,
+  AllowClosedStore,
+  RequirePermission,
+  StoreAccessGuard,
+} from '../tenancy/store-access.guard.js';
 import { OrdersService } from './orders.service.js';
 
 @ApiTags('orders')
@@ -35,6 +40,9 @@ export class OrdersController {
   }
 
   @Get('export')
+  // Merchants can take their data out even when billing lapsed or the store is closed.
+  @AllowBillingLocked()
+  @AllowClosedStore()
   @RequirePermission('orders:read')
   exportCsv(
     @CurrentStore() store: StoreContext,

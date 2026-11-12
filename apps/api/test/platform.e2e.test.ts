@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BillingService } from '../src/platform/billing.service.js';
+import { StoreResolver } from '../src/storefront/store-resolver.js';
+import { StoreClosureService } from '../src/stores/store-closure.service.js';
 import {
   createTestApp,
   merchantWithStore,
@@ -38,14 +40,32 @@ describe('Plans, billing, limits and platform admin', () => {
     await ctx?.close();
   });
 
+  /** The default plan plus a bigger test-only plan to switch between. */
   async function plans() {
-    const res = await ctx.http().get('/api/v1/platform/plans').set(admin).expect(200);
-    const byCode = (code: string) =>
-      res.body.find((p: { code: string }) => p.code === code) as { id: string };
-    return { starter: byCode('starter'), growth: byCode('growth'), pro: byCode('pro') };
+    let res = await ctx.http().get('/api/v1/platform/plans').set(admin).expect(200);
+    const find = (code: string) =>
+      res.body.find((p: { code: string }) => p.code === code) as { id: string } | undefined;
+    if (!find('scale')) {
+      await ctx
+        .http()
+        .post('/api/v1/platform/plans')
+        .set(admin)
+        .send({
+          code: 'scale',
+          name: 'Scale',
+          priceMonthly: 199_900,
+          maxProducts: null,
+          maxStaff: null,
+          maxOrdersPerMonth: null,
+          sortOrder: 2,
+        })
+        .expect(201);
+      res = await ctx.http().get('/api/v1/platform/plans').set(admin).expect(200);
+    }
+    return { standard: find('standard')!, scale: find('scale')! };
   }
 
-  it('starts every new store on the default plan with a trial', async () => {
+  it('starts every new store on a 7-day trial of the INR plan with the launch offer', async () => {
     const { store, auth } = await merchantWithStore(ctx);
     const billing = await ctx
       .http()
@@ -53,23 +73,34 @@ describe('Plans, billing, limits and platform admin', () => {
       .set(auth)
       .expect(200);
     expect(billing.body).toMatchObject({
-      plan: { code: 'starter', priceMonthly: 0, maxProducts: 25 },
+      plan: {
+        code: 'standard',
+        priceMonthly: 79_900,
+        currency: 'INR',
+        trialDays: 7,
+        introPrice: 9_900,
+        introCycles: 3,
+        transactionFeeBps: 0,
+        maxProducts: null,
+      },
       status: 'TRIALING',
+      provider: 'none',
+      locked: false,
+      action: 'subscribe',
+      introAvailable: true,
       usage: { products: 0, staff: 1, ordersThisMonth: 0 },
     });
-    expect(billing.body.plans.map((p: { code: string }) => p.code)).toEqual([
-      'starter',
-      'growth',
-      'pro',
-    ]);
+    const days = (Date.parse(billing.body.trialEndsAt) - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(6.9);
+    expect(days).toBeLessThanOrEqual(7);
   });
 
   it('enforces product and staff limits with 402 and lifts them on upgrade', async () => {
     const { store, auth } = await merchantWithStore(ctx);
     const base = `/api/v1/admin/stores/${store.id}`;
-    const { growth, starter } = await plans();
+    const { scale, standard } = await plans();
     await ctx.platform.plan.update({
-      where: { id: starter.id },
+      where: { id: standard.id },
       data: { maxProducts: 2, maxStaff: 2 },
     });
     try {
@@ -109,14 +140,15 @@ describe('Plans, billing, limits and platform admin', () => {
         .http()
         .post(`${base}/billing/plan`)
         .set(auth)
-        .send({ planId: growth.id })
+        .send({ planId: scale.id })
         .expect(200);
       expect(upgraded.body).toMatchObject({
         checkoutUrl: null,
+        checkout: null,
         billing: {
-          plan: { code: 'growth' },
+          plan: { code: 'scale' },
           status: 'ACTIVE',
-          invoices: [{ amount: 2900, status: 'PAID', planName: 'Growth' }],
+          invoices: [{ amount: 199_900, currency: 'INR', status: 'PAID', planName: 'Scale' }],
         },
       });
       await ctx
@@ -131,21 +163,21 @@ describe('Plans, billing, limits and platform admin', () => {
         .http()
         .post(`${base}/billing/plan`)
         .set(auth)
-        .send({ planId: starter.id })
+        .send({ planId: standard.id })
         .expect(402);
       expect(downgrade.body.detail).toMatch(/Reduce your catalog to 2 products/);
     } finally {
       await ctx.platform.plan.update({
-        where: { id: starter.id },
-        data: { maxProducts: 25, maxStaff: 2 },
+        where: { id: standard.id },
+        data: { maxProducts: null, maxStaff: 5 },
       });
     }
   });
 
   it('caps monthly orders on the storefront', async () => {
     const { store, auth } = await merchantWithStore(ctx);
-    const { starter } = await plans();
-    await ctx.platform.plan.update({ where: { id: starter.id }, data: { maxOrdersPerMonth: 1 } });
+    const { standard } = await plans();
+    await ctx.platform.plan.update({ where: { id: standard.id }, data: { maxOrdersPerMonth: 1 } });
     try {
       const sf = storefrontClient(ctx, `${store.subdomain}.localhost`);
       const product = await ctx
@@ -179,46 +211,151 @@ describe('Plans, billing, limits and platform admin', () => {
       expect(second.body.detail).toMatch(/cannot accept new orders/);
     } finally {
       await ctx.platform.plan.update({
-        where: { id: starter.id },
-        data: { maxOrdersPerMonth: 100 },
+        where: { id: standard.id },
+        data: { maxOrdersPerMonth: null },
       });
     }
   });
 
-  it('only owners can change plans; renewals issue invoices and end trials', async () => {
-    const { store, auth, session } = await merchantWithStore(ctx);
+  it('only owners subscribe; the intro price covers the first 3 months, then the full price', async () => {
+    const { store, auth } = await merchantWithStore(ctx);
     const adminMember = await signup(ctx);
     await ctx.platform.storeMember.create({
       data: { storeId: store.id, userId: adminMember.user.id, role: 'ADMIN' },
     });
-    const { pro } = await plans();
+    const { standard } = await plans();
     await ctx
       .http()
       .post(`/api/v1/admin/stores/${store.id}/billing/plan`)
       .set('Authorization', `Bearer ${adminMember.token}`)
-      .send({ planId: pro.id })
+      .send({ planId: standard.id })
       .expect(403);
 
+    const subscribed = await ctx
+      .http()
+      .post(`/api/v1/admin/stores/${store.id}/billing/plan`)
+      .set(auth)
+      .send({ planId: standard.id })
+      .expect(200);
+    expect(subscribed.body.billing).toMatchObject({
+      status: 'ACTIVE',
+      action: null,
+      introAvailable: false,
+      invoices: [{ amount: 9_900 }],
+    });
+    // Already subscribed: a second click is refused.
     await ctx
       .http()
       .post(`/api/v1/admin/stores/${store.id}/billing/plan`)
       .set(auth)
-      .send({ planId: pro.id })
-      .expect(200);
-    await ctx.platform.subscription.update({
-      where: { storeId: store.id },
-      data: { currentPeriodEnd: new Date(Date.now() - 1000) },
-    });
-    const renewed = await ctx.app.get(BillingService).renewDue();
-    expect(renewed).toBeGreaterThanOrEqual(1);
+      .send({ planId: standard.id })
+      .expect(400);
+
+    for (let month = 2; month <= 4; month++) {
+      await ctx.platform.subscription.update({
+        where: { storeId: store.id },
+        data: { currentPeriodEnd: new Date(Date.now() - 1000) },
+      });
+      expect(await ctx.app.get(BillingService).renewDue()).toBeGreaterThanOrEqual(1);
+    }
     const billing = await ctx
       .http()
       .get(`/api/v1/admin/stores/${store.id}/billing`)
       .set(auth)
       .expect(200);
-    expect(billing.body.invoices).toHaveLength(2);
+    // Newest first: month 4 at the full price, months 1–3 at the intro price.
+    expect(billing.body.invoices.map((i: { amount: number }) => i.amount)).toEqual([
+      79_900, 9_900, 9_900, 9_900,
+    ]);
     expect(new Date(billing.body.currentPeriodEnd).getTime()).toBeGreaterThan(Date.now());
-    expect(session.user.id).toBeDefined();
+  });
+
+  it('pauses a store whose trial ended unpaid and reopens it the moment it subscribes', async () => {
+    const { store, auth } = await merchantWithStore(ctx);
+    const { standard } = await plans();
+    const sf = storefrontClient(ctx, `${store.subdomain}.localhost`);
+    await sf('get', '/shop').expect(200);
+
+    await ctx.platform.subscription.update({
+      where: { storeId: store.id },
+      data: { trialEndsAt: new Date(Date.now() - 1000) },
+    });
+    await ctx.app.get(BillingService).renewDue();
+    const sub = await ctx.platform.subscription.findUniqueOrThrow({ where: { storeId: store.id } });
+    expect(sub.status).toBe('EXPIRED');
+    ctx.app.get(StoreResolver).invalidate();
+    await sf('get', '/shop').expect(404);
+
+    const blocked = await ctx
+      .http()
+      .post(`/api/v1/admin/stores/${store.id}/products`)
+      .set(auth)
+      .send({ title: 'X', variants: [{ price: 100 }] })
+      .expect(402);
+    expect(blocked.body).toMatchObject({ code: 'billing_required' });
+    const detail = await ctx.http().get(`/api/v1/admin/stores/${store.id}`).set(auth).expect(200);
+    expect(detail.body).toMatchObject({ billingLocked: true, billingAction: 'subscribe' });
+    // Data stays exportable while paused.
+    await ctx.http().get(`/api/v1/admin/stores/${store.id}/orders/export`).set(auth).expect(200);
+
+    await ctx
+      .http()
+      .post(`/api/v1/admin/stores/${store.id}/billing/plan`)
+      .set(auth)
+      .send({ planId: standard.id })
+      .expect(200);
+    ctx.app.get(StoreResolver).invalidate();
+    await sf('get', '/shop').expect(200);
+    await ctx
+      .http()
+      .post(`/api/v1/admin/stores/${store.id}/products`)
+      .set(auth)
+      .send({ title: 'X', variants: [{ price: 100 }] })
+      .expect(201);
+  });
+
+  it('closes a store, lets the owner reopen it, and erases it after the grace period', async () => {
+    const { store, auth } = await merchantWithStore(ctx);
+    const { standard } = await plans();
+    const base = `/api/v1/admin/stores/${store.id}`;
+    await ctx
+      .http()
+      .post(`${base}/billing/plan`)
+      .set(auth)
+      .send({ planId: standard.id })
+      .expect(200);
+    const sf = storefrontClient(ctx, `${store.subdomain}.localhost`);
+
+    await ctx.http().post(`${base}/close`).set(auth).send({ confirmSubdomain: 'nope' }).expect(400);
+    const closed = await ctx
+      .http()
+      .post(`${base}/close`)
+      .set(auth)
+      .send({ confirmSubdomain: store.subdomain })
+      .expect(200);
+    expect(closed.body.status).toBe('CLOSED');
+    const days = (Date.parse(closed.body.deletionScheduledAt) - Date.now()) / 86_400_000;
+    expect(Math.round(days)).toBe(30);
+    await sf('get', '/shop').expect(404);
+    await ctx.http().patch(base).set(auth).send({ name: 'x' }).expect(403);
+
+    await ctx.http().post(`${base}/reopen`).set(auth).expect(200);
+    await sf('get', '/shop').expect(200);
+
+    await ctx
+      .http()
+      .post(`${base}/close`)
+      .set(auth)
+      .send({ confirmSubdomain: store.subdomain })
+      .expect(200);
+    await ctx.platform.store.update({
+      where: { id: store.id },
+      data: { deletionScheduledAt: new Date(Date.now() - 1000) },
+    });
+    expect(await ctx.app.get(StoreClosureService).purgeDue()).toBe(1);
+    expect(await ctx.platform.store.findUnique({ where: { id: store.id } })).toBeNull();
+    // Our invoices to the merchant are kept for tax records.
+    expect(await ctx.platform.platformInvoice.count({ where: { storeId: store.id } })).toBe(1);
   });
 
   describe('platform admin', () => {
@@ -246,14 +383,15 @@ describe('Plans, billing, limits and platform admin', () => {
       expect(list.body.items[0]).toMatchObject({
         id: merchant.store.id,
         ownerEmail: merchant.session.user.email,
-        plan: 'Starter',
+        plan: 'Standard',
         usage: { products: 0, staff: 1 },
       });
       const overview = await ctx.http().get('/api/v1/platform/overview').set(admin).expect(200);
       expect(overview.body.stores.total).toBeGreaterThan(0);
-      expect(overview.body.mrr).toBeGreaterThanOrEqual(9900); // the Pro store above
+      expect(overview.body.mrr).toBeGreaterThanOrEqual(199_900); // the Scale store above
+      expect(overview.body.mrrCurrency).toBe('INR');
       expect(overview.body.planBreakdown.map((p: { plan: string }) => p.plan)).toEqual(
-        expect.arrayContaining(['Starter']),
+        expect.arrayContaining(['Standard']),
       );
     });
 
@@ -297,12 +435,12 @@ describe('Plans, billing, limits and platform admin', () => {
 
     it('comps a store onto a plan, manages plans, disables users, and closes sign-ups', async () => {
       const merchant = await merchantWithStore(ctx);
-      const { pro } = await plans();
+      const { scale } = await plans();
       await ctx
         .http()
         .put(`/api/v1/platform/stores/${merchant.store.id}/plan`)
         .set(admin)
-        .send({ planId: pro.id })
+        .send({ planId: scale.id })
         .expect(204);
       const billing = await ctx
         .http()
@@ -310,9 +448,10 @@ describe('Plans, billing, limits and platform admin', () => {
         .set(merchant.auth)
         .expect(200);
       expect(billing.body).toMatchObject({
-        plan: { code: 'pro' },
+        plan: { code: 'scale' },
         status: 'ACTIVE',
         provider: 'manual',
+        locked: false,
       });
 
       const created = await ctx

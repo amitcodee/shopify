@@ -82,6 +82,8 @@ model Merchant {
 enum StoreStatus {
   ACTIVE
   SUSPENDED
+  /// Closed by its owner; data is erased at `deletionScheduledAt` unless reopened first.
+  CLOSED
 }
 
 enum StoreRole {
@@ -122,6 +124,14 @@ model Store {
   codEnabled                  Boolean     @default(false)
   /// Largest order total allowed for cash on delivery (minor units); null = no limit.
   codMaxAmount                Int?
+  /// Cash-on-delivery orders hold stock only until the shopper confirms them from their email.
+  codRequireConfirmation      Boolean     @default(true)
+  /// Set by billing when the trial ended unpaid or the subscription lapsed: the storefront is
+  /// offline and the admin is limited to billing until the store pays.
+  billingLocked               Boolean     @default(false)
+  closedAt                    DateTime?
+  /// When a closed store's data is permanently erased.
+  deletionScheduledAt         DateTime?
   createdAt                   DateTime    @default(now())
   updatedAt                   DateTime    @updatedAt
 
@@ -1205,8 +1215,18 @@ model Plan {
   id                String   @id @default(uuid(7)) @db.Uuid
   code              String   @unique
   name              String
-  /// Monthly price in platform currency minor units (USD cents).
+  /// Monthly price in minor units of `currency` (paise for INR).
   priceMonthly      Int
+  currency          String   @default("INR") @db.Char(3)
+  /// Free days before the first charge (no card needed to start).
+  trialDays         Int      @default(7)
+  /// Introductory monthly price for the first `introCycles` paid months (null = none).
+  introPrice        Int?
+  introCycles       Int      @default(0)
+  /// Razorpay offer (created in its Dashboard) that gives the intro discount on one mandate.
+  razorpayOfferId   String?
+  /// Provider plan ids created for this plan, keyed by API key id: {keyId: {regular, intro}}.
+  providerPlans     Json     @default("{}")
   /// Null = unlimited.
   maxProducts       Int?
   maxStaff          Int?
@@ -1227,6 +1247,8 @@ enum SubscriptionStatus {
   ACTIVE
   PAST_DUE
   CANCELLED
+  /// The trial ended without a subscription, or a lapsed subscription ran out of grace.
+  EXPIRED
 }
 
 /// One subscription per store. Global platform table (billing is managed by the platform).
@@ -1240,8 +1262,18 @@ model Subscription {
   trialEndsAt        DateTime?
   /// Plan to switch to at the end of the current period (scheduled downgrade).
   pendingPlanId      String?            @db.Uuid
-  provider           String             @default("mock")
+  /// Who bills: "none" (trial, not subscribed yet), "razorpay", "stripe", "mock" (dev), "manual".
+  provider           String             @default("none")
   providerRef        String?
+  /// "intro" while billed at the introductory price on its own mandate, else "regular".
+  providerPhase      String?
+  /// Payment failed: the store keeps working until this time, then billing locks it.
+  graceEndsAt        DateTime?
+  /// The introductory price was used once (it is never offered to the store again).
+  introUsed          Boolean            @default(false)
+  /// Cancelled by the merchant: access continues until `currentPeriodEnd`.
+  cancelAtPeriodEnd  Boolean            @default(false)
+  lastSyncedAt       DateTime?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -1258,18 +1290,19 @@ enum InvoiceStatus {
 
 model PlatformInvoice {
   id             String        @id @default(uuid(7)) @db.Uuid
+  /// Kept after the store is erased (tax records), so not a foreign key.
   storeId        String        @db.Uuid
-  subscriptionId String        @db.Uuid
+  subscriptionId String?       @db.Uuid
   planName       String
   amount         Int
   currency       String        @default("USD") @db.Char(3)
   status         InvoiceStatus @default(OPEN)
   periodStart    DateTime
   periodEnd      DateTime
-  providerRef    String?
+  providerRef    String?       @unique
   createdAt      DateTime      @default(now())
 
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
   @@index([storeId, createdAt])
 }

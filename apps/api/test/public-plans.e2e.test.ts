@@ -13,48 +13,36 @@ describe('Public plans', () => {
     await ctx?.close();
   });
 
-  it('lists the default plans without auth, exposing only public fields', async () => {
+  it('lists the default plan without auth, exposing only public fields', async () => {
     const res = await ctx.http().get('/api/v1/public/plans').expect(200);
     expect(res.body).toEqual([
       {
-        code: 'starter',
-        name: 'Starter',
-        priceMonthly: 0,
-        maxProducts: 25,
-        maxStaff: 2,
-        maxOrdersPerMonth: 100,
-        transactionFeeBps: 200,
-      },
-      {
-        code: 'growth',
-        name: 'Growth',
-        priceMonthly: 2900,
-        maxProducts: 1000,
-        maxStaff: 10,
-        maxOrdersPerMonth: null,
-        transactionFeeBps: 100,
-      },
-      {
-        code: 'pro',
-        name: 'Pro',
-        priceMonthly: 9900,
+        code: 'standard',
+        name: 'Standard',
+        priceMonthly: 79_900,
+        currency: 'INR',
+        trialDays: 7,
+        introPrice: 9_900,
+        introCycles: 3,
         maxProducts: null,
-        maxStaff: null,
+        maxStaff: 5,
         maxOrdersPerMonth: null,
-        transactionFeeBps: 50,
+        transactionFeeBps: 0,
       },
     ]);
     expect(res.headers['cache-control']).toContain('max-age');
   });
 
   it('hides inactive plans and follows sortOrder', async () => {
-    await ctx.platform.plan.update({ where: { code: 'growth' }, data: { active: false } });
-    await ctx.platform.plan.update({ where: { code: 'pro' }, data: { sortOrder: 0 } });
-    const res = await ctx.http().get('/api/v1/public/plans').expect(200);
-    expect(res.body.map((p: { code: string }) => p.code)).toEqual(['pro', 'starter']);
-
-    await ctx.platform.plan.update({ where: { code: 'growth' }, data: { active: true } });
-    await ctx.platform.plan.update({ where: { code: 'pro' }, data: { sortOrder: 3 } });
+    const extra = await ctx.platform.plan.create({
+      data: { code: 'scale', name: 'Scale', priceMonthly: 199_900, sortOrder: 0 },
+    });
+    let res = await ctx.http().get('/api/v1/public/plans').expect(200);
+    expect(res.body.map((p: { code: string }) => p.code)).toEqual(['scale', 'standard']);
+    await ctx.platform.plan.update({ where: { id: extra.id }, data: { active: false } });
+    res = await ctx.http().get('/api/v1/public/plans').expect(200);
+    expect(res.body.map((p: { code: string }) => p.code)).toEqual(['standard']);
+    await ctx.platform.plan.delete({ where: { id: extra.id } });
   });
 
   it('shares only the support email for the contact page, hiding the placeholder', async () => {

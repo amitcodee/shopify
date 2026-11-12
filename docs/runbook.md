@@ -33,10 +33,53 @@
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | DB role passwords             | Update `DATABASE_URL*` and restart.                                                                                                                      |
 | `STOREFRONT_SHARED_SECRET`    | Update API and storefront together. **Order-status links in old emails stop working** (they are HMACs of the order id).                                  |
-| `APP_ENCRYPTION_KEY`          | Encrypts 2FA secrets: rotating requires re-encrypting `User.totpSecretEnc` (or asking users to re-enrol). Pending MFA challenges (5 min) become invalid. |
+| `APP_ENCRYPTION_KEY`          | Encrypts merchants' gateway keys, 2FA seeds, storefront passwords and webhook secrets. Rotate with the procedure below — never just replace it.          |
+| Razorpay billing keys         | `BILLING_RAZORPAY_KEY_*`: roll in the Razorpay Dashboard, update `api.env`, restart API and worker. Plans are re-created under the new key on first use. |
 | `POSTMARK_SERVER_TOKEN`       | Create a new server token in Postmark, update `api.env`, restart API and worker, revoke the old token.                                                   |
 | Stripe keys / webhook secrets | Roll in Stripe dashboard, update env, restart.                                                                                                           |
 | Session tokens                | Disable a user from the platform console to revoke all their sessions.                                                                                   |
+
+### Rotating `APP_ENCRYPTION_KEY`
+
+Replacing the key outright would make every connected payment gateway, 2FA device, storefront
+password and webhook secret unreadable. Rotate in four steps:
+
+1. Generate a new key: `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`.
+2. In `api.env` set `APP_ENCRYPTION_KEY=<new>` and `APP_ENCRYPTION_KEYS_PREVIOUS=<old>`; restart API
+   and worker. Old values still decrypt (keys are tried in order), new values use the new key.
+3. Re-encrypt everything: `docker compose run --rm api node dist/rotate-encryption-key.js`. It
+   prints counts per table and exits non-zero if any value could not be decrypted.
+4. When it reports `failed: 0`, remove `APP_ENCRYPTION_KEYS_PREVIOUS` and restart. Keep the old
+   key in the password manager for one backup cycle (old backups still need it).
+
+The key also signs short-lived tokens (2FA challenges, theme previews): those issued before the
+restart in step 2 stop working; users simply retry.
+
+## Billing (merchant subscriptions)
+
+- Plans live in Platform → Plans. Default: **Standard**, ₹799/month, 7-day free trial (no card),
+  ₹99/month for the first 3 months. Prices include GST. A price change creates new Razorpay plans
+  on first use; existing subscribers keep their mandate.
+- Razorpay setup: `BILLING_PROVIDER=razorpay`, `BILLING_RAZORPAY_KEY_ID/SECRET`, and a webhook in
+  the Razorpay Dashboard to `https://api.<domain>/api/v1/webhooks/billing/razorpay` with the
+  `subscription.*` events and `BILLING_RAZORPAY_WEBHOOK_SECRET`. Enable Subscriptions and UPI
+  AutoPay on the account.
+- Intro price on one mandate (recommended): create an offer in Razorpay Dashboard → Subscriptions →
+  Offers (flat ₹700 off, _limited number of cycles_ = 3) and paste its `offer_…` id into the plan.
+  Without an offer, the intro months run on their own short mandate and the merchant authorises
+  the ₹799 mandate when they end (they see a banner; 7 days of grace).
+- The `billing` job (every 10 min) ends unpaid trials, re-syncs Razorpay subscriptions (so a missed
+  webhook only delays an update) and sets `Store.billingLocked`. A locked store's storefront is
+  offline and its admin shows only billing and data exports.
+- Failed payment: Razorpay retries; the store keeps working for `BILLING_GRACE_DAYS` (7), then locks.
+- Comp a store: Platform → Stores → set plan (provider `manual`, never charged, never locks).
+
+## Closed stores
+
+An owner can close a store (Settings → General). The storefront goes offline at once, the
+subscription is cancelled, and the `erase-closed-stores` job deletes the store and its media 30
+days later (`Store.deletionScheduledAt`). Platform invoices are kept for tax records. To stop an
+erasure (e.g. legal hold), set `deletionScheduledAt` to NULL for that store.
 
 ## Incident playbooks
 

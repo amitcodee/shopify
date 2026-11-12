@@ -17,7 +17,7 @@ export default async function PlatformOverviewPage() {
     <>
       <PageHeader title="Platform overview" />
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="MRR" value={formatMoney(o.mrr, 'USD')} />
+        <Stat label="MRR" value={formatMoney(o.mrr, o.mrrCurrency)} />
         <Stat
           label="Stores"
           value={`${o.stores.active} active · ${o.stores.suspended} suspended`}

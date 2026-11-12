@@ -23,7 +23,13 @@ import type { AuthUser, RequestMeta } from '../common/request.js';
 import { PLATFORM_DB } from '../database/database.module.js';
 import { StoreResolver } from '../storefront/store-resolver.js';
 import { PlatformSettingsService } from './platform-settings.service.js';
-import { addDays, PlansService, startOfMonthUtc, toPlanDto } from './plans.service.js';
+import {
+  addDays,
+  billingState,
+  PlansService,
+  startOfMonthUtc,
+  toPlanDto,
+} from './plans.service.js';
 
 /**
  * Cross-tenant platform administration. Uses the BYPASSRLS connection deliberately; every
@@ -88,9 +94,16 @@ export class PlatformAdminService {
       stores: { total: stores, active, suspended: stores - active },
       users,
       merchants,
+      // Paying subscriptions only: comped ("manual") stores and trials bring in nothing.
       mrr: subscriptions
-        .filter((s) => s.status === 'ACTIVE')
+        .filter(
+          (s) =>
+            ['ACTIVE', 'PAST_DUE'].includes(s.status) &&
+            s.provider !== 'manual' &&
+            s.plan.currency === 'INR',
+        )
         .reduce((sum, s) => sum + s.plan.priceMonthly, 0),
+      mrrCurrency: 'INR',
       paidOrders30d: paidOrders,
       gmv30d: gmv.map((g) => ({ currency: g.currency, amount: g._sum.total ?? 0 })),
       fees30d: fees.map((f) => ({ currency: f.currency, amount: f._sum.applicationFee ?? 0 })),
@@ -140,9 +153,18 @@ export class PlatformAdminService {
       }),
       this.db.order.groupBy({
         by: ['storeId'],
+        // Same rule as the plan quota: paid orders plus confirmed cash-on-delivery orders.
         where: {
           storeId: { in: ids },
-          paidAt: { gte: monthStart },
+          OR: [
+            { paidAt: { gte: monthStart } },
+            {
+              paidAt: null,
+              paymentProvider: 'cod',
+              status: 'OPEN',
+              createdAt: { gte: monthStart },
+            },
+          ],
         },
         _count: { _all: true },
       }),
@@ -157,7 +179,7 @@ export class PlatformAdminService {
         status: s.status,
         suspendedReason: s.suspendedReason,
         ownerEmail: s.merchant.owner.email,
-        plan: s.subscription?.plan.name ?? 'Starter',
+        plan: s.subscription?.plan.name ?? '—',
         subscriptionStatus: s.subscription?.status ?? 'TRIALING',
         paymentsStatus: s.paymentAccount?.status ?? null,
         usage: {
@@ -209,18 +231,31 @@ export class PlatformAdminService {
     if (!store) throw new NotFoundException('Store not found.');
     const subscription = await this.plans.subscriptionFor(storeId, this.db);
     const now = new Date();
-    await this.db.subscription.update({
+    const updated = await this.db.subscription.update({
       where: { id: subscription.id },
       data: {
         planId: plan.id,
         status: input.status,
         currentPeriodStart: now,
-        currentPeriodEnd: addDays(now, this.plans.periodDays()),
-        trialEndsAt: null,
+        // A comp has no billing behind it: it runs until an operator changes it.
+        currentPeriodEnd: addDays(
+          now,
+          input.status === 'ACTIVE' ? 36_500 : this.plans.periodDays(),
+        ),
+        trialEndsAt: input.status === 'TRIALING' ? addDays(now, this.plans.periodDays()) : null,
         pendingPlanId: null,
+        graceEndsAt: null,
+        cancelAtPeriodEnd: false,
+        providerRef: null,
+        providerPhase: null,
         provider: 'manual',
       },
     });
+    await this.db.store.update({
+      where: { id: storeId },
+      data: { billingLocked: billingState(updated).locked },
+    });
+    this.resolver.invalidate();
     await this.log(actor, 'store.plan_set', 'store', storeId, meta, {
       plan: plan.code,
       status: input.status,
@@ -238,8 +273,19 @@ export class PlatformAdminService {
     meta: RequestMeta,
   ): Promise<PlanDto> {
     try {
+      const before = planId ? await this.db.plan.findUnique({ where: { id: planId } }) : null;
+      // Provider plans are immutable: a new price needs new ones (existing subscribers keep
+      // theirs until they change plan).
+      const priceChanged =
+        before !== null &&
+        (before.priceMonthly !== input.priceMonthly ||
+          before.currency !== input.currency ||
+          before.introPrice !== input.introPrice);
       const plan = planId
-        ? await this.db.plan.update({ where: { id: planId }, data: input })
+        ? await this.db.plan.update({
+            where: { id: planId },
+            data: { ...input, ...(priceChanged ? { providerPlans: {} } : {}) },
+          })
         : await this.db.plan.create({ data: input });
       await this.log(actor, planId ? 'plan.updated' : 'plan.created', 'plan', plan.id, meta, {
         code: plan.code,

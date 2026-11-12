@@ -192,11 +192,15 @@ describe('Staff & invitations', () => {
         permissions: ['staff:manage', 'orders:read'],
       },
     });
-    // Room for more staff than the Starter plan's two seats.
-    const growth = await ctx.platform.plan.findUniqueOrThrow({ where: { code: 'growth' } });
+    // Room for more staff than the default plan's seats.
+    const roomy = await ctx.platform.plan.upsert({
+      where: { code: 'test-unlimited-staff' },
+      update: {},
+      create: { code: 'test-unlimited-staff', name: 'Roomy', priceMonthly: 0, active: false },
+    });
     await ctx.platform.subscription.update({
       where: { storeId: owner.store.id },
-      data: { planId: growth.id },
+      data: { planId: roomy.id },
     });
     const base = `/api/v1/admin/stores/${owner.store.id}/staff`;
     const auth = { Authorization: `Bearer ${manager.token}` };

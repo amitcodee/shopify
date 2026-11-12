@@ -163,7 +163,7 @@ export const FEATURE_AREAS: FeatureArea[] = [
       },
       {
         title: 'Connect payments',
-        body: 'Choose Stripe or Razorpay, or test with the sandbox first.',
+        body: 'Connect Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal, turn on cash on delivery, or test with the sandbox first.',
       },
       { title: 'Take orders', body: 'Shoppers check out on one page and get a status page.' },
     ],
@@ -174,11 +174,12 @@ export const FEATURE_AREAS: FeatureArea[] = [
     slug: 'payments',
     name: 'Payments',
     icon: 'lock',
-    summary: 'Stripe Connect or Razorpay payouts, a sandbox, refunds and disputes.',
+    summary:
+      'Your own gateway (Razorpay, PayU, Cashfree, PhonePe, Stripe, PayPal), cash on delivery, refunds and disputes.',
     eyebrow: 'Payments',
     headline: 'Get paid into your own account',
     subhead:
-      'Connect Stripe or Razorpay and payouts go straight to you. Card details are entered on the provider’s secure page — never on our servers.',
+      'Connect the gateway you already use and payouts go straight to you, with no platform fee. Card and UPI details are entered on the provider’s secure page — never on our servers.',
     capabilities: [
       {
         icon: 'card',
@@ -189,6 +190,16 @@ export const FEATURE_AREAS: FeatureArea[] = [
         icon: 'globe',
         title: 'Razorpay',
         body: 'Selling in Indian rupees? Set up Razorpay instead and get paid through Razorpay Route.',
+      },
+      {
+        icon: 'card',
+        title: 'PayU, Cashfree, PhonePe and PayPal',
+        body: 'Paste your gateway’s API keys in your admin; the keys are checked with the gateway and stored encrypted.',
+      },
+      {
+        icon: 'switch',
+        title: 'Cash on delivery',
+        body: 'Offer COD with an order limit. Shoppers confirm cash orders from their email, unconfirmed ones release their stock after 12 hours, and each phone number can hold only a few open cash orders.',
       },
       {
         icon: 'code',
@@ -213,7 +224,7 @@ export const FEATURE_AREAS: FeatureArea[] = [
     ],
     showcase: {
       title: 'Card data never touches the platform',
-      body: 'Shoppers pay on Stripe’s or Razorpay’s hosted page, which keeps the platform within PCI SAQ-A. The platform fee for your plan is set on the server at checkout.',
+      body: 'Shoppers pay on your gateway’s hosted page — Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal — which keeps the platform within PCI SAQ-A. Money settles to your own account with no platform fee, and cash on delivery works alongside.',
       points: [
         'One gateway per store, chosen by you',
         'Amounts confirmed with the provider before fulfilment',
@@ -222,7 +233,10 @@ export const FEATURE_AREAS: FeatureArea[] = [
       mock: 'payments',
     },
     steps: [
-      { title: 'Open Payments settings', body: 'Pick Stripe or Razorpay as your gateway.' },
+      {
+        title: 'Open Payments settings',
+        body: 'Pick your gateway — Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal — and turn on cash on delivery if you want it.',
+      },
       { title: 'Finish onboarding', body: 'Complete the provider’s account set-up.' },
       { title: 'Test, then go live', body: 'Try a sandbox order, then start selling.' },
     ],

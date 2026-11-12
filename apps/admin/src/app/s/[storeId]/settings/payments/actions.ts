@@ -131,7 +131,11 @@ export async function saveCodAction(
   try {
     await api(`/admin/stores/${storeId}/store-gateways/cod`, {
       method: 'PUT',
-      body: { enabled: formData.get('enabled') !== null, maxAmount },
+      body: {
+        enabled: formData.get('enabled') !== null,
+        maxAmount,
+        requireConfirmation: formData.get('requireConfirmation') !== null,
+      },
     });
   } catch (error) {
     return toFormState(error, formData);

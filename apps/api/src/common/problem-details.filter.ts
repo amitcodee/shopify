@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { ProblemDetails } from '@repo/contracts';
+import { reportError } from './error-reporting.js';
 import { Prisma } from '@repo/db';
 import type { Response } from 'express';
 
@@ -40,6 +41,7 @@ function fromHttpException(exception: HttpException): ProblemDetails {
     if (typeof record.title === 'string') problem.title = record.title;
     if (typeof record.detail === 'string') problem.detail = record.detail;
     else if (typeof record.message === 'string') problem.detail = record.message;
+    if (typeof record.code === 'string') problem.code = record.code;
     if (Array.isArray(record.errors)) problem.errors = record.errors as ProblemDetails['errors'];
   }
   return problem;
@@ -77,6 +79,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
       this.logger.error(
         `[${requestId ?? '-'}] ${exception instanceof Error ? (exception.stack ?? exception.message) : String(exception)}`,
       );
+      reportError(exception, { requestId });
       // Give clients a reference they can quote to support without exposing internals.
       if (requestId) problem.detail = `Reference: ${requestId}`;
     }

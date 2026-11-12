@@ -6,6 +6,8 @@ export interface ObjectStorage {
   put(key: string, data: Buffer, contentType: string): Promise<void>;
   get(key: string): Promise<Buffer | null>;
   delete(key: string): Promise<void>;
+  /** Deletes every object under `prefix` (e.g. "stores/<id>/" when a store is erased). */
+  deletePrefix(prefix: string): Promise<void>;
 }
 
 export const OBJECT_STORAGE = Symbol('OBJECT_STORAGE');
@@ -53,5 +55,10 @@ export class LocalDiskStorage implements ObjectStorage {
 
   async delete(key: string): Promise<void> {
     await rm(this.pathFor(key), { force: true });
+  }
+
+  async deletePrefix(prefix: string): Promise<void> {
+    if (!/^stores\/[0-9a-f-]{36}\/$/.test(prefix)) throw new Error('Invalid storage prefix');
+    await rm(this.pathFor(prefix.slice(0, -1)), { recursive: true, force: true });
   }
 }

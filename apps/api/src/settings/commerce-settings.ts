@@ -37,7 +37,7 @@ import { ConflictException } from '@nestjs/common';
 import { z } from 'zod';
 import { AuditService } from '../audit/audit.service.js';
 import { decryptSecret, encryptSecret } from '../common/crypto.js';
-import { ENV, type Env } from '../config/env.js';
+import { ENV, type Env, decryptionKeys } from '../config/env.js';
 import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { UuidParam } from '../common/uuid-param.pipe.js';
@@ -136,7 +136,7 @@ export class CommerceSettingsService {
     return {
       enabled: store.passwordProtected,
       password: store.storefrontPasswordEncrypted
-        ? decryptSecret(this.env.APP_ENCRYPTION_KEY, store.storefrontPasswordEncrypted)
+        ? decryptSecret(decryptionKeys(this.env), store.storefrontPasswordEncrypted)
         : null,
       message: store.passwordMessage,
     };

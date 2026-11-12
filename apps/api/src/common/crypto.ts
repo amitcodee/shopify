@@ -20,12 +20,25 @@ export function encryptSecret(secret: string, plaintext: string): string {
   return [iv, cipher.getAuthTag(), data].map((b) => b.toString('base64url')).join('.');
 }
 
-export function decryptSecret(secret: string, payload: string): string {
+/**
+ * Decrypts with the current key, or — during a key rotation — any previous key still listed.
+ * GCM authentication makes a wrong key fail loudly, so trying keys in order is safe.
+ */
+export function decryptSecret(secret: string | readonly string[], payload: string): string {
   const [iv, tag, data] = payload.split('.').map((p) => Buffer.from(p, 'base64url'));
   if (!iv || !tag || !data) throw new Error('Malformed encrypted value');
-  const decipher = createDecipheriv('aes-256-gcm', key(secret), iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
+  const keys = typeof secret === 'string' ? [secret] : secret;
+  let lastError: unknown = new Error('No decryption key configured');
+  for (const candidate of keys) {
+    try {
+      const decipher = createDecipheriv('aes-256-gcm', key(candidate), iv);
+      decipher.setAuthTag(tag);
+      return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
 
 /** Short-lived signed token: base64url(JSON payload).HMAC. Rejects tampering and expiry. */

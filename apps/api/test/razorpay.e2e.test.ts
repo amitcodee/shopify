@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { PlansService } from '../src/platform/plans.service.js';
 import { createGateways } from '../src/payments/payments.module.js';
 import { FakeRazorpay, RAZORPAY_TEST_SECRET, razorpayWebhook } from './fake-razorpay.js';
 import {
@@ -53,6 +54,12 @@ describe('Razorpay gateway (Route + Payment Links) through the API', () => {
         ),
     });
     await resetDatabase(ctx.owner);
+    // The default plan takes no fee; these tests cover the fee mechanics an operator can enable.
+    await ctx.app.get(PlansService).ensureDefaults();
+    await ctx.platform.plan.update({
+      where: { code: 'standard' },
+      data: { transactionFeeBps: 200 },
+    });
   });
 
   afterAll(async () => {

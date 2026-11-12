@@ -22,7 +22,7 @@ export interface LegalDoc {
   sections: LegalSection[];
 }
 
-export const LEGAL_UPDATED = '24 October 2026';
+export const LEGAL_UPDATED = '12 November 2026';
 
 const terms: LegalDoc = {
   slug: 'terms',
@@ -72,7 +72,7 @@ const terms: LegalDoc = {
       id: 'plans',
       title: 'Plans, fees and trials',
       blocks: [
-        'Plans, their limits and the platform fee on sales are shown on our pricing page. New stores start with a 14-day trial. Prices may change; we will tell you in advance and the new price applies from your next billing period. See the Billing & Refund Policy for details.',
+        'Plans and their prices are shown on our pricing page. New stores start with a 7-day free trial and we take no fee on your sales. Prices may change; we will tell you in advance and the new price applies from your next billing period. See the Billing & Refund Policy for details.',
       ],
     },
     {
@@ -94,7 +94,7 @@ const terms: LegalDoc = {
       title: 'Suspension and closing your store',
       blocks: [
         'You can close your store at any time. We may suspend or close a store that breaks these Terms or the Acceptable Use Policy, that puts customers or the Service at risk, or when the law requires it. Where it is safe and lawful to do so, we will explain why and give you a chance to fix the problem.',
-        'Before you close your store you can export your catalog as CSV and download your data. After closing, we delete store data within a reasonable period, except where we must keep records by law (for example invoices).',
+        'Before you close your store you can export your catalog as CSV and download your data. Closing takes the storefront offline and stops your subscription. For 30 days you can reopen the store from your admin; after that we permanently delete its data, except records we must keep by law (for example our invoices to you).',
       ],
     },
     {
@@ -216,7 +216,7 @@ const privacy: LegalDoc = {
       id: 'retention',
       title: 'How long we keep it',
       blocks: [
-        'We keep account and store data for as long as your account is open. Sessions expire automatically and single-use links (password reset, email verification) expire after a short time. When you close your store we delete its data within a reasonable period, except records we must keep by law, such as invoices.',
+        'We keep account and store data for as long as your account is open. Sessions expire automatically and single-use links (password reset, email verification) expire after a short time. When you close your store we permanently delete its data 30 days later, except records we must keep by law, such as invoices.',
       ],
     },
     {
@@ -414,28 +414,31 @@ const acceptableUse: LegalDoc = {
 const billing: LegalDoc = {
   slug: 'billing',
   title: 'Billing & Refund Policy',
-  summary: 'How plans are charged, the platform fee on sales, trials, cancellations and refunds.',
+  summary:
+    'How plans are charged, trials, the introductory price, failed payments, cancellations and refunds.',
   updated: LEGAL_UPDATED,
   sections: [
     {
       id: 'plans',
-      title: 'Plans and the platform fee',
+      title: 'Plans and prices',
       blocks: [
-        'Each plan has a monthly price and a platform fee on sales, both shown on the pricing page in US dollars. Every feature is included on every plan; plans differ in their limits and fee. Payment providers charge their own processing fees separately.',
+        'Each plan has a monthly price, shown on the pricing page in Indian rupees. We take no fee on your sales, whichever payment gateway you connect and including cash on delivery. Payment providers charge their own processing fees separately.',
+        'Where a plan has an introductory price (for example ₹99 a month for the first 3 months, then ₹799 a month), it applies once per store, to its first paid months.',
       ],
     },
     {
       id: 'trial',
       title: 'Free trial',
       blocks: [
-        'New stores start with a 14-day trial. Choose a plan before the trial ends to keep selling.',
+        'New stores start with a 7-day free trial; no card or UPI mandate is needed to start. You can subscribe at any time during the trial and the first charge happens when the trial ends. If the trial ends without a subscription, the storefront goes offline and the admin shows only billing until you subscribe; your data is kept.',
       ],
     },
     {
       id: 'charges',
       title: 'Invoices and payment',
       blocks: [
-        'Plan charges are billed in advance for each billing period and appear as platform invoices in your admin. If a payment fails we will let you know; a store with unpaid invoices may be limited until they are paid.',
+        'Plans are charged monthly in advance through a UPI AutoPay or card mandate you authorise with our payment provider (Razorpay). Every charge appears as an invoice in your admin.',
+        'If a payment fails, the provider retries it and your store keeps working for a grace period of 7 days. If it is still unpaid after that, the storefront goes offline until the payment is made or the payment method is updated.',
       ],
     },
     {
@@ -449,7 +452,7 @@ const billing: LegalDoc = {
       id: 'refunds',
       title: 'Refunds',
       blocks: [
-        'Plan charges are not refundable for partly used periods, except where the law requires a refund or where we charged you in error. Platform fees on sales are not refunded when you refund an order, unless the law requires it.',
+        'Plan charges are not refundable for partly used periods, except where the law requires a refund or where we charged you in error.',
         {
           note: 'Refunds to your customers for their orders are handled by you from your admin and paid back through your payment provider.',
         },
@@ -458,9 +461,7 @@ const billing: LegalDoc = {
     {
       id: 'taxes',
       title: 'Taxes',
-      blocks: [
-        'Prices do not include taxes such as VAT or GST unless shown otherwise; we add them where the law requires.',
-      ],
+      blocks: ['Prices shown in Indian rupees include GST.'],
     },
     {
       id: 'contact',

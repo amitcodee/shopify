@@ -180,6 +180,29 @@ export function disputeEmail(
   };
 }
 
+export function codConfirmationEmail(
+  to: string,
+  data: OrderEmailData & { confirmUrl: string; hours: number },
+): EmailMessage {
+  const total = formatMoney(data.total, data.currency);
+  return {
+    to,
+    subject: `Confirm your cash on delivery order #${data.orderNumber} — ${data.storeName}`,
+    text: `Please confirm your order #${data.orderNumber} so we can ship it. You will pay ${total} in cash on delivery.
+
+${lineText(data)}
+Total: ${total}
+
+Confirm your order: ${data.confirmUrl}
+
+If you do not confirm within ${data.hours} hours, the order is cancelled automatically. Didn't place this order? Ignore this email.`,
+    html: layout(
+      data.storeName,
+      `<p>Please confirm your order <strong>#${data.orderNumber}</strong> so we can ship it. You will pay <strong>${escapeHtml(total)}</strong> in cash on delivery.</p>${lineHtml(data)}<p><a href="${escapeHtml(data.confirmUrl)}" style="display:inline-block;background:#111;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Confirm my order</a></p><p style="color:#666;font-size:13px">If you do not confirm within ${data.hours} hours, the order is cancelled automatically. Didn't place this order? Ignore this email.</p>`,
+    ),
+  };
+}
+
 export function abandonedCheckoutEmail(
   to: string,
   data: {

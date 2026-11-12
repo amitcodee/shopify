@@ -2,6 +2,7 @@ import { ABANDONED_CHECKOUT_DELAYS, SUPPORTED_CURRENCIES } from '@repo/contracts
 import { ActionForm, Field, SelectField, SubmitButton } from '@/components/form';
 import { Card } from '@/components/ui';
 import { getStore } from '@/lib/session';
+import { closeStoreAction } from '../store-actions';
 import { updateStoreAction } from './actions';
 
 const TIMEZONES = [
@@ -25,52 +26,70 @@ export default async function GeneralSettings({
   const canEdit = store.permissions.includes('settings:write');
 
   return (
-    <Card title="Store details" description="Shown to customers on your storefront and emails.">
-      <ActionForm action={updateStoreAction.bind(null, store.id)} className="max-w-xl space-y-4">
-        <fieldset disabled={!canEdit} className="space-y-4">
-          <Field
-            name="name"
-            label="Store name"
-            defaultValue={store.name}
-            required
-            maxLength={100}
-          />
-          <Field
-            name="contactEmail"
-            label="Contact email"
-            type="email"
-            defaultValue={store.contactEmail}
-            required
-          />
-          <SelectField
-            name="currency"
-            label="Currency"
-            defaultValue={store.currency}
-            options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
-            hint="Changing currency does not convert existing prices."
-          />
-          <SelectField
-            name="timezone"
-            label="Time zone"
-            defaultValue={store.timezone}
-            options={TIMEZONES.map((tz) => ({ value: tz, label: tz }))}
-          />
-          <SelectField
-            name="abandonedCheckoutDelayHours"
-            label="Abandoned checkout emails"
-            defaultValue={String(store.abandonedCheckoutDelayHours ?? 'off')}
-            options={[
-              ...ABANDONED_CHECKOUT_DELAYS.map((h) => ({
-                value: String(h),
-                label: `Send ${h} hour${h === 1 ? '' : 's'} after an unpaid checkout`,
-              })),
-              { value: 'off', label: "Don't send" },
-            ]}
-            hint="Shoppers who left checkout unpaid get one email with a link back to their cart."
-          />
-        </fieldset>
-        {canEdit ? <SubmitButton>Save changes</SubmitButton> : null}
-      </ActionForm>
-    </Card>
+    <div className="space-y-6">
+      <Card title="Store details" description="Shown to customers on your storefront and emails.">
+        <ActionForm action={updateStoreAction.bind(null, store.id)} className="max-w-xl space-y-4">
+          <fieldset disabled={!canEdit} className="space-y-4">
+            <Field
+              name="name"
+              label="Store name"
+              defaultValue={store.name}
+              required
+              maxLength={100}
+            />
+            <Field
+              name="contactEmail"
+              label="Contact email"
+              type="email"
+              defaultValue={store.contactEmail}
+              required
+            />
+            <SelectField
+              name="currency"
+              label="Currency"
+              defaultValue={store.currency}
+              options={SUPPORTED_CURRENCIES.map((code) => ({ value: code, label: code }))}
+              hint="Changing currency does not convert existing prices."
+            />
+            <SelectField
+              name="timezone"
+              label="Time zone"
+              defaultValue={store.timezone}
+              options={TIMEZONES.map((tz) => ({ value: tz, label: tz }))}
+            />
+            <SelectField
+              name="abandonedCheckoutDelayHours"
+              label="Abandoned checkout emails"
+              defaultValue={String(store.abandonedCheckoutDelayHours ?? 'off')}
+              options={[
+                ...ABANDONED_CHECKOUT_DELAYS.map((h) => ({
+                  value: String(h),
+                  label: `Send ${h} hour${h === 1 ? '' : 's'} after an unpaid checkout`,
+                })),
+                { value: 'off', label: "Don't send" },
+              ]}
+              hint="Shoppers who left checkout unpaid get one email with a link back to their cart."
+            />
+          </fieldset>
+          {canEdit ? <SubmitButton>Save changes</SubmitButton> : null}
+        </ActionForm>
+      </Card>
+      {store.role === 'OWNER' ? (
+        <Card
+          title="Close store"
+          description="Takes your storefront offline and stops your subscription. You can reopen the store within 30 days; after that its products, orders, customers and images are permanently deleted. Download your data first."
+        >
+          <ActionForm action={closeStoreAction.bind(null, store.id)} className="max-w-xl space-y-4">
+            <Field
+              name="confirmSubdomain"
+              label={`Type ${store.subdomain} to confirm`}
+              autoComplete="off"
+              required
+            />
+            <SubmitButton variant="danger">Close store</SubmitButton>
+          </ActionForm>
+        </Card>
+      ) : null}
+    </div>
   );
 }

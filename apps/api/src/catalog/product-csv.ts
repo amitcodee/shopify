@@ -25,7 +25,12 @@ import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { TenantDb } from '../database/database.module.js';
 import { MediaUrls } from '../storage/storage.module.js';
 import { PlanLimitError } from '../platform/plans.service.js';
-import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
+import {
+  AllowBillingLocked,
+  AllowClosedStore,
+  RequirePermission,
+  StoreAccessGuard,
+} from '../tenancy/store-access.guard.js';
 import { ProductsService } from './products.service.js';
 
 const MAX_CSV_BYTES = 4 * 1024 * 1024;
@@ -194,6 +199,9 @@ export class ProductCsvController {
   constructor(private readonly csv: ProductCsvService) {}
 
   @Get('export')
+  // Merchants can take their data out even when billing lapsed or the store is closed.
+  @AllowBillingLocked()
+  @AllowClosedStore()
   @RequirePermission('products:read')
   export(@CurrentStore() store: StoreContext): Promise<{ filename: string; csv: string }> {
     return this.csv.export(store);

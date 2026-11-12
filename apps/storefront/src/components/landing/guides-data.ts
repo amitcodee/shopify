@@ -52,7 +52,7 @@ export const GUIDES: Guide[] = [
       },
     ],
     tips: [
-      'Every new store starts with a 14-day trial.',
+      'Every new store starts with a 7-day free trial.',
       'Your store address keeps working even after you connect your own domain.',
     ],
     features: ['online-store', 'domains'],

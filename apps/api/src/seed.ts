@@ -10,7 +10,14 @@ import { seedCatalog } from './seed-catalog.js';
 import { seedMerchandising } from './seed-merchandising.js';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
-if (process.env.NODE_ENV === 'production') throw new Error('Refusing to seed in production.');
+const staging = process.env.APP_STAGE === 'staging';
+if (process.env.NODE_ENV === 'production' && !staging) {
+  throw new Error('Refusing to seed in production.');
+}
+// A staging server is reachable from the internet: never use the well-known demo passwords there.
+if (staging && (!process.env.SEED_ADMIN_PASSWORD || !process.env.SEED_MERCHANT_PASSWORD)) {
+  throw new Error('Set SEED_ADMIN_PASSWORD and SEED_MERCHANT_PASSWORD to seed a staging server.');
+}
 
 const db = createPrismaClient(process.env.DATABASE_URL_PLATFORM ?? '');
 const passwords = new PasswordService();
@@ -18,12 +25,12 @@ const passwords = new PasswordService();
 const ADMIN = {
   email: 'admin@example.com',
   name: 'Platform Admin',
-  password: 'admin-password-123',
+  password: process.env.SEED_ADMIN_PASSWORD ?? 'admin-password-123',
 };
 const MERCHANT = {
   email: 'merchant@example.com',
   name: 'Demo Merchant',
-  password: 'merchant-password-123',
+  password: process.env.SEED_MERCHANT_PASSWORD ?? 'merchant-password-123',
 };
 
 async function upsertUser(input: typeof ADMIN, platformRole: 'NONE' | 'SUPER_ADMIN') {

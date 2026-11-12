@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { getCurrentUser, getStore } from '@/lib/session';
 import { storefrontUrlFor } from '@/lib/storefront';
 import { MobileNav, type NavItem, PageSearchButton, SideNav } from './nav';
+import { BillingBanner, ClosedStoreNotice } from './store-status';
 
 export default async function StoreLayout({
   children,
@@ -285,8 +286,13 @@ export default async function StoreLayout({
                 This store is suspended by the platform. Your storefront is offline and the admin is
                 locked. Contact {notice.supportEmail} to resolve this.
               </Alert>
+            ) : store.status === 'CLOSED' ? (
+              <ClosedStoreNotice store={store} />
             ) : (
-              children
+              <>
+                <BillingBanner store={store} />
+                {children}
+              </>
             )}
           </main>
         </div>

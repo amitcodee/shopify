@@ -25,11 +25,19 @@ import { OrdersService } from '../orders/orders.service.js';
 import { CustomerReturnsController, ReturnsController, ReturnsService } from '../orders/returns.js';
 import { PaymentsModule } from '../payments/payments.module.js';
 import { StorefrontModule } from '../storefront/storefront.module.js';
+import { StoresModule } from '../stores/stores.module.js';
 import { DeveloperModule } from '../webhooks/developer.js';
 
 /** Checkout, orders, customers, analytics and the background jobs that serve them. */
 @Module({
-  imports: [AuthModule, StorefrontModule, PaymentsModule, OrdersCoreModule, DeveloperModule],
+  imports: [
+    AuthModule,
+    StorefrontModule,
+    StoresModule,
+    PaymentsModule,
+    OrdersCoreModule,
+    DeveloperModule,
+  ],
   controllers: [
     CheckoutController,
     CartRecoveryController,

@@ -22,7 +22,7 @@ import type { StoreGateway, TenantTx } from '@repo/db';
 import { AuditService } from '../../audit/audit.service.js';
 import { decryptSecret, encryptSecret } from '../../common/crypto.js';
 import type { AuthUser, RequestMeta } from '../../common/request.js';
-import { ENV, type Env } from '../../config/env.js';
+import { ENV, type Env, decryptionKeys } from '../../config/env.js';
 import { TenantDb } from '../../database/database.module.js';
 import type { PaymentProvider } from '../payment-provider.js';
 import type { FetchLike } from '../razorpay/razorpay-client.js';
@@ -84,11 +84,15 @@ export class StoreGatewaysService {
       rows: await tx.storeGateway.findMany({ where: { storeId }, orderBy: { createdAt: 'asc' } }),
       store: await tx.store.findUniqueOrThrow({
         where: { id: storeId },
-        select: { codEnabled: true, codMaxAmount: true },
+        select: { codEnabled: true, codMaxAmount: true, codRequireConfirmation: true },
       }),
     }));
     return {
-      cod: { enabled: store.codEnabled, maxAmount: store.codMaxAmount },
+      cod: {
+        enabled: store.codEnabled,
+        maxAmount: store.codMaxAmount,
+        requireConfirmation: store.codRequireConfirmation,
+      },
       connected: rows.map((row) => ({
         id: row.provider as StoreGatewayId,
         mode: gatewayModeSchema.parse(row.mode),
@@ -187,7 +191,11 @@ export class StoreGatewaysService {
     await this.tenantDb.run(storeId, async (tx) => {
       await tx.store.update({
         where: { id: storeId },
-        data: { codEnabled: input.enabled, codMaxAmount: input.maxAmount },
+        data: {
+          codEnabled: input.enabled,
+          codMaxAmount: input.maxAmount,
+          codRequireConfirmation: input.requireConfirmation,
+        },
       });
       await this.audit.record(tx, {
         storeId,
@@ -195,7 +203,11 @@ export class StoreGatewaysService {
         action: 'payments.cod_updated',
         entityType: 'store',
         entityId: storeId,
-        data: { enabled: input.enabled, maxAmount: input.maxAmount },
+        data: {
+          enabled: input.enabled,
+          maxAmount: input.maxAmount,
+          requireConfirmation: input.requireConfirmation,
+        },
         meta,
       });
     });
@@ -359,7 +371,7 @@ export class StoreGatewaysService {
   }
 
   private credentialsOf(row: StoreGateway): Record<string, string> {
-    return JSON.parse(decryptSecret(this.env.APP_ENCRYPTION_KEY, row.credentialsEnc)) as Record<
+    return JSON.parse(decryptSecret(decryptionKeys(this.env), row.credentialsEnc)) as Record<
       string,
       string
     >;

@@ -15,7 +15,12 @@ import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { UuidParam } from '../common/uuid-param.pipe.js';
 import { TenantDb } from '../database/database.module.js';
-import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
+import {
+  AllowBillingLocked,
+  AllowClosedStore,
+  RequirePermission,
+  StoreAccessGuard,
+} from '../tenancy/store-access.guard.js';
 
 const REDACTED = '[redacted]';
 
@@ -130,6 +135,9 @@ export class CustomerPrivacyController {
   constructor(private readonly privacy: CustomerPrivacyService) {}
 
   @Get('export')
+  // Merchants can take their data out even when billing lapsed or the store is closed.
+  @AllowBillingLocked()
+  @AllowClosedStore()
   @RequirePermission('customers:write')
   export(
     @CurrentStore() store: StoreContext,

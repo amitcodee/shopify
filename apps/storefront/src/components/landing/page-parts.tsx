@@ -367,7 +367,9 @@ export function CtaBand({
           <div className="mt-9">
             <EmailCapture signupUrl={signupUrl} template={template} />
           </div>
-          <p className="mt-3 text-sm text-mk-muted">Every new store starts with a 14-day trial.</p>
+          <p className="mt-3 text-sm text-mk-muted">
+            Free for 7 days, then ₹99/month for 3 months.
+          </p>
         </div>
       </div>
     </section>

@@ -99,8 +99,8 @@ function Hero() {
           </span>
         </h1>
         <p className="mt-6 max-w-xl text-lg leading-[1.45] sm:text-[1.375rem]">
-          {THEME_TEMPLATES.length} templates, payments through Stripe or Razorpay, and one admin for
-          your orders, stock and customers.
+          {THEME_TEMPLATES.length} templates, payments through Razorpay, PayU, PhonePe, Cashfree,
+          Stripe or cash on delivery, and one admin for your orders, stock and customers.
         </p>
         <div className="mt-9 flex flex-wrap gap-4">
           <a href={signupUrl} className={pillLight}>
@@ -261,7 +261,7 @@ function RunStage() {
             kind="payments"
             title="Paid your way"
             href="/features/payments"
-            linkText="Connect Stripe or Razorpay"
+            linkText="Connect your gateway or COD"
           >
             and the money goes to your own account, with refunds handled in the admin.
           </FeatureColumn>
@@ -629,7 +629,9 @@ function ClosingStage() {
             <a href={signupUrl} className={`mt-10 ${pillLight}`}>
               Start for free
             </a>
-            <p className="mt-4 text-sm text-mk-dim">Every new store starts with a 14-day trial.</p>
+            <p className="mt-4 text-sm text-mk-dim">
+              Free for 7 days, then ₹99/month for 3 months.
+            </p>
           </div>
         </div>
       </div>

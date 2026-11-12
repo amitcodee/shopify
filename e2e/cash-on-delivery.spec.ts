@@ -18,6 +18,8 @@ test('merchant turns on cash on delivery; shopper orders with it; merchant recor
 
   await merchant.goto(`${ADMIN_URL}/s/${storeId}/settings/payments`);
   await merchant.getByLabel('Offer cash on delivery').check();
+  // This test covers instant confirmation; email confirmation is covered by the API tests.
+  await merchant.getByLabel(/Shoppers confirm by email/).uncheck();
   await merchant.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(merchant.getByText('Cash on delivery settings saved.')).toBeVisible();
 

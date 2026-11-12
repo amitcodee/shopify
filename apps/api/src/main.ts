@@ -3,11 +3,13 @@ import { ConsoleLogger, Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { loadEnv } from './config/env.js';
+import { initErrorReporting } from './common/error-reporting.js';
 import { configureApp } from './configure-app.js';
 
 async function bootstrap(): Promise<void> {
   if (existsSync('.env')) process.loadEnvFile('.env');
   const env = loadEnv();
+  initErrorReporting(env, 'api');
 
   // rawBody is needed to verify payment-provider webhook signatures.
   const app = await NestFactory.create(AppModule.register(env), {

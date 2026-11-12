@@ -13,6 +13,19 @@ export const planInputSchema = z.strictObject({
     .regex(/^[a-z0-9-]{2,30}$/, 'Use lowercase letters, numbers and hyphens'),
   name: z.string().trim().min(1).max(60),
   priceMonthly: z.number().int().min(0).max(10_000_000),
+  currency: z.enum(['INR', 'USD']).default('INR'),
+  /** Free days before the first charge; 0 = no trial. */
+  trialDays: z.number().int().min(0).max(90).default(7),
+  /** Introductory monthly price for the first `introCycles` months (null = none). */
+  introPrice: z.number().int().min(100).max(10_000_000).nullable().default(null),
+  introCycles: z.number().int().min(0).max(24).default(0),
+  /** Razorpay subscription offer (created in its Dashboard) that applies the intro discount. */
+  razorpayOfferId: z
+    .string()
+    .trim()
+    .regex(/^offer_[A-Za-z0-9]{14}$/, 'Paste the offer id from the Razorpay Dashboard (offer_…)')
+    .nullable()
+    .default(null),
   maxProducts: limit,
   maxStaff: limit,
   maxOrdersPerMonth: limit,
@@ -27,6 +40,11 @@ export const planSchema = z.object({
   code: z.string(),
   name: z.string(),
   priceMonthly: z.number().int(),
+  currency: z.string(),
+  trialDays: z.number().int(),
+  introPrice: z.number().int().nullable(),
+  introCycles: z.number().int(),
+  razorpayOfferId: z.string().nullable(),
   maxProducts: z.number().int().nullable(),
   maxStaff: z.number().int().nullable(),
   maxOrdersPerMonth: z.number().int().nullable(),
@@ -37,7 +55,21 @@ export const planSchema = z.object({
 });
 export type Plan = z.infer<typeof planSchema>;
 
-export const subscriptionStatusSchema = z.enum(['TRIALING', 'ACTIVE', 'PAST_DUE', 'CANCELLED']);
+export const subscriptionStatusSchema = z.enum([
+  'TRIALING',
+  'ACTIVE',
+  'PAST_DUE',
+  'CANCELLED',
+  'EXPIRED',
+]);
+export type SubscriptionStatus = z.infer<typeof subscriptionStatusSchema>;
+
+/**
+ * What the merchant must do next: start a subscription (trial running or ended), authorise the
+ * payment mandate (e.g. after the intro months on their own mandate), or fix a failing payment.
+ */
+export const billingActionSchema = z.enum(['subscribe', 'authorize', 'update_payment']);
+export type BillingAction = z.infer<typeof billingActionSchema>;
 
 export const usageSchema = z.object({
   products: z.number().int(),
@@ -53,6 +85,16 @@ export const billingOverviewSchema = z.object({
   trialEndsAt: z.iso.datetime().nullable(),
   pendingPlan: planSchema.nullable(),
   provider: z.string(),
+  /** The storefront is offline and the admin is limited to billing until the store pays. */
+  locked: z.boolean(),
+  /** Payment is failing: the store keeps working until this time. */
+  graceEndsAt: z.iso.datetime().nullable(),
+  cancelAtPeriodEnd: z.boolean(),
+  /** The store can still get the introductory price (never used before). */
+  introAvailable: z.boolean(),
+  /** Billed at the intro price right now. */
+  onIntroPrice: z.boolean(),
+  action: billingActionSchema.nullable(),
   usage: usageSchema,
   plans: z.array(planSchema),
   invoices: z.array(
@@ -72,10 +114,40 @@ export type BillingOverview = z.infer<typeof billingOverviewSchema>;
 
 export const changePlanInputSchema = z.strictObject({ planId: z.uuid() });
 
+/** Opens Razorpay Checkout in the admin to authorise a subscription mandate. */
+export const razorpayCheckoutSchema = z.object({
+  provider: z.literal('razorpay'),
+  keyId: z.string(),
+  subscriptionId: z.string(),
+  /** Hosted page for the same authorisation, used when Checkout cannot open. */
+  shortUrl: z.string().nullable(),
+  name: z.string(),
+  description: z.string(),
+  email: z.string(),
+});
+export type RazorpayCheckout = z.infer<typeof razorpayCheckoutSchema>;
+
 export const changePlanResultSchema = z.object({
   /** Set when the provider needs the merchant to complete payment on a hosted page. */
   checkoutUrl: z.string().nullable(),
+  /** Set when the merchant authorises the payment in Razorpay Checkout inside the admin. */
+  checkout: razorpayCheckoutSchema.nullable(),
   billing: billingOverviewSchema,
+});
+
+export const confirmRazorpaySubscriptionInputSchema = z.strictObject({
+  paymentId: z
+    .string()
+    .trim()
+    .regex(/^pay_[A-Za-z0-9]{6,30}$/),
+  subscriptionId: z
+    .string()
+    .trim()
+    .regex(/^sub_[A-Za-z0-9]{6,30}$/),
+  signature: z
+    .string()
+    .trim()
+    .regex(/^[a-f0-9]{64}$/),
 });
 export type ChangePlanResult = z.infer<typeof changePlanResultSchema>;
 
@@ -89,8 +161,9 @@ export const platformOverviewSchema = z.object({
   }),
   users: z.number().int(),
   merchants: z.number().int(),
-  /** Monthly recurring revenue from paid, active subscriptions (USD cents). */
+  /** Monthly recurring revenue from paid, active subscriptions (minor units of `mrrCurrency`). */
   mrr: z.number().int(),
+  mrrCurrency: z.string(),
   paidOrders30d: z.number().int(),
   /** Gross merchandise volume per currency in the last 30 days. */
   gmv30d: z.array(z.object({ currency: z.string(), amount: z.number().int() })),
@@ -106,7 +179,7 @@ export const platformStoreSchema = z.object({
   id: z.uuid(),
   name: z.string(),
   subdomain: z.string(),
-  status: z.enum(['ACTIVE', 'SUSPENDED']),
+  status: z.enum(['ACTIVE', 'SUSPENDED', 'CLOSED']),
   suspendedReason: z.string().nullable(),
   ownerEmail: z.string(),
   plan: z.string(),
@@ -121,7 +194,7 @@ export const platformStoreListSchema = paginated(platformStoreSchema);
 
 export const platformStoreQuerySchema = z.strictObject({
   q: z.string().trim().max(100).optional(),
-  status: z.enum(['ACTIVE', 'SUSPENDED']).optional(),
+  status: z.enum(['ACTIVE', 'SUSPENDED', 'CLOSED']).optional(),
   page: z.coerce.number().int().min(1).max(10_000).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });

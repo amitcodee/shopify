@@ -33,7 +33,7 @@ export const subdomainSchema = z
     message: 'This address is reserved',
   });
 
-export const storeStatusSchema = z.enum(['ACTIVE', 'SUSPENDED']);
+export const storeStatusSchema = z.enum(['ACTIVE', 'SUSPENDED', 'CLOSED']);
 
 export const createStoreInputSchema = z.strictObject({
   name: z.string().trim().min(1, 'Enter a store name').max(100),
@@ -77,9 +77,26 @@ export const storeDetailSchema = storeSummarySchema.extend({
   timezone: z.string(),
   abandonedCheckoutDelayHours: z.number().int().nullable(),
   permissions: z.array(permissionSchema),
+  /** Billing lapsed: the storefront is offline and only billing pages work. */
+  billingLocked: z.boolean(),
+  /** When the free trial ends (null when not on a trial). */
+  trialEndsAt: z.iso.datetime().nullable(),
+  /** What the owner must do about billing: subscribe, authorise a mandate, fix a payment. */
+  billingAction: z.enum(['subscribe', 'authorize', 'update_payment']).nullable(),
+  closedAt: z.iso.datetime().nullable(),
+  /** A closed store's data is permanently erased at this time unless it is reopened. */
+  deletionScheduledAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
 });
 export type StoreDetail = z.infer<typeof storeDetailSchema>;
+
+/** Days a closed store can still be reopened before its data is erased. */
+export const STORE_DELETION_GRACE_DAYS = 30;
+
+export const closeStoreInputSchema = z.strictObject({
+  /** The owner types the store's address (subdomain) to confirm. */
+  confirmSubdomain: z.string().trim().toLowerCase().min(1).max(63),
+});
 
 /**
  * One card on the store picker. Every number is gated by the same permission as the page it comes
