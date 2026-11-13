@@ -71,6 +71,20 @@ export function SubscribeButton({
       description: checkout.description,
       prefill: { email: checkout.email },
       theme: { color: '#111111' },
+      // The launch offer only applies to UPI mandates (Razorpay refuses other methods with it).
+      ...(checkout.upiOnly
+        ? {
+            config: {
+              display: {
+                blocks: {
+                  upi: { name: 'Pay with UPI (launch offer)', instruments: [{ method: 'upi' }] },
+                },
+                sequence: ['block.upi'],
+                preferences: { show_default_blocks: false },
+              },
+            },
+          }
+        : {}),
       handler: (response: RazorpaySuccess) => {
         setMessage('Confirming your subscription…');
         startTransition(async () => {

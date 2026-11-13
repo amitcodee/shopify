@@ -85,7 +85,7 @@ function PriceTimeline({ plan }: { plan: PublicPlan }) {
       ? {
           when: `Months 1–${plan.introCycles}`,
           what: `${money(plan.introPrice, plan.currency)}/mo`,
-          note: 'Launch offer',
+          note: plan.introUpiOnly ? 'Launch offer · UPI AutoPay' : 'Launch offer',
         }
       : null,
     {

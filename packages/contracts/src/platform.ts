@@ -124,6 +124,11 @@ export const razorpayCheckoutSchema = z.object({
   name: z.string(),
   description: z.string(),
   email: z.string(),
+  /**
+   * The launch offer is attached. Razorpay offers name one payment method (the platform's is
+   * UPI) and refuse the others, so Checkout shows only that method.
+   */
+  upiOnly: z.boolean().default(false),
 });
 export type RazorpayCheckout = z.infer<typeof razorpayCheckoutSchema>;
 

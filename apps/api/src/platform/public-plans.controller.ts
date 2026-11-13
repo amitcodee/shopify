@@ -15,6 +15,8 @@ export interface PublicPlan {
   trialDays: number;
   introPrice: number | null;
   introCycles: number;
+  /** The intro price runs on a Razorpay offer, which only applies to UPI AutoPay. */
+  introUpiOnly: boolean;
   maxProducts: number | null;
   maxStaff: number | null;
   maxOrdersPerMonth: number | null;
@@ -43,6 +45,7 @@ export class PublicPlansController {
       trialDays: p.trialDays,
       introPrice: p.introPrice,
       introCycles: p.introCycles,
+      introUpiOnly: p.razorpayOfferId !== null,
       maxProducts: p.maxProducts,
       maxStaff: p.maxStaff,
       maxOrdersPerMonth: p.maxOrdersPerMonth,

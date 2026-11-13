@@ -379,6 +379,7 @@ export class BillingService {
         name: `${plan.name} plan`,
         description,
         email: actor.email,
+        upiOnly: Boolean(remote.offer_id),
       },
       billing: await this.overview(storeId),
     };

@@ -107,6 +107,11 @@ function PlanPrice({ plan, intro }: { plan: Plan; intro: boolean }) {
             {money(plan.priceMonthly, plan.currency)}/month
           </span>
         </p>
+        {plan.razorpayOfferId ? (
+          <p className="mt-1 text-xs text-slate-500">
+            Launch price applies when you pay with UPI AutoPay.
+          </p>
+        ) : null}
       </div>
     );
   }

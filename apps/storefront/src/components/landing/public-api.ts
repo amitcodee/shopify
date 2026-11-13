@@ -9,6 +9,7 @@ const publicPlanSchema = z.object({
   trialDays: z.number().int().default(0),
   introPrice: z.number().int().nullable().default(null),
   introCycles: z.number().int().default(0),
+  introUpiOnly: z.boolean().default(false),
   maxProducts: z.number().int().nullable(),
   maxStaff: z.number().int().nullable(),
   maxOrdersPerMonth: z.number().int().nullable(),
