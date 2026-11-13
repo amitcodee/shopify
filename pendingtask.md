@@ -24,19 +24,18 @@ Razorpay Dashboard → Payments → Account & Settings → Webhooks → Add New 
 
 Without it, billing still works: the `billing` job re-syncs every 10 minutes.
 
-## 2. Razorpay intro offer: refused by Razorpay, switched off (2026-11-13)
+## 2. Razorpay intro offer: cause found (2026-11-13)
 
-Test offers `offer_TzYbMoF8joCz5s` (minimum Rs 799) and `offer_TzZyptQ2FlxDb4` (minimum Rs 750),
-both flat Rs 700 off, 3 cycles, UPI only. Creating a subscription with either returns
-`400 BAD_REQUEST_ERROR: Offer not applicable for this subscription`. Untested suspects: the future
-`start_at` (subscriptions start when the 7-day trial ends) and the UPI-only scope.
+Razorpay refuses an offer on any subscription with a future `start_at` (verified with the test API:
+both `offer_TzYbMoF8joCz5s` and `offer_TzZyptQ2FlxDb4` are accepted without `start_at` and refused
+with it). The UPI-only scope is not the cause.
 
-Coolify has `BILLING_RAZORPAY_OFFER_ID=none`, so the intro runs on its own Rs 99 x 3 mandate (UPI
-or card) and the merchant approves the Rs 799 mandate afterwards (a banner asks them). If Razorpay
-refuses an offer the API falls back to that path on its own (commit 0b3f589).
+The API now attaches the offer only when the subscription starts at once (trial over, or store
+locked/expired). A merchant who subscribes during the trial gets the separate Rs 99 x 3 intro
+mandate, then approves the Rs 799 mandate (a banner asks them).
 
-To retry: ask Razorpay support why the offer is not applicable to a subscription with `start_at`
-in the future, then set `BILLING_RAZORPAY_OFFER_ID=offer_...` in Coolify and redeploy.
+To switch the offer on: set `BILLING_RAZORPAY_OFFER_ID=offer_TzYbMoF8joCz5s` in Coolify and
+redeploy (currently `none`).
 
 ## 3. Before real launch
 
@@ -56,9 +55,10 @@ in the future, then set `BILLING_RAZORPAY_OFFER_ID=offer_...` in Coolify and red
 - A full paid flow on staging (complete a test subscription in Checkout and confirm the first
   charge lands after the trial).
 
-## 5. Rotate the Razorpay test key (urgent)
+## 5. Rotate the Razorpay test key: new key made, Coolify not updated yet
 
 Commit ce65fe4 pushed the test key id + secret in `prbl.md` to the public GitHub repo. The lines
 are removed now, but they stay in git history. Razorpay Dashboard (Test mode) → Account & Settings
-→ API Keys → Regenerate Test Key, then update `RAZORPAY_*` / `BILLING_RAZORPAY_*` in Coolify and
+→ API Keys → Regenerate Test Key (done: new key id `rzp_test_TzZ59Ql9eDuGdY`, saved commented-out
+in the gitignored `apps/api/.env`), then update `RAZORPAY_*` / `BILLING_RAZORPAY_*` in Coolify and
 `apps/api/.env`, and redeploy.

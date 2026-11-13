@@ -311,9 +311,24 @@ export class BillingService implements OnApplicationBootstrap {
       return { checkoutUrl: null, checkout: null, billing: await this.overview(store.id) };
     }
 
+    const now = Date.now();
+    const state = billingState(subscription);
+    // Keep what the merchant already has: the rest of the trial, or the paid period.
+    const keepUntil =
+      subscription.status === 'TRIALING'
+        ? subscription.trialEndsAt
+        : !state.locked && subscription.status !== 'EXPIRED'
+          ? subscription.currentPeriodEnd
+          : null;
+    const startAt = keepUntil && keepUntil.getTime() - now > MIN_FUTURE_START_MS ? keepUntil : null;
+
+    // Razorpay refuses an offer on a subscription with a future start_at ("Offer not applicable
+    // for this subscription", verified 2026-11-13), so a merchant still in the trial or a paid
+    // period gets the intro on its own mandate instead.
     const intro = hasIntro(plan) && !subscription.introUsed;
-    let phase: 'intro' | 'regular' = intro && !plan.razorpayOfferId ? 'intro' : 'regular';
-    let offerId = intro && plan.razorpayOfferId ? plan.razorpayOfferId : null;
+    const useOffer = intro && !!plan.razorpayOfferId && !startAt;
+    let phase: 'intro' | 'regular' = intro && !useOffer ? 'intro' : 'regular';
+    let offerId = useOffer ? plan.razorpayOfferId : null;
 
     // An earlier, never-authorised checkout with the same terms is reused instead of piling up
     // abandoned subscriptions in Razorpay. One started before the offer changed is replaced.
@@ -330,18 +345,7 @@ export class BillingService implements OnApplicationBootstrap {
       }
     }
 
-    const now = Date.now();
-    const state = billingState(subscription);
-    // Keep what the merchant already has: the rest of the trial, or the paid period.
-    const keepUntil =
-      subscription.status === 'TRIALING'
-        ? subscription.trialEndsAt
-        : !state.locked && subscription.status !== 'EXPIRED'
-          ? subscription.currentPeriodEnd
-          : null;
-    const startAt = keepUntil && keepUntil.getTime() - now > MIN_FUTURE_START_MS ? keepUntil : null;
-
-    const ids = await this.razorpayPlans(plan);
+    const ids = await this.razorpayPlans(plan, phase === 'intro');
     const create = (planIds: RazorpayPlanIds) =>
       razorpay.createSubscription({
         razorpayPlanId: phase === 'intro' && planIds.intro ? planIds.intro : ids.regular,
