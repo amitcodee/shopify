@@ -145,6 +145,7 @@ services:
       PUBLIC_API_URL: https://api.${ROOT_DOMAIN}
       STOREFRONT_ROOT_DOMAIN: ${ROOT_DOMAIN}
       ADMIN_PUBLIC_URL: https://admin.${ROOT_DOMAIN}
+      PLATFORM_DEMO_STORE_URL: https://demo.${ROOT_DOMAIN}
       STOREFRONT_SHARED_SECRET: ${SERVICE_BASE64_64_STOREFRONT}
     depends_on: [api]
 
