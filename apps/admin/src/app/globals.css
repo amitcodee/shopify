@@ -249,6 +249,13 @@
   --color-violet-700: #c4b5fd;
   --color-violet-800: #ddd6fe;
   --color-violet-900: #ede9fe;
+  /* 950 is only used for text (alert bodies), so it lightens like 900. */
+  --color-red-950: #fee2e2;
+  --color-emerald-950: #d1fae5;
+  --color-green-950: #dcfce7;
+  --color-amber-950: #fef3c7;
+  --color-sky-950: #e0f2fe;
+  --color-violet-950: #ede9fe;
 }
 
 /* These colors also fill buttons, so only their text uses are lightened. */
