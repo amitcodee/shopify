@@ -59,14 +59,18 @@ export class BillingService implements OnApplicationBootstrap {
     @Optional() @Inject(RAZORPAY_BILLING) private readonly razorpay: RazorpayBilling | null = null,
   ) {}
 
-  /** Applies BILLING_RAZORPAY_OFFER_ID to intro plans that have no offer yet. */
+  /** While BILLING_RAZORPAY_OFFER_ID is set it is the offer of every plan with an intro price. */
   async onApplicationBootstrap(): Promise<void> {
     const offerId = this.env.BILLING_RAZORPAY_OFFER_ID;
     if (!offerId) return;
     try {
       await this.plans.ensureDefaults(this.platformDb);
       const { count } = await this.platformDb.plan.updateMany({
-        where: { razorpayOfferId: null, introPrice: { not: null }, introCycles: { gt: 0 } },
+        where: {
+          introPrice: { not: null },
+          introCycles: { gt: 0 },
+          OR: [{ razorpayOfferId: null }, { razorpayOfferId: { not: offerId } }],
+        },
         data: { razorpayOfferId: offerId },
       });
       if (count > 0) this.logger.log(`Saved Razorpay offer ${offerId} on ${count} plan(s)`);

@@ -131,9 +131,9 @@ const envSchema = z
     /** Secret of the webhook added in the Razorpay Dashboard for /api/v1/webhooks/billing/razorpay. */
     BILLING_RAZORPAY_WEBHOOK_SECRET: z.string().min(8).optional(),
     /**
-     * Razorpay Dashboard offer for the intro price (e.g. ₹700 off × 3 cycles). On start-up it is
-     * saved on every plan with an intro price that has no offer yet; the platform console can
-     * still change or clear it afterwards.
+     * Razorpay Dashboard offer for the intro price (e.g. ₹700 off × 3 cycles). While set, it is
+     * saved on every plan with an intro price at start-up, replacing what the console holds.
+     * Razorpay needs discount <= the offer's minimum amount < the plan price (e.g. 700/750/799).
      */
     BILLING_RAZORPAY_OFFER_ID: z.string().startsWith('offer_').optional(),
     /** Days a store keeps working after a subscription payment fails, before billing locks it. */

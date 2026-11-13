@@ -26,12 +26,12 @@ Without it, billing still works: the `billing` job re-syncs every 10 minutes.
 
 ## 2. Razorpay intro offer: created 2026-11-13, needs the id saved
 
-Test-mode offer `offer_TzYbMoF8joCz5s` ("Standard intro 99 x3"): flat Rs 700 off, 3 cycles,
+Test-mode offer `offer_TzZyptQ2FlxDb4` ("Standard intro 99 x3"): flat Rs 700 off (minimum Rs 750; Razorpay refuses a minimum equal to the plan price), 3 cycles,
 UPI only, blocks the payment if the offer cannot apply, valid to 30 Nov 2029. Razorpay allows one
 payment method per offer, so Checkout shows only UPI when the offer is attached (commit 53403ff).
 
 To do: log in to admin as `admin@example.com` → Platform → Plans → Standard → "Razorpay offer id" =
-`offer_TzYbMoF8joCz5s` → Save. A live-mode offer is needed again at launch.
+`offer_TzZyptQ2FlxDb4` → Save. A live-mode offer is needed again at launch.
 
 ## 3. Before real launch
 
