@@ -300,12 +300,21 @@ export class BillingService implements OnApplicationBootstrap {
       return { checkoutUrl: null, checkout: null, billing: await this.overview(store.id) };
     }
 
-    // An earlier, never-authorised checkout for the same plan is reused instead of piling up
-    // abandoned subscriptions in Razorpay.
+    const intro = hasIntro(plan) && !subscription.introUsed;
+    const phase: 'intro' | 'regular' = intro && !plan.razorpayOfferId ? 'intro' : 'regular';
+    const offerId = intro && plan.razorpayOfferId ? plan.razorpayOfferId : null;
+
+    // An earlier, never-authorised checkout with the same terms is reused instead of piling up
+    // abandoned subscriptions in Razorpay. One started before the offer changed is replaced.
     if (subscription.provider === 'razorpay' && subscription.providerRef) {
       const existing = await razorpay.fetchSubscription(subscription.providerRef);
       const notes = subscriptionNotes(existing);
-      if (existing.status === 'created' && notes.planId === plan.id) {
+      if (
+        existing.status === 'created' &&
+        notes.planId === plan.id &&
+        notes.phase === phase &&
+        (existing.offer_id ?? null) === offerId
+      ) {
         return this.checkoutResult(store.id, existing, plan, actor);
       }
     }
@@ -322,15 +331,13 @@ export class BillingService implements OnApplicationBootstrap {
     const startAt = keepUntil && keepUntil.getTime() - now > MIN_FUTURE_START_MS ? keepUntil : null;
 
     const ids = await this.razorpayPlans(plan);
-    const intro = hasIntro(plan) && !subscription.introUsed;
-    const phase: 'intro' | 'regular' = intro && !plan.razorpayOfferId ? 'intro' : 'regular';
     let created: RazorpaySubscription;
     try {
       created = await razorpay.createSubscription({
         razorpayPlanId: phase === 'intro' && ids.intro ? ids.intro : ids.regular,
         totalCount: phase === 'intro' ? plan.introCycles : REGULAR_TOTAL_COUNT,
         startAt,
-        offerId: intro && plan.razorpayOfferId ? plan.razorpayOfferId : null,
+        offerId,
         notes: { storeId: store.id, planId: plan.id, phase },
       });
     } catch (error) {
