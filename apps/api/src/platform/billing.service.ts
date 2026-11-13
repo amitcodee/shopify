@@ -59,21 +59,27 @@ export class BillingService implements OnApplicationBootstrap {
     @Optional() @Inject(RAZORPAY_BILLING) private readonly razorpay: RazorpayBilling | null = null,
   ) {}
 
-  /** While BILLING_RAZORPAY_OFFER_ID is set it is the offer of every plan with an intro price. */
+  /**
+   * While BILLING_RAZORPAY_OFFER_ID is set it is the offer of every plan with an intro price;
+   * "none" clears offers.
+   */
   async onApplicationBootstrap(): Promise<void> {
-    const offerId = this.env.BILLING_RAZORPAY_OFFER_ID;
-    if (!offerId) return;
+    const setting = this.env.BILLING_RAZORPAY_OFFER_ID;
+    if (!setting) return;
+    const offerId = setting === 'none' ? null : setting;
     try {
       await this.plans.ensureDefaults(this.platformDb);
       const { count } = await this.platformDb.plan.updateMany({
-        where: {
-          introPrice: { not: null },
-          introCycles: { gt: 0 },
-          OR: [{ razorpayOfferId: null }, { razorpayOfferId: { not: offerId } }],
-        },
+        where: offerId
+          ? {
+              introPrice: { not: null },
+              introCycles: { gt: 0 },
+              OR: [{ razorpayOfferId: null }, { razorpayOfferId: { not: offerId } }],
+            }
+          : { razorpayOfferId: { not: null } },
         data: { razorpayOfferId: offerId },
       });
-      if (count > 0) this.logger.log(`Saved Razorpay offer ${offerId} on ${count} plan(s)`);
+      if (count > 0) this.logger.log(`Set Razorpay offer ${setting} on ${count} plan(s)`);
     } catch (error) {
       this.logger.warn(`Could not apply BILLING_RAZORPAY_OFFER_ID: ${String(error)}`);
     }

@@ -24,14 +24,19 @@ Razorpay Dashboard → Payments → Account & Settings → Webhooks → Add New 
 
 Without it, billing still works: the `billing` job re-syncs every 10 minutes.
 
-## 2. Razorpay intro offer: created 2026-11-13, needs the id saved
+## 2. Razorpay intro offer: refused by Razorpay, switched off (2026-11-13)
 
-Test-mode offer `offer_TzZyptQ2FlxDb4` ("Standard intro 99 x3"): flat Rs 700 off (minimum Rs 750; Razorpay refuses a minimum equal to the plan price), 3 cycles,
-UPI only, blocks the payment if the offer cannot apply, valid to 30 Nov 2029. Razorpay allows one
-payment method per offer, so Checkout shows only UPI when the offer is attached (commit 53403ff).
+Test offers `offer_TzYbMoF8joCz5s` (minimum Rs 799) and `offer_TzZyptQ2FlxDb4` (minimum Rs 750),
+both flat Rs 700 off, 3 cycles, UPI only. Creating a subscription with either returns
+`400 BAD_REQUEST_ERROR: Offer not applicable for this subscription`. Untested suspects: the future
+`start_at` (subscriptions start when the 7-day trial ends) and the UPI-only scope.
 
-To do: log in to admin as `admin@example.com` → Platform → Plans → Standard → "Razorpay offer id" =
-`offer_TzZyptQ2FlxDb4` → Save. A live-mode offer is needed again at launch.
+Coolify has `BILLING_RAZORPAY_OFFER_ID=none`, so the intro runs on its own Rs 99 x 3 mandate (UPI
+or card) and the merchant approves the Rs 799 mandate afterwards (a banner asks them). If Razorpay
+refuses an offer the API falls back to that path on its own (commit 0b3f589).
+
+To retry: ask Razorpay support why the offer is not applicable to a subscription with `start_at`
+in the future, then set `BILLING_RAZORPAY_OFFER_ID=offer_...` in Coolify and redeploy.
 
 ## 3. Before real launch
 

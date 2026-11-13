@@ -134,8 +134,11 @@ const envSchema = z
      * Razorpay Dashboard offer for the intro price (e.g. ₹700 off × 3 cycles). While set, it is
      * saved on every plan with an intro price at start-up, replacing what the console holds.
      * Razorpay needs discount <= the offer's minimum amount < the plan price (e.g. 700/750/799).
+     * "none" clears the offer (the intro months then run on their own mandate).
      */
-    BILLING_RAZORPAY_OFFER_ID: z.string().startsWith('offer_').optional(),
+    BILLING_RAZORPAY_OFFER_ID: z
+      .union([z.string().startsWith('offer_'), z.literal('none')])
+      .optional(),
     /** Days a store keeps working after a subscription payment fails, before billing locks it. */
     BILLING_GRACE_DAYS: z.coerce.number().int().min(0).max(30).default(7),
     /** Where rate-limit counters live: PostgreSQL (shared by all instances) or process memory. */
