@@ -24,17 +24,14 @@ Razorpay Dashboard → Payments → Account & Settings → Webhooks → Add New 
 
 Without it, billing still works: the `billing` job re-syncs every 10 minutes.
 
-## 2. Razorpay intro offer (₹99 for 3 months on one mandate)
+## 2. Razorpay intro offer: created 2026-11-13, needs the id saved
 
-Razorpay Dashboard → Offers → Create Offer → Subscriptions:
+Test-mode offer `offer_TzYbMoF8joCz5s` ("Standard intro 99 x3"): flat Rs 700 off, 3 cycles,
+UPI only, blocks the payment if the offer cannot apply, valid to 30 Nov 2029. Razorpay allows one
+payment method per offer, so Checkout shows only UPI when the offer is attached (commit 53403ff).
 
-- Discount: flat ₹700 (₹799 → ₹99)
-- Redemption type: "Limited number of cycles" = 3
-- Payment methods: UPI and Card
-
-Copy the `offer_…` id into admin → Platform → Plans → Standard → "Razorpay offer id" and save.
-Without an offer, the intro months run on their own mandate and the merchant re-authorises the
-₹799 mandate when they end (a banner asks them to).
+To do: log in to admin as `admin@example.com` → Platform → Plans → Standard → "Razorpay offer id" =
+`offer_TzYbMoF8joCz5s` → Save. A live-mode offer is needed again at launch.
 
 ## 3. Before real launch
 
