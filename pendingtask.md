@@ -50,7 +50,13 @@ Without an offer, the intro months run on their own mandate and the merchant re-
 
 ## 4. Not yet run
 
-- Playwright browser tests (`e2e/platform.spec.ts`, `e2e/cash-on-delivery.spec.ts` were updated
-  for the new plan and COD confirmation but not run).
+- Playwright `e2e/platform.spec.ts` + `e2e/cash-on-delivery.spec.ts`: run 2026-11-13, 3/3 pass.
 - A full paid flow on staging (complete a test subscription in Checkout and confirm the first
   charge lands after the trial).
+
+## 5. Rotate the Razorpay test key (urgent)
+
+Commit ce65fe4 pushed the test key id + secret in `prbl.md` to the public GitHub repo. The lines
+are removed now, but they stay in git history. Razorpay Dashboard (Test mode) → Account & Settings
+→ API Keys → Regenerate Test Key, then update `RAZORPAY_*` / `BILLING_RAZORPAY_*` in Coolify and
+`apps/api/.env`, and redeploy.
