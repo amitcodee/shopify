@@ -227,7 +227,10 @@ export default async function BillingPage({
                   ✓ Your own gateway (Razorpay, PayU, Cashfree, PhonePe…) and cash on delivery
                 </li>
                 <li>✓ Every template, custom domain and app included</li>
-                <li>✓ Pay by UPI AutoPay or card · price includes GST</li>
+                <li>
+                  ✓ Pay by {intro && p.razorpayOfferId ? 'UPI AutoPay' : 'UPI AutoPay or card'} ·
+                  price includes GST
+                </li>
               </ul>
               <div className="mt-5">
                 {showSubscribe ? (

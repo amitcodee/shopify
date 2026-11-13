@@ -165,7 +165,9 @@ function PlanCards({ plans }: { plans: PublicPlan[] }) {
                 limit(plan.maxOrdersPerMonth, 'orders a month'),
                 fee(plan.transactionFeeBps),
                 'Every feature and template included',
-                'Pay by UPI AutoPay or card',
+                hasIntro(plan) && plan.introUpiOnly
+                  ? 'Launch offer with UPI AutoPay'
+                  : 'Pay by UPI AutoPay or card',
               ].map((line) => (
                 <li key={line} className="flex gap-2.5">
                   <span className={`mt-0.5 ${highlight ? 'text-mk-accent' : 'text-mk-accent'}`}>
