@@ -256,6 +256,7 @@ export class BillingService implements OnApplicationBootstrap {
   /** Razorpay plan ids for `plan` under the current API key, created on first use. */
   private async razorpayPlans(
     plan: Plan,
+    withIntro = hasIntro(plan) && !plan.razorpayOfferId,
   ): Promise<Required<Pick<RazorpayPlanIds, 'regular'>> & RazorpayPlanIds> {
     const razorpay = this.requireRazorpay();
     const all = (plan.providerPlans ?? {}) as Record<string, RazorpayPlanIds>;
@@ -269,7 +270,7 @@ export class BillingService implements OnApplicationBootstrap {
         kind: 'regular',
       });
     }
-    if (hasIntro(plan) && !plan.razorpayOfferId && !ids.intro && plan.introPrice !== null) {
+    if (withIntro && !ids.intro && plan.introPrice !== null) {
       ids.intro = await razorpay.createPlan({
         name: `${plan.name} plan (intro)`,
         amount: plan.introPrice,
@@ -301,8 +302,8 @@ export class BillingService implements OnApplicationBootstrap {
     }
 
     const intro = hasIntro(plan) && !subscription.introUsed;
-    const phase: 'intro' | 'regular' = intro && !plan.razorpayOfferId ? 'intro' : 'regular';
-    const offerId = intro && plan.razorpayOfferId ? plan.razorpayOfferId : null;
+    let phase: 'intro' | 'regular' = intro && !plan.razorpayOfferId ? 'intro' : 'regular';
+    let offerId = intro && plan.razorpayOfferId ? plan.razorpayOfferId : null;
 
     // An earlier, never-authorised checkout with the same terms is reused instead of piling up
     // abandoned subscriptions in Razorpay. One started before the offer changed is replaced.
@@ -331,15 +332,27 @@ export class BillingService implements OnApplicationBootstrap {
     const startAt = keepUntil && keepUntil.getTime() - now > MIN_FUTURE_START_MS ? keepUntil : null;
 
     const ids = await this.razorpayPlans(plan);
-    let created: RazorpaySubscription;
-    try {
-      created = await razorpay.createSubscription({
-        razorpayPlanId: phase === 'intro' && ids.intro ? ids.intro : ids.regular,
+    const create = (planIds: RazorpayPlanIds) =>
+      razorpay.createSubscription({
+        razorpayPlanId: phase === 'intro' && planIds.intro ? planIds.intro : ids.regular,
         totalCount: phase === 'intro' ? plan.introCycles : REGULAR_TOTAL_COUNT,
         startAt,
         offerId,
         notes: { storeId: store.id, planId: plan.id, phase },
       });
+    let created: RazorpaySubscription;
+    try {
+      try {
+        created = await create(ids);
+      } catch (error) {
+        // A Dashboard offer Razorpay refuses (e.g. its minimum equals the plan price) must not
+        // block signing up: fall back to the intro price on its own mandate.
+        if (!(offerId && error instanceof RazorpayError && error.status < 500)) throw error;
+        this.logger.warn(`Razorpay refused offer ${offerId} for ${store.id}: ${error.message}`);
+        phase = 'intro';
+        offerId = null;
+        created = await create(await this.razorpayPlans(plan, true));
+      }
     } catch (error) {
       if (error instanceof RazorpayError && error.status < 500) {
         this.logger.warn(`Razorpay rejected a subscription for ${store.id}: ${error.message}`);
