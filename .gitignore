@@ -42,3 +42,6 @@ storage/
 
 # deploy secrets (per service); only *.env.example is tracked
 deploy/env/*.env
+
+# Coolify API token for scripts/coolify-sync.mjs
+.coolify-token
