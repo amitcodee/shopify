@@ -24,6 +24,7 @@ describe('Public plans', () => {
         trialDays: 7,
         introPrice: 9_900,
         introCycles: 3,
+        introUpiOnly: false,
         maxProducts: null,
         maxStaff: 5,
         maxOrdersPerMonth: null,
