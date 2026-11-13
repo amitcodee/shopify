@@ -6,6 +6,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  type OnApplicationBootstrap,
   Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -44,7 +45,7 @@ const fromUnix = (seconds: number | null | undefined): Date | null =>
   seconds ? new Date(seconds * 1000) : null;
 
 @Injectable()
-export class BillingService {
+export class BillingService implements OnApplicationBootstrap {
   private readonly logger = new Logger(BillingService.name);
 
   constructor(
@@ -57,6 +58,22 @@ export class BillingService {
     @Inject(ENV) private readonly env: Env,
     @Optional() @Inject(RAZORPAY_BILLING) private readonly razorpay: RazorpayBilling | null = null,
   ) {}
+
+  /** Applies BILLING_RAZORPAY_OFFER_ID to intro plans that have no offer yet. */
+  async onApplicationBootstrap(): Promise<void> {
+    const offerId = this.env.BILLING_RAZORPAY_OFFER_ID;
+    if (!offerId) return;
+    try {
+      await this.plans.ensureDefaults(this.platformDb);
+      const { count } = await this.platformDb.plan.updateMany({
+        where: { razorpayOfferId: null, introPrice: { not: null }, introCycles: { gt: 0 } },
+        data: { razorpayOfferId: offerId },
+      });
+      if (count > 0) this.logger.log(`Saved Razorpay offer ${offerId} on ${count} plan(s)`);
+    } catch (error) {
+      this.logger.warn(`Could not apply BILLING_RAZORPAY_OFFER_ID: ${String(error)}`);
+    }
+  }
 
   overview(storeId: string): Promise<BillingOverview> {
     return this.tenantDb.run(storeId, async (tx) => {

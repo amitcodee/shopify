@@ -130,6 +130,12 @@ const envSchema = z
     BILLING_RAZORPAY_KEY_SECRET: z.string().min(8).optional(),
     /** Secret of the webhook added in the Razorpay Dashboard for /api/v1/webhooks/billing/razorpay. */
     BILLING_RAZORPAY_WEBHOOK_SECRET: z.string().min(8).optional(),
+    /**
+     * Razorpay Dashboard offer for the intro price (e.g. ₹700 off × 3 cycles). On start-up it is
+     * saved on every plan with an intro price that has no offer yet; the platform console can
+     * still change or clear it afterwards.
+     */
+    BILLING_RAZORPAY_OFFER_ID: z.string().startsWith('offer_').optional(),
     /** Days a store keeps working after a subscription payment fails, before billing locks it. */
     BILLING_GRACE_DAYS: z.coerce.number().int().min(0).max(30).default(7),
     /** Where rate-limit counters live: PostgreSQL (shared by all instances) or process memory. */
