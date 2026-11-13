@@ -34,8 +34,10 @@ The API now attaches the offer only when the subscription starts at once (trial 
 locked/expired). A merchant who subscribes during the trial gets the separate Rs 99 x 3 intro
 mandate, then approves the Rs 799 mandate (a banner asks them).
 
-To switch the offer on: set `BILLING_RAZORPAY_OFFER_ID=offer_TzYbMoF8joCz5s` in Coolify and
-redeploy (currently `none`).
+Decision (2026-11-13): keep the offer OFF (`BILLING_RAZORPAY_OFFER_ID=none`). Most merchants
+subscribe during the trial and could not use it, and with it on the pricing page would claim
+"UPI AutoPay" for everyone. Rs 99 x 3 reaches every merchant through the intro mandate.
+`scripts/coolify-sync.mjs` now sends `none` by default.
 
 ## 3. Before real launch
 

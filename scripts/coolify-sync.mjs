@@ -14,7 +14,9 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const BASE = process.env.COOLIFY_URL ?? 'http://200.234.38.152:8000';
 const NAME = process.env.COOLIFY_RESOURCE ?? 'shopify';
-const OFFER_ID = process.env.OFFER_ID ?? 'offer_TzYbMoF8joCz5s';
+// `none` keeps the Razorpay offer off: trial subscribers (most merchants) cannot use it anyway, and
+// the intro price reaches everyone through the separate intro mandate.
+const OFFER_ID = process.env.OFFER_ID ?? 'none';
 const dryRun = process.argv.includes('--dry-run');
 
 const tokenFile = `${root}.coolify-token`;
