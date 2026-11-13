@@ -57,10 +57,14 @@ subscribe during the trial and could not use it, and with it on the pricing page
 - A full paid flow on staging (complete a test subscription in Checkout and confirm the first
   charge lands after the trial).
 
-## 5. Rotate the Razorpay test key: new key made, Coolify not updated yet
+## 5. Rotate the Razorpay test key: DONE (2026-11-13)
 
 Commit ce65fe4 pushed the test key id + secret in `prbl.md` to the public GitHub repo. The lines
 are removed now, but they stay in git history. Razorpay Dashboard (Test mode) → Account & Settings
 → API Keys → Regenerate Test Key (done: new key id `rzp_test_TzZ59Ql9eDuGdY`, saved commented-out
 in the gitignored `apps/api/.env`), then update `RAZORPAY_*` / `BILLING_RAZORPAY_*` in Coolify and
 `apps/api/.env`, and redeploy.
+
+Done: Coolify has the new key, redeployed (61b3d12), staging Checkout opens with it (Rs 5
+auth, then the Rs 99 intro mandate for a trial store). Webhook (section 1) is also set: enabled,
+10 events.
