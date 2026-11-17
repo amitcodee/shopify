@@ -78,7 +78,12 @@ function MockPanel({
 
 const HERO_WORDS = ['fashion label', 'skincare brand', 'coffee shop', 'bookshop', 'pet store'];
 
-function Hero() {
+function Hero({ terms }: { terms: PlanTerms | null }) {
+  const trust = [
+    terms && terms.trialDays > 0 ? `${terms.trialDays}-day free trial` : null,
+    terms && terms.trialDays > 0 ? 'No card needed' : null,
+    terms?.noSalesFee ? 'No fee on your sales' : null,
+  ].filter((t): t is string => t !== null);
   return (
     <section className="mk-dark relative isolate flex min-h-[100svh] items-center overflow-hidden pt-24 pb-28">
       <div className="absolute inset-0 -z-20 motion-safe:animate-[cp-zoom_24s_ease-out_forwards]">
@@ -91,7 +96,7 @@ function Hero() {
       <div className={`${wrap} text-mk-fg`}>
         <h1
           aria-label="Open your own online store"
-          className={`${displayFace} text-[3.25rem] leading-[1.04] font-normal tracking-[-0.035em] sm:text-7xl lg:text-[6.5rem]`}
+          className={`${displayFace} text-[3.25rem] leading-[1.04] font-normal tracking-[-0.035em] sm:text-7xl lg:text-[6.5rem] motion-safe:animate-[cp-rise_0.9s_cubic-bezier(0.2,0.7,0.2,1)_both]`}
         >
           <span aria-hidden="true">
             <span className="block">Open your own</span>
@@ -100,18 +105,45 @@ function Hero() {
             </span>
           </span>
         </h1>
-        <p className="mt-6 max-w-xl text-lg leading-[1.45] sm:text-[1.375rem]">
+        <p className="mt-6 max-w-xl text-lg leading-[1.45] sm:text-[1.375rem] motion-safe:animate-[cp-rise_0.9s_cubic-bezier(0.2,0.7,0.2,1)_both] motion-safe:[animation-delay:120ms]">
           {THEME_TEMPLATES.length} templates, payments through Razorpay, PayU, PhonePe, Cashfree,
           Stripe or cash on delivery, and one admin for your orders, stock and customers.
         </p>
-        <div className="mt-9 flex flex-wrap gap-4">
-          <a href={signupUrl} className={pillLight}>
+        <div className="mt-9 flex flex-wrap gap-4 motion-safe:animate-[cp-rise_0.9s_cubic-bezier(0.2,0.7,0.2,1)_both] motion-safe:[animation-delay:240ms]">
+          <a href={signupUrl} className={`group ${pillLight}`}>
             Start free trial
+            <span
+              aria-hidden="true"
+              className="ml-2 inline-block transition-transform duration-300 group-hover:translate-x-1"
+            >
+              →
+            </span>
           </a>
           <a href="/templates" className={pillGhost}>
             Browse templates
           </a>
         </div>
+        {trust.length > 0 ? (
+          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-mk-fg-soft motion-safe:animate-[cp-rise_0.9s_cubic-bezier(0.2,0.7,0.2,1)_both] motion-safe:[animation-delay:360ms]">
+            {trust.map((t) => (
+              <li key={t} className="flex items-center gap-2">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden="true"
+                  className="size-4 text-mk-leaf"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.58l7.3-7.3a1 1 0 0 1 1.4 0Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                {t}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
     </section>
   );
@@ -123,7 +155,7 @@ function TemplateTile({ template }: { template: ThemeTemplate }) {
   return (
     <a
       href={`/templates/${template.id}`}
-      className={`group relative block overflow-hidden rounded-2xl bg-mk-fg ring-1 ring-mk-line ${focusWhite}`}
+      className={`group relative block overflow-hidden rounded-2xl bg-mk-fg ring-1 ring-mk-line transition duration-500 hover:-translate-y-1 hover:shadow-[0_30px_60px_-30px_rgb(10_34_54/0.55)] ${focusWhite}`}
     >
       <TemplateThumb
         template={template}
@@ -131,8 +163,14 @@ function TemplateTile({ template }: { template: ThemeTemplate }) {
         scale={9}
         className="h-[22rem] transition duration-700 group-hover:scale-[1.03] lg:h-[27rem]"
       />
-      <span className="absolute bottom-4 left-4 rounded-full bg-slate-950/85 px-3.5 py-1.5 text-sm font-medium text-mk-fg backdrop-blur">
+      <span className="absolute bottom-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-slate-950/85 px-3.5 py-1.5 text-sm font-medium text-white backdrop-blur">
         {template.name} · {template.styleLabel}
+        <span
+          aria-hidden="true"
+          className="-ml-1 inline-block w-0 overflow-hidden opacity-0 transition-all duration-300 group-hover:ml-0 group-hover:w-3 group-hover:opacity-100"
+        >
+          →
+        </span>
       </span>
     </a>
   );
@@ -647,7 +685,7 @@ export async function CinematicHome() {
   const terms = await fetchPlanTerms();
   return (
     <div className="bg-mk-bg">
-      <Hero />
+      <Hero terms={terms} />
       <StoreStage />
       <RunStage />
       <BuildStage />

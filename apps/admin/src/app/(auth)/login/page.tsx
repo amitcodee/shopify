@@ -12,8 +12,12 @@ export default async function LoginPage({
   const { next, expired, reset, unlocked } = await searchParams;
   return (
     <>
-      <h1 className="text-[22px] leading-8 font-semibold tracking-tight text-slate-900">Sign in</h1>
-      <p className="mt-1.5 text-sm text-slate-500">Manage your stores, products and orders.</p>
+      <h1 className="text-[28px] leading-9 font-semibold tracking-tight text-slate-900">
+        Welcome back
+      </h1>
+      <p className="mt-2 text-[15px] text-slate-500">
+        Sign in to manage your stores, products and orders.
+      </p>
       {expired ? (
         <div className="mt-4">
           <Alert tone="info">Your session ended. Please sign in again.</Alert>

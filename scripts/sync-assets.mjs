@@ -11,7 +11,7 @@ const assets = path.join(root, 'packages', 'assets');
 /** [source folder in packages/assets, destination folders relative to the repo root] */
 const COPIES = [
   ['templates', ['apps/storefront/public/media/templates', 'apps/admin/public/media/templates']],
-  ['marketing', ['apps/storefront/public/media/marketing']],
+  ['marketing', ['apps/storefront/public/media/marketing', 'apps/admin/public/media/marketing']],
 ];
 
 for (const [source, destinations] of COPIES) {

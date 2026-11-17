@@ -2,6 +2,7 @@ import { findThemeTemplate } from '@repo/contracts';
 import Link from 'next/link';
 import { ActionForm, Field, SubmitButton } from '@/components/form';
 import { linkClass } from '@/components/ui';
+import { marketingUrl } from '@/lib/storefront';
 import { signupAction } from '../actions';
 
 export const metadata = { title: 'Create account · Merchant Admin' };
@@ -16,10 +17,10 @@ export default async function SignupPage({
   const template = templateId ? findThemeTemplate(templateId) : undefined;
   return (
     <>
-      <h1 className="text-[22px] leading-8 font-semibold tracking-tight text-slate-900">
-        Create your account
+      <h1 className="text-[28px] leading-9 font-semibold tracking-tight text-slate-900">
+        Create your store
       </h1>
-      <p className="mt-1 text-sm text-slate-500">Start selling in minutes.</p>
+      <p className="mt-2 text-[15px] text-slate-500">Start your free trial. No card needed.</p>
       {template ? (
         <p className="mt-4 rounded-lg bg-indigo-50 px-3.5 py-2.5 text-sm text-indigo-900 ring-1 ring-indigo-600/10 ring-inset">
           Your store will start with the “{template.name}” template ({template.industryLabel} ·{' '}
@@ -47,6 +48,17 @@ export default async function SignupPage({
           hint="At least 12 characters."
         />
         <SubmitButton fullWidth>Create account</SubmitButton>
+        <p className="text-center text-xs leading-5 text-slate-500">
+          By creating an account you agree to our{' '}
+          <a href={marketingUrl('/legal/terms')} className={linkClass}>
+            Terms of Service
+          </a>{' '}
+          and{' '}
+          <a href={marketingUrl('/legal/privacy')} className={linkClass}>
+            Privacy Policy
+          </a>
+          .
+        </p>
       </ActionForm>
       <p className="mt-6 border-t border-slate-100 pt-5 text-center text-sm text-slate-500">
         Already have an account?{' '}

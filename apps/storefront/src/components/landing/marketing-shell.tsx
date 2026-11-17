@@ -12,6 +12,7 @@ const KEYFRAMES = `
 @keyframes cp-marquee-rev { from { transform: translateX(-50%) } to { transform: translateX(0) } }
 @keyframes cp-zoom { from { transform: scale(1.08) } to { transform: scale(1) } }
 @keyframes cp-word { from { opacity: 0; transform: translateY(0.35em) } to { opacity: 1; transform: none } }
+@keyframes cp-rise { from { opacity: 0; transform: translateY(18px) } to { opacity: 1; transform: none } }
 `;
 
 /** Nav, page and footer shared by the platform's marketing pages on the root host. */

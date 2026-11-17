@@ -125,6 +125,25 @@
   }
 }
 
+/* Signed-out pages (src/components/auth-shell.tsx): a slow photo drift and a soft entrance. */
+.auth-photo {
+  animation: auth-photo-drift 30s var(--ease-out-soft) both;
+}
+@keyframes auth-photo-drift {
+  from {
+    scale: 1.1;
+  }
+}
+.auth-rise {
+  animation: auth-rise 700ms var(--ease-out-soft) both;
+}
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+
 /* Loading placeholders (src/components/states.tsx). */
 .skeleton {
   background: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.65) 50%, transparent 100%)

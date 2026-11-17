@@ -4,3 +4,11 @@ const storefrontOrigin = process.env.STOREFRONT_PUBLIC_URL ?? 'http://{subdomain
 export function storefrontUrlFor(subdomain: string): string {
   return storefrontOrigin.replace('{subdomain}', subdomain);
 }
+
+/**
+ * The platform's marketing site (the storefront app on the root domain), derived from the store
+ * URL pattern: `https://{subdomain}.example.com` -> `https://example.com`.
+ */
+export function marketingUrl(path = ''): string {
+  return `${storefrontOrigin.replace('{subdomain}.', '')}${path}`;
+}
