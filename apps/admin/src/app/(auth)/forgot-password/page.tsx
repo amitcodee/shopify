@@ -14,7 +14,15 @@ export default function ForgotPasswordPage() {
         Enter your account email and we&apos;ll send you a link to choose a new password.
       </p>
       <ActionForm action={forgotPasswordAction} className="mt-6 space-y-4">
-        <Field name="email" label="Email" type="email" autoComplete="email" required />
+        <Field
+          name="email"
+          label="Email"
+          type="email"
+          icon="mail"
+          placeholder="you@yourbrand.com"
+          autoComplete="email"
+          required
+        />
         <SubmitButton fullWidth>Send reset link</SubmitButton>
       </ActionForm>
       <p className="mt-6 text-sm text-slate-500">

@@ -20,7 +20,7 @@ import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.gua
 import { GiftCardsService } from './gift-cards.service.js';
 
 /** Gift cards are money: reading and issuing them follows the orders permissions. */
-@ApiTags('gift-cards')
+@ApiTags('Gift cards')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/gift-cards')

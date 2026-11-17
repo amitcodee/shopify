@@ -58,7 +58,7 @@ export class PlatformAdminGuard implements CanActivate {
 
 const userQuerySchema = paginationQuerySchema.extend({ q: z.string().trim().max(100).optional() });
 
-@ApiTags('platform')
+@ApiTags('Platform')
 @ApiBearerAuth()
 @UseGuards(PlatformAdminGuard)
 @Controller('platform')

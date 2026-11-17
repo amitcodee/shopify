@@ -8,7 +8,7 @@ import type { Env } from '../config/env.js';
 import { ENV } from '../config/env.js';
 import { APP_DB } from '../database/database.module.js';
 
-@ApiTags('health')
+@ApiTags('Health')
 @Public()
 @SkipThrottle()
 @Controller('health')

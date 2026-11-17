@@ -211,7 +211,7 @@ export class ThemeEditorService {
 
 type AiBody = z.output<typeof themeAiInputSchema>;
 
-@ApiTags('settings')
+@ApiTags('Settings')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId')

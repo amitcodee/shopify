@@ -24,7 +24,7 @@ export interface PublicPlan {
   transactionFeeBps: number;
 }
 
-@ApiTags('public')
+@ApiTags('Public')
 @Public()
 @Controller('public')
 export class PublicPlansController {

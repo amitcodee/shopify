@@ -279,7 +279,7 @@ export class SegmentsService {
 
 const previewInputSchema = z.strictObject({ conditions: segmentInputSchema.shape.conditions });
 
-@ApiTags('customers')
+@ApiTags('Customers')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/segments')

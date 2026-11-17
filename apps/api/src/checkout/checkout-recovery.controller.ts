@@ -18,7 +18,7 @@ import type { ShopContext } from '../storefront/store-resolver.js';
 import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
 import { CheckoutRecoveryService } from './checkout-recovery.service.js';
 
-@ApiTags('orders')
+@ApiTags('Orders')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/abandoned-checkouts')
@@ -35,7 +35,7 @@ export class AbandonedCheckoutsController {
   }
 }
 
-@ApiTags('storefront')
+@ApiTags('Storefront')
 @Public()
 @UseGuards(StorefrontGuard)
 @Controller('storefront')

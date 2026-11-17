@@ -25,7 +25,7 @@ import { CollectionsService } from './collections.service.js';
 
 type CollectionBody = z.output<typeof collectionInputSchema>;
 
-@ApiTags('collections')
+@ApiTags('Collections')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/collections')

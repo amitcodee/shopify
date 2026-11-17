@@ -29,7 +29,7 @@ import { ApiZodBody, ZodPipe } from '../common/zod.js';
 import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
 import { InventoryService } from './inventory.service.js';
 
-@ApiTags('inventory')
+@ApiTags('Inventory')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/inventory')
@@ -83,7 +83,7 @@ export class InventoryController {
   }
 }
 
-@ApiTags('inventory')
+@ApiTags('Inventory')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/locations')

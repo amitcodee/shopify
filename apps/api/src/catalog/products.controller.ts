@@ -44,7 +44,7 @@ import { ProductsService } from './products.service.js';
 /** Most images one upload request may carry. */
 const MAX_FILES_PER_UPLOAD = 10;
 
-@ApiTags('products')
+@ApiTags('Products')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/products')

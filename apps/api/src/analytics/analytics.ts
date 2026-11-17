@@ -81,7 +81,7 @@ export class AnalyticsService {
   }
 }
 
-@ApiTags('analytics')
+@ApiTags('Analytics')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/analytics')

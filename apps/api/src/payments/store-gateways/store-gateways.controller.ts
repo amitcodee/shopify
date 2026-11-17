@@ -56,7 +56,7 @@ const escapeHtml = (value: string) =>
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;');
 
-@ApiTags('payments')
+@ApiTags('Payments')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/store-gateways')

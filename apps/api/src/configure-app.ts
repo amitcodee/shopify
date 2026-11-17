@@ -1,7 +1,7 @@
 import { type INestApplication, VersioningType } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { Express } from 'express';
 import helmet from 'helmet';
+import { setupApiDocs } from './api-docs.js';
 import { requestId } from './common/request-id.middleware.js';
 import type { Env } from './config/env.js';
 
@@ -17,12 +17,5 @@ export function configureApp(app: INestApplication, env: Env): void {
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   app.enableShutdownHooks();
 
-  if (env.NODE_ENV !== 'production') {
-    const config = new DocumentBuilder()
-      .setTitle('Commerce Platform API')
-      .setVersion(env.APP_VERSION)
-      .addBearerAuth()
-      .build();
-    SwaggerModule.setup('api/docs', app, () => SwaggerModule.createDocument(app, config));
-  }
+  setupApiDocs(app, env);
 }

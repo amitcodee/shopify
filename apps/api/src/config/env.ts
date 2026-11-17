@@ -173,6 +173,8 @@ const envSchema = z
     WEBHOOK_ALLOW_PRIVATE_URLS: z.enum(['true', 'false']).optional(),
     /** Require platform admins to use two-factor authentication (default: on in production). */
     REQUIRE_PLATFORM_2FA: z.enum(['true', 'false']).optional(),
+    /** Serve the OpenAPI reference at /api/docs (default: on; "false" hides it). */
+    API_DOCS: z.enum(['true', 'false']).optional(),
   })
   .transform(({ PAYMENT_PROVIDER, PAYMENT_PROVIDERS, BILLING_PROVIDER, ...env }) => ({
     ...env,

@@ -127,7 +127,7 @@ export class CustomerPrivacyService {
   }
 }
 
-@ApiTags('customers')
+@ApiTags('Customers')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/customers/:customerId')

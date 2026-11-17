@@ -346,7 +346,7 @@ export class ReturnsService {
   }
 }
 
-@ApiTags('orders')
+@ApiTags('Orders')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId')
@@ -413,7 +413,7 @@ export class ReturnsController {
   }
 }
 
-@ApiTags('storefront')
+@ApiTags('Storefront')
 @Public()
 @UseGuards(StorefrontGuard)
 @Controller('storefront/customers/me/orders')

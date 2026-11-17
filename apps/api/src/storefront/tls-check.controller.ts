@@ -8,7 +8,7 @@ import { StoreResolver } from './store-resolver.js';
  * "Ask" endpoint for on-demand TLS (e.g. Caddy `on_demand_tls`): certificates are only issued
  * for hostnames that belong to a live store, so attackers cannot make us request arbitrary certs.
  */
-@ApiTags('storefront')
+@ApiTags('Storefront')
 @Public()
 @Throttle({ default: { limit: 120, ttl: 60_000 } })
 @Controller('domains')

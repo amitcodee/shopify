@@ -135,7 +135,7 @@ export class ApiTokensService {
   }
 }
 
-@ApiTags('developer')
+@ApiTags('Developer')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/api-tokens')
@@ -174,7 +174,7 @@ export class ApiTokensController {
 }
 
 /** Webhook subscriptions; usable with an access token too, so integrations register their own. */
-@ApiTags('developer')
+@ApiTags('Developer')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/webhooks')

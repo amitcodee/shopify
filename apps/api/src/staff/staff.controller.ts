@@ -31,7 +31,7 @@ import { ApiZodBody, ZodPipe } from '../common/zod.js';
 import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
 import { StaffService } from './staff.service.js';
 
-@ApiTags('staff')
+@ApiTags('Staff')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/staff')
@@ -96,7 +96,7 @@ export class StaffController {
 }
 
 /** Public endpoints used by the invite link (the token is the credential). */
-@ApiTags('staff')
+@ApiTags('Staff')
 @Public()
 @Throttle({ default: { limit: 20, ttl: 60_000 } })
 @Controller('invitations')

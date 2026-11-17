@@ -25,7 +25,7 @@ import { Public } from './auth.guard.js';
 import { PlatformSettingsService } from '../platform/platform-settings.service.js';
 import { AuthService } from './auth.service.js';
 
-@ApiTags('auth')
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(

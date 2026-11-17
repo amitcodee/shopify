@@ -33,7 +33,7 @@ import {
 import { StripeConnectProvider } from './stripe-connect.provider.js';
 import { StripePaymentProvider } from './stripe-payment.provider.js';
 
-@ApiTags('webhooks')
+@ApiTags('Webhooks')
 @Public()
 @SkipThrottle()
 @Controller('webhooks/payments')

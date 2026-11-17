@@ -191,7 +191,7 @@ export class ProductCsvService {
   }
 }
 
-@ApiTags('products')
+@ApiTags('Products')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/product-csv')

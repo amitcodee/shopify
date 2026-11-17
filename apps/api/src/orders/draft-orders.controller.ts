@@ -39,7 +39,7 @@ import { DraftOrdersService } from './draft-orders.service.js';
 
 type DraftBody = z.output<typeof draftOrderInputSchema>;
 
-@ApiTags('orders')
+@ApiTags('Orders')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/draft-orders')
@@ -129,7 +129,7 @@ export class DraftOrdersController {
   }
 }
 
-@ApiTags('storefront')
+@ApiTags('Storefront')
 @Public()
 @AllowLockedStore()
 @UseGuards(StorefrontGuard)

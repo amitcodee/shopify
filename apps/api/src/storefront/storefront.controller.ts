@@ -59,7 +59,7 @@ import {
 } from './storefront.guard.js';
 import type { ShopContext } from './store-resolver.js';
 
-@ApiTags('storefront')
+@ApiTags('Storefront')
 @ApiHeader({ name: STOREFRONT_HEADERS.host, required: true })
 @ApiHeader({ name: STOREFRONT_HEADERS.timestamp, required: true })
 @ApiHeader({ name: STOREFRONT_HEADERS.signature, required: true })

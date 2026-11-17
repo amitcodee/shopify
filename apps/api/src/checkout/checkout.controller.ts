@@ -58,7 +58,7 @@ export function signedHost(req: Request): string {
   return (Array.isArray(value) ? value[0] : value) ?? '';
 }
 
-@ApiTags('storefront')
+@ApiTags('Storefront')
 @Public()
 @UseGuards(StorefrontGuard)
 @Controller('storefront')

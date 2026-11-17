@@ -37,11 +37,22 @@ export function LoginForm({ next }: { next: string }) {
         </>
       ) : (
         <>
-          <Field name="email" label="Email" type="email" autoComplete="email" required />
+          <Field
+            name="email"
+            label="Email"
+            type="email"
+            icon="mail"
+            placeholder="you@yourbrand.com"
+            autoComplete="email"
+            required
+          />
           <Field
             name="password"
             label="Password"
             type="password"
+            icon="lock"
+            revealable
+            placeholder="Your password"
             autoComplete="current-password"
             required
           />

@@ -11,6 +11,7 @@ import {
   useContext,
   useEffect,
   useId,
+  useState,
 } from 'react';
 import { useFormStatus } from 'react-dom';
 import type { FormState } from '@/lib/form';
@@ -151,26 +152,101 @@ function FieldShell({
   );
 }
 
+/** 20px outline icons for the start of a field. */
+const FIELD_ICONS = {
+  user: 'M10 10a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Zm-6 6.5c.6-2.9 3-4.5 6-4.5s5.4 1.6 6 4.5',
+  mail: 'M3 5.5h14v9H3zM3.5 6l6.5 5 6.5-5',
+  lock: 'M5.5 9h9v7.5h-9zM7.25 9V6.75a2.75 2.75 0 0 1 5.5 0V9',
+  key: 'M12.5 3.5a4 4 0 1 1-3.2 6.4L3.5 15.7V17h2.2v-1.3H7v-1.3h1.3l1.9-1.9',
+} as const;
+export type FieldIcon = keyof typeof FIELD_ICONS;
+
+function FieldIconSvg({ icon }: { icon: FieldIcon }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="pointer-events-none absolute top-1/2 left-3 h-[18px] w-[18px] -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-slate-700"
+    >
+      <path d={FIELD_ICONS[icon]} />
+    </svg>
+  );
+}
+
 type FieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'defaultValue' | 'name'> & {
   name: string;
   label: string;
   hint?: ReactNode;
   defaultValue?: string | number | null;
+  /** An icon at the start of the input. */
+  icon?: FieldIcon;
+  /** For passwords: a button that shows or hides what was typed. */
+  revealable?: boolean;
 };
 
-export function Field({ name, label, hint, defaultValue, ...rest }: FieldProps) {
+export function Field({
+  name,
+  label,
+  hint,
+  defaultValue,
+  icon,
+  revealable,
+  type,
+  ...rest
+}: FieldProps) {
   const { id, error, value } = useField(name, defaultValue);
+  const [revealed, setRevealed] = useState(false);
+  const input = (
+    <input
+      id={id}
+      name={name}
+      defaultValue={value}
+      type={revealable && revealed ? 'text' : type}
+      aria-invalid={error ? true : undefined}
+      aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
+      className={`${controlClass} ${icon ? 'pl-10' : ''} ${revealable ? 'pr-11' : ''} ${icon || revealable ? 'h-11' : ''}`}
+      {...rest}
+    />
+  );
   return (
     <FieldShell id={id} label={label} hint={hint} error={error}>
-      <input
-        id={id}
-        name={name}
-        defaultValue={value}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
-        className={controlClass}
-        {...rest}
-      />
+      {icon || revealable ? (
+        <div className="group relative">
+          {icon ? <FieldIconSvg icon={icon} /> : null}
+          {input}
+          {revealable ? (
+            <button
+              type="button"
+              onClick={() => setRevealed((r) => !r)}
+              aria-label={revealed ? 'Hide password' : 'Show password'}
+              aria-pressed={revealed}
+              className="absolute top-1/2 right-1.5 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-slate-900"
+            >
+              <svg
+                aria-hidden
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.6}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-[18px] w-[18px]"
+              >
+                <path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5S2 10 2 10Z" />
+                <circle cx="10" cy="10" r="2.25" />
+                {revealed ? <path d="M3.5 3.5l13 13" /> : null}
+              </svg>
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        input
+      )}
     </FieldShell>
   );
 }

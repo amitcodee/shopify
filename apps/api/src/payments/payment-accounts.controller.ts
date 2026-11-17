@@ -39,7 +39,7 @@ import { PaymentWebhooksService } from './payment-webhooks.service.js';
 import { PaymentAccountsService } from './payment-accounts.service.js';
 
 /** Store payments: payout account onboarding, status, sales summary and payouts. */
-@ApiTags('payments')
+@ApiTags('Payments')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/payments')
@@ -163,7 +163,7 @@ export class PaymentAccountsController {
   }
 }
 
-@ApiTags('webhooks')
+@ApiTags('Webhooks')
 @Public()
 @SkipThrottle()
 @Controller('webhooks/connect')

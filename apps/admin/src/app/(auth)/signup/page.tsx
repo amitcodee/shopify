@@ -28,11 +28,21 @@ export default async function SignupPage({
         </p>
       ) : null}
       <ActionForm action={signupAction} className="mt-6 space-y-4">
-        <Field name="name" label="Your name" autoComplete="name" required maxLength={100} />
+        <Field
+          name="name"
+          label="Your name"
+          icon="user"
+          placeholder="Priya Sharma"
+          autoComplete="name"
+          required
+          maxLength={100}
+        />
         <Field
           name="email"
-          label="Email"
+          label="Work email"
           type="email"
+          icon="mail"
+          placeholder="you@yourbrand.com"
           autoComplete="email"
           required
           defaultValue={email?.slice(0, 254)}
@@ -42,10 +52,13 @@ export default async function SignupPage({
           name="password"
           label="Password"
           type="password"
+          icon="lock"
+          revealable
+          placeholder="At least 12 characters"
           autoComplete="new-password"
           required
           minLength={12}
-          hint="At least 12 characters."
+          hint="Use 12 or more characters. A short phrase is easy to remember."
         />
         <SubmitButton fullWidth>Create account</SubmitButton>
         <p className="text-center text-xs leading-5 text-slate-500">

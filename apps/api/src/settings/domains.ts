@@ -449,7 +449,7 @@ export class DomainsService {
   }
 }
 
-@ApiTags('settings')
+@ApiTags('Settings')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/domains')

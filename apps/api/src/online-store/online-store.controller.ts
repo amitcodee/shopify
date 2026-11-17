@@ -36,7 +36,7 @@ import { OnlineStoreService } from './online-store.service.js';
 type PageBody = z.output<typeof pageInputSchema>;
 
 /** Online store content: pages, policies and navigation menus. */
-@ApiTags('online-store')
+@ApiTags('Online store')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId')

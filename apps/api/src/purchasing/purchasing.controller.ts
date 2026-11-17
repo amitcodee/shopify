@@ -32,7 +32,7 @@ import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.gua
 import { PurchaseOrdersService } from './purchase-orders.service.js';
 import { SuppliersService } from './suppliers.service.js';
 
-@ApiTags('purchasing')
+@ApiTags('Purchasing')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/suppliers')
@@ -102,7 +102,7 @@ export class SuppliersController {
   }
 }
 
-@ApiTags('purchasing')
+@ApiTags('Purchasing')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/purchase-orders')

@@ -453,7 +453,7 @@ export class CommerceSettingsService {
   }
 }
 
-@ApiTags('settings')
+@ApiTags('Settings')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId')

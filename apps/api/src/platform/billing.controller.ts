@@ -23,7 +23,7 @@ import {
 } from '../tenancy/store-access.guard.js';
 import { BillingService } from './billing.service.js';
 
-@ApiTags('billing')
+@ApiTags('Billing')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @AllowBillingLocked()
@@ -88,7 +88,7 @@ export class BillingController {
   }
 }
 
-@ApiTags('webhooks')
+@ApiTags('Webhooks')
 @Public()
 @SkipThrottle()
 @Controller('webhooks/billing')

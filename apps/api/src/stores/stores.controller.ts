@@ -40,7 +40,7 @@ import {
 import { StoreClosureService } from './store-closure.service.js';
 import { StoresService } from './stores.service.js';
 
-@ApiTags('stores')
+@ApiTags('Stores')
 @ApiBearerAuth()
 @Controller('admin/stores')
 export class StoresController {
@@ -71,7 +71,7 @@ export class StoresController {
   }
 }
 
-@ApiTags('stores')
+@ApiTags('Stores')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId')

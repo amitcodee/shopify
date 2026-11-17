@@ -23,7 +23,7 @@ import {
 } from '../tenancy/store-access.guard.js';
 import { OrdersService } from './orders.service.js';
 
-@ApiTags('orders')
+@ApiTags('Orders')
 @ApiBearerAuth()
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId/orders')

@@ -22,6 +22,9 @@ export default async function ResetPasswordPage({
           name="password"
           label="New password"
           type="password"
+          icon="lock"
+          revealable
+          placeholder="At least 12 characters"
           autoComplete="new-password"
           required
           minLength={12}
