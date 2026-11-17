@@ -120,9 +120,12 @@ export function PageHeader({
   actions,
   back,
   meta,
+  help,
 }: {
   title: string;
   description?: ReactNode;
+  /** A how-to guide for this page (opens in a new tab). */
+  help?: { href: string; label?: string };
   actions?: ReactNode;
   back?: { href: string; label: string };
   /** Badges or small status shown beside the title. */
@@ -151,7 +154,26 @@ export function PageHeader({
             </h1>
             {meta ? <div className="flex flex-wrap items-center gap-1.5">{meta}</div> : null}
           </div>
-          {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
+          {description || help ? (
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">
+              {description}
+              {help ? (
+                <>
+                  {description ? ' ' : null}
+                  <a
+                    href={help.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 rounded font-medium whitespace-nowrap text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-900 hover:decoration-slate-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+                  >
+                    <Icon name="book" className="h-3.5 w-3.5" />
+                    {help.label ?? 'How it works'}
+                    <span className="sr-only"> (opens in a new tab)</span>
+                  </a>
+                </>
+              ) : null}
+            </p>
+          ) : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
@@ -217,11 +239,14 @@ export function EmptyState({
   description,
   action,
   icon = 'inbox',
+  help,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
   icon?: IconName;
+  /** A how-to guide (opens in a new tab). */
+  help?: { href: string; label?: string };
 }) {
   return (
     <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
@@ -233,6 +258,18 @@ export function EmptyState({
         <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">{description}</p>
       ) : null}
       {action ? <div className="mt-5 flex justify-center gap-2">{action}</div> : null}
+      {help ? (
+        <a
+          href={help.href}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-4 inline-flex items-center gap-1 rounded text-sm font-medium text-slate-600 underline decoration-slate-300 underline-offset-4 hover:text-slate-900"
+        >
+          <Icon name="book" className="h-3.5 w-3.5" />
+          {help.label ?? 'Read the guide'}
+          <span className="sr-only"> (opens in a new tab)</span>
+        </a>
+      ) : null}
     </div>
   );
 }

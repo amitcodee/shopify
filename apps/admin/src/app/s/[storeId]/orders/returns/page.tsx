@@ -12,6 +12,8 @@ import {
 } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
+import { guide } from '@/lib/storefront';
+import { OrdersNav } from '../orders-nav';
 
 const VIEWS: { key: ReturnStatus | 'ALL'; label: string }[] = [
   { key: 'REQUESTED', label: 'To review' },
@@ -38,7 +40,12 @@ export default async function ReturnsPage({
   const base = `/s/${storeId}/orders`;
   return (
     <>
-      <PageHeader title="Returns" back={{ href: base, label: 'Orders' }} />
+      <PageHeader
+        title="Returns"
+        description="Return requests from customers, with the refund we suggest for each. Open the order to approve or decline a return, then refund it."
+        help={guide('fulfil-and-refund', 'How returns and refunds work')}
+      />
+      <OrdersNav storeId={storeId} active="returns" />
       <div className="mb-4">
         <ViewTabs
           label="Return views"
@@ -53,7 +60,7 @@ export default async function ReturnsPage({
         <EmptyState
           icon="inbox"
           title="Nothing here"
-          description="Returns customers request appear here."
+          description="When a customer asks to return items from their account page, the request shows up here."
         />
       ) : (
         <>

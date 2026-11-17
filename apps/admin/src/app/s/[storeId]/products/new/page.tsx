@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
 import { saveProductAction, searchVariantsAction } from '../actions';
 import { ProductEditor } from '../product-editor';
+import { guide } from '@/lib/storefront';
 
 export const metadata = { title: 'Add product · Merchant Admin' };
 
@@ -23,6 +24,8 @@ export default async function NewProductPage({ params }: { params: Promise<{ sto
     <>
       <PageHeader
         title="Add product"
+        description="Start with a title and price. You can add photos, variants and stock now or after saving."
+        help={guide('add-products')}
         back={{ href: `/s/${storeId}/products`, label: 'Products' }}
       />
       <ProductEditor

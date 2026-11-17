@@ -29,7 +29,7 @@ export default async function GiftCardsPage({
     <>
       <PageHeader
         title="Gift cards"
-        description="Store credit customers spend at checkout. Codes are shown only once, when issued."
+        description="Store credit customers spend at checkout, like a prepaid voucher. Copy the code when you issue it: it is shown only once."
       />
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">

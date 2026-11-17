@@ -2,6 +2,7 @@ import { PRODUCT_CSV_COLUMNS } from '@repo/contracts';
 import { Card, PageHeader } from '@/components/ui';
 import { importProductsAction } from './actions';
 import { ImportForm } from './import-form';
+import { guide } from '@/lib/storefront';
 
 export default async function ImportProductsPage({
   params,
@@ -12,7 +13,12 @@ export default async function ImportProductsPage({
   const base = `/s/${storeId}/products`;
   return (
     <>
-      <PageHeader title="Import products" back={{ href: base, label: 'Products' }} />
+      <PageHeader
+        title="Import products"
+        description="Add or update many products at once from a CSV file, one row per variant. It uses Shopify-style column names."
+        help={guide('add-products')}
+        back={{ href: base, label: 'Products' }}
+      />
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card
           title="Upload CSV"

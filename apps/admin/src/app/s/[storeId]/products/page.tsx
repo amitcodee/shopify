@@ -16,6 +16,7 @@ import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
 import { bulkProductsAction } from './actions';
 import { ProductsTable } from './products-table';
+import { guide } from '@/lib/storefront';
 
 const FILTERS = [
   { label: 'All', value: undefined },
@@ -139,6 +140,8 @@ export default async function ProductsPage({
     <>
       <PageHeader
         title="Products"
+        description="Everything you sell. Set prices, photos and variants (like size or color), and choose which products are live on your store."
+        help={guide('add-products', 'How to add products')}
         actions={
           <>
             {/* A route handler download, not a page: plain <a>, no client-side navigation. */}
@@ -286,9 +289,15 @@ export default async function ProductsPage({
                   Clear filters
                 </ButtonLink>
               ) : canWrite ? (
-                <ButtonLink href={`${base}/new`}>Add product</ButtonLink>
+                <>
+                  <ButtonLink href={`${base}/new`}>Add product</ButtonLink>
+                  <ButtonLink href={`${base}/import`} variant="secondary">
+                    Import from CSV
+                  </ButtonLink>
+                </>
               ) : null
             }
+            help={filtered ? undefined : guide('add-products')}
           />
         }
       />

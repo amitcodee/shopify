@@ -16,6 +16,8 @@ import {
 import { api } from '@/lib/api';
 import { FinancialBadge, FulfillmentBadge, OrderStatusBadge } from './badges';
 import { ORDER_VIEWS } from './views';
+import { guide } from '@/lib/storefront';
+import { OrdersNav } from './orders-nav';
 
 const VIEWS = ORDER_VIEWS;
 
@@ -45,14 +47,10 @@ export default async function OrdersPage({
     <>
       <PageHeader
         title="Orders"
+        description="Every order placed in your store. Open one to mark it shipped, refund it or print a packing slip."
+        help={guide('fulfil-and-refund', 'How fulfilment and refunds work')}
         actions={
           <>
-            <Link href={`${base}/abandoned`} className={buttonClass('ghost', 'sm')}>
-              Abandoned checkouts
-            </Link>
-            <Link href={`${base}/returns`} className={buttonClass('ghost', 'sm')}>
-              Returns
-            </Link>
             {/* A route handler download, not a page: plain <a>, no client-side navigation. */}
             <a
               href={href({ page: undefined }).replace(base, `${base}/export`)}
@@ -62,12 +60,14 @@ export default async function OrdersPage({
               <Icon name="download" className="-ml-0.5 h-4 w-4" />
               Export
             </a>
-            <ButtonLink href={`${base}/drafts`} variant="primary" size="sm">
-              Draft orders
+            <ButtonLink href={`${base}/drafts/new`} variant="primary" size="sm">
+              <Icon name="plus" className="-ml-0.5 h-4 w-4" />
+              Create order
             </ButtonLink>
           </>
         }
       />
+      <OrdersNav storeId={storeId} active="orders" />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <ViewTabs
           label="Order views"
@@ -94,8 +94,9 @@ export default async function OrdersPage({
           description={
             q
               ? 'Try a different order number or email.'
-              : 'Orders placed on your storefront appear here.'
+              : 'When someone buys from your store, the order appears here. You can also create one yourself for a phone or WhatsApp sale.'
           }
+          help={q ? undefined : guide('fulfil-and-refund', 'What to do when an order arrives')}
         />
       ) : (
         <>

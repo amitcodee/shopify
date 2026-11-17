@@ -19,7 +19,7 @@ export default async function CollectionsPage({
     <>
       <PageHeader
         title="Collections"
-        description="Group products for your storefront navigation."
+        description="Groups of products, like “New arrivals” or “Under ₹999”. Add them to your menus so shoppers can browse by category."
         actions={
           canWrite ? (
             <ButtonLink href={`${base}/new`} size="sm" icon="plus">

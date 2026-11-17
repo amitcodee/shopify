@@ -33,6 +33,7 @@ export default async function CustomersPage({
     <>
       <PageHeader
         title="Customers"
+        description="People who ordered from you or created an account on your store. Open one to see their orders, addresses and email preferences."
         actions={
           <ButtonLink href={`/s/${storeId}/customers/segments`} variant="secondary" size="sm">
             Segments
@@ -55,7 +56,7 @@ export default async function CustomersPage({
         <EmptyState
           icon="customers"
           title="No customers yet"
-          description="Customers are added when they check out or create an account."
+          description="Customers are added automatically when they check out or create an account on your store."
         />
       ) : (
         <>

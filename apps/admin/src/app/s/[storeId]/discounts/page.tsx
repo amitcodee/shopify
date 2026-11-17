@@ -9,6 +9,7 @@ import {
   deleteDiscountAction,
   toggleDiscountAction,
 } from '../settings/commerce-actions';
+import { guide } from '@/lib/storefront';
 
 function status(d: Discount): { label: string; tone: 'green' | 'gray' | 'yellow' | 'red' } {
   const now = Date.now();
@@ -35,13 +36,18 @@ export default async function DiscountsPage({ params }: { params: Promise<{ stor
 
   return (
     <>
-      <PageHeader title="Discounts" description="Codes customers enter at checkout." />
+      <PageHeader
+        title="Discounts"
+        description="Codes shoppers type at checkout for a percentage off, a fixed amount off or free shipping. Create one with the form, then share the code with customers."
+        help={guide('run-a-discount', 'How to run a discount')}
+      />
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         {discounts.length === 0 ? (
           <EmptyState
             icon="discounts"
             title="No discount codes yet"
-            description="Create a code to offer a percentage, a fixed amount or free shipping."
+            description="Use the form to create a code for a percentage off, a fixed amount off or free shipping."
+            help={guide('run-a-discount')}
           />
         ) : (
           <Table

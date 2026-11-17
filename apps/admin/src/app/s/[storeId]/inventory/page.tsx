@@ -21,6 +21,8 @@ import {
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
 import { adjustInventoryAction, transferInventoryAction } from './actions';
+import { Icon } from '@/components/icons';
+import { guide } from '@/lib/storefront';
 
 export default async function InventoryPage({
   params,
@@ -45,7 +47,22 @@ export default async function InventoryPage({
 
   return (
     <>
-      <PageHeader title="Inventory" description="Stock levels for every variant." />
+      <PageHeader
+        title="Inventory"
+        description="How many of each product you have. Stock goes down when an order is placed and back up when a cancelled order or return is restocked."
+        help={guide('add-products', 'How stock tracking works')}
+      />
+      {canWrite ? (
+        <p className="mb-4 flex items-start gap-2 rounded-lg bg-slate-50 px-3.5 py-2.5 text-sm text-slate-600 ring-1 ring-slate-200/70">
+          <Icon name="info" className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+          <span>
+            To change stock, type how many to <strong className="font-medium">add</strong> (like 10)
+            or <strong className="font-medium">remove</strong> (like -2), pick why, and click{' '}
+            <strong className="font-medium">Apply</strong>. Every change is recorded with its
+            reason.
+          </span>
+        </p>
+      ) : null}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <ViewTabs
           label="Stock filter"
@@ -76,7 +93,7 @@ export default async function InventoryPage({
         />
       ) : (
         <>
-          <Table head={['Product', 'SKU', 'Available', canWrite ? 'Adjust' : '']}>
+          <Table head={['Product', 'SKU', 'In stock', canWrite ? 'Change stock' : '']}>
             {inventory.items.map((item) => (
               <tr key={item.variantId}>
                 <Td>
@@ -125,10 +142,10 @@ export default async function InventoryPage({
                         id={`d-${item.variantId}`}
                         name="delta"
                         inputMode="numeric"
-                        placeholder="+10 / -2"
+                        placeholder="e.g. 10 or -2"
                         required
                         pattern="-?[0-9]+"
-                        className={`${inputClass} h-8 w-24 px-2.5`}
+                        className={`${inputClass} h-8 w-28 px-2.5`}
                       />
                       <label className="sr-only" htmlFor={`r-${item.variantId}`}>
                         Reason
@@ -140,7 +157,7 @@ export default async function InventoryPage({
                       >
                         {manualInventoryReasons.map((reason) => (
                           <option key={reason} value={reason}>
-                            {reason.toLowerCase()}
+                            {REASON_LABELS[reason]}
                           </option>
                         ))}
                       </select>
@@ -220,3 +237,11 @@ export default async function InventoryPage({
     </>
   );
 }
+
+const REASON_LABELS: Record<(typeof manualInventoryReasons)[number], string> = {
+  MANUAL: 'Other change',
+  RESTOCK: 'New stock arrived',
+  CORRECTION: 'Count correction',
+  DAMAGED: 'Damaged or lost',
+  RETURN: 'Customer return',
+};

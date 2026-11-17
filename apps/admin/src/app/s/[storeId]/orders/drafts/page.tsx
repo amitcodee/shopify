@@ -12,6 +12,7 @@ import {
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
 import { DraftStatusBadge } from './status';
+import { OrdersNav } from '../orders-nav';
 
 export default async function DraftOrdersPage({
   params,
@@ -35,10 +36,10 @@ export default async function DraftOrdersPage({
     <>
       <PageHeader
         title="Draft orders"
-        description="Create orders for phone, email or in-person sales, then send an invoice or mark them as paid."
-        back={{ href: `/s/${storeId}/orders`, label: 'Orders' }}
+        description="Orders you create yourself for phone, WhatsApp, email or in-person sales. Send the customer an invoice to pay online, or mark it paid."
         actions={canWrite ? <ButtonLink href={`${base}/new`}>Create order</ButtonLink> : null}
       />
+      <OrdersNav storeId={storeId} active="drafts" />
       {drafts.items.length === 0 ? (
         <EmptyState title="No draft orders" description="Draft orders you create appear here." />
       ) : (

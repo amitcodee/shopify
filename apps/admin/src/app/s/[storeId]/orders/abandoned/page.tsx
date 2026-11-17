@@ -12,6 +12,7 @@ import {
 } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
+import { OrdersNav } from '../orders-nav';
 
 const RECOVERY: Record<AbandonedCheckout['recoveryStatus'], { label: string; tone: BadgeTone }> = {
   PENDING: { label: 'email scheduled', tone: 'yellow' },
@@ -42,11 +43,11 @@ export default async function AbandonedCheckoutsPage({
         title="Abandoned checkouts"
         description={
           store.abandonedCheckoutDelayHours
-            ? `Shoppers who don't pay get a recovery email ${store.abandonedCheckoutDelayHours} hour(s) after checkout.`
-            : 'Recovery emails are off. Turn them on in Settings → General.'
+            ? `Shoppers who reached checkout but didn't pay. Each gets one reminder email with a link back to their cart, ${store.abandonedCheckoutDelayHours} hour(s) later.`
+            : "Shoppers who reached checkout but didn't pay. Reminder emails are off; turn them on in Settings → General."
         }
-        back={{ href: base, label: 'Orders' }}
       />
+      <OrdersNav storeId={storeId} active="abandoned" />
       {checkouts.items.length === 0 ? (
         <EmptyState
           title="No abandoned checkouts"
