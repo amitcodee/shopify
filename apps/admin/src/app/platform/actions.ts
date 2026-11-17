@@ -121,6 +121,12 @@ export async function savePlatformSettingsAction(
         signupsEnabled: formData.get('signupsEnabled') === 'on',
         supportEmail: requiredString(formData, 'supportEmail'),
         adminNotice: requiredString(formData, 'adminNotice'),
+        legalName: requiredString(formData, 'legalName'),
+        registeredAddress: requiredString(formData, 'registeredAddress'),
+        gstin: requiredString(formData, 'gstin'),
+        supportPhone: requiredString(formData, 'supportPhone'),
+        grievanceOfficerName: requiredString(formData, 'grievanceOfficerName'),
+        grievanceOfficerEmail: requiredString(formData, 'grievanceOfficerEmail'),
       },
     });
   } catch (error) {

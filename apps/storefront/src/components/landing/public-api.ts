@@ -39,8 +39,33 @@ export async function fetchPublicPlans(): Promise<PublicPlan[] | null> {
   return plans && plans.length > 0 ? plans : null;
 }
 
+const contactSchema = z.object({
+  supportEmail: z.email().nullable(),
+  legalName: z.string().nullable().default(null),
+  registeredAddress: z.string().nullable().default(null),
+  gstin: z.string().nullable().default(null),
+  supportPhone: z.string().nullable().default(null),
+  grievanceOfficerName: z.string().nullable().default(null),
+  grievanceOfficerEmail: z.email().nullable().default(null),
+});
+export type PlatformContact = z.infer<typeof contactSchema>;
+
+const NO_CONTACT: PlatformContact = {
+  supportEmail: null,
+  legalName: null,
+  registeredAddress: null,
+  gstin: null,
+  supportPhone: null,
+  grievanceOfficerName: null,
+  grievanceOfficerEmail: null,
+};
+
+/** The operator's public contact and legal identity; every field null when unset or unavailable. */
+export async function fetchContact(): Promise<PlatformContact> {
+  return (await getPublic('contact', contactSchema)) ?? NO_CONTACT;
+}
+
 /** The platform support address for the contact page; null when unset or unavailable. */
 export async function fetchSupportEmail(): Promise<string | null> {
-  const contact = await getPublic('contact', z.object({ supportEmail: z.email().nullable() }));
-  return contact?.supportEmail ?? null;
+  return (await fetchContact()).supportEmail;
 }

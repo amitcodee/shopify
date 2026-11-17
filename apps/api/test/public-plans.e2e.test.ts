@@ -46,17 +46,33 @@ describe('Public plans', () => {
     await ctx.platform.plan.delete({ where: { id: extra.id } });
   });
 
-  it('shares only the support email for the contact page, hiding the placeholder', async () => {
+  it('shares the operator contact details, hiding the placeholder and empty fields', async () => {
+    const empty = {
+      supportEmail: null,
+      legalName: null,
+      registeredAddress: null,
+      gstin: null,
+      supportPhone: null,
+      grievanceOfficerName: null,
+      grievanceOfficerEmail: null,
+    };
     const before = await ctx.http().get('/api/v1/public/contact').expect(200);
-    expect(before.body).toEqual({ supportEmail: null });
+    expect(before.body).toEqual(empty);
 
     await ctx.platform.platformSetting.upsert({
       where: { key: 'platform' },
-      update: { value: { supportEmail: 'help@shops.test' } },
-      create: { key: 'platform', value: { supportEmail: 'help@shops.test' } },
+      update: { value: { supportEmail: 'help@shops.test', legalName: 'Shops Pvt Ltd' } },
+      create: {
+        key: 'platform',
+        value: { supportEmail: 'help@shops.test', legalName: 'Shops Pvt Ltd' },
+      },
     });
     const after = await ctx.http().get('/api/v1/public/contact').expect(200);
-    expect(after.body).toEqual({ supportEmail: 'help@shops.test' });
+    expect(after.body).toEqual({
+      ...empty,
+      supportEmail: 'help@shops.test',
+      legalName: 'Shops Pvt Ltd',
+    });
     await ctx.platform.platformSetting.deleteMany({ where: { key: 'platform' } });
   });
 });

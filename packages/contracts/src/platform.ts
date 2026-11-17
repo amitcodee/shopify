@@ -230,8 +230,33 @@ export const platformSettingsSchema = z.strictObject({
   supportEmail: z.email().default('support@example.com'),
   /** Optional banner shown in the merchant admin. */
   adminNotice: z.string().trim().max(300).default(''),
+  /** The operator's legal identity, shown on the marketing site's legal and contact pages. */
+  legalName: z.string().trim().max(200).default(''),
+  registeredAddress: z.string().trim().max(500).default(''),
+  gstin: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^$|^[0-9]{2}[A-Z0-9]{13}$/, 'Enter a 15-character GSTIN')
+    .default(''),
+  supportPhone: z.string().trim().max(30).default(''),
+  /** Grievance Officer (India: IT Rules 2021, Consumer Protection (E-Commerce) Rules 2020). */
+  grievanceOfficerName: z.string().trim().max(120).default(''),
+  grievanceOfficerEmail: z.union([z.literal(''), z.email()]).default(''),
 });
 export type PlatformSettings = z.output<typeof platformSettingsSchema>;
+
+/** What the marketing site may show publicly about the operator. Empty values are null. */
+export const publicContactSchema = z.object({
+  supportEmail: z.email().nullable(),
+  legalName: z.string().nullable(),
+  registeredAddress: z.string().nullable(),
+  gstin: z.string().nullable(),
+  supportPhone: z.string().nullable(),
+  grievanceOfficerName: z.string().nullable(),
+  grievanceOfficerEmail: z.email().nullable(),
+});
+export type PublicContact = z.infer<typeof publicContactSchema>;
 
 export const platformAuditEntrySchema = z.object({
   id: z.uuid(),

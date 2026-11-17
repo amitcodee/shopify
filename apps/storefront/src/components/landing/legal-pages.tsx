@@ -19,7 +19,8 @@ import {
   section,
   SectionHeading,
 } from './page-parts';
-import { fetchSupportEmail } from './public-api';
+import { BusinessDetails, hasBusinessDetails, hasGrievanceOfficer } from './business-details';
+import { fetchContact } from './public-api';
 import { signupUrl } from './urls';
 
 const DOC_ICONS: Record<string, IconName> = {
@@ -29,6 +30,10 @@ const DOC_ICONS: Record<string, IconName> = {
   'acceptable-use': 'users',
   billing: 'card',
   'data-processing': 'stack',
+  subprocessors: 'globe',
+  'service-delivery': 'truck',
+  grievance: 'mail',
+  'intellectual-property': 'tag',
 };
 
 // ── /legal ──────────────────────────────────────────────────────────────────────
@@ -151,7 +156,8 @@ function Block({ block }: { block: LegalBlock }) {
 }
 
 export async function LegalDocPage({ doc }: { doc: LegalDoc }) {
-  const supportEmail = await fetchSupportEmail();
+  const contact = await fetchContact();
+  const supportEmail = contact.supportEmail;
   const others = LEGAL_DOCS.filter((d) => d.slug !== doc.slug);
   return (
     <>
@@ -236,6 +242,12 @@ export async function LegalDocPage({ doc }: { doc: LegalDoc }) {
                   </>
                 )}
               </p>
+              {hasBusinessDetails(contact) || hasGrievanceOfficer(contact) ? (
+                <BusinessDetails
+                  contact={contact}
+                  className="mt-6 border-t border-mk-line pt-6 [&_dt]:text-mk-muted"
+                />
+              ) : null}
             </div>
 
             <div className="mt-12">

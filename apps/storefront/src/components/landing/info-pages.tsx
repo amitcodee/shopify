@@ -1,4 +1,5 @@
 /* eslint-disable @next/next/no-html-link-for-pages -- the root layout picks the marketing page from the request path, so links between marketing pages must be full page loads, not client navigations. */
+import { BusinessDetails, hasBusinessDetails, hasGrievanceOfficer } from './business-details';
 import { Icon, type IconName } from './icons';
 import {
   Arrow,
@@ -22,6 +23,7 @@ import {
   textLink,
 } from './page-parts';
 import { Photo } from './photos';
+import type { PlatformContact } from './public-api';
 import { apiDocsUrl, signupUrl } from './urls';
 
 // ── /switch ─────────────────────────────────────────────────────────────────────
@@ -430,7 +432,8 @@ export function SecurityPage() {
 
 // ── /contact ────────────────────────────────────────────────────────────────────
 
-export function ContactPage({ supportEmail }: { supportEmail: string | null }) {
+export function ContactPage({ contact }: { contact: PlatformContact }) {
+  const { supportEmail } = contact;
   return (
     <>
       <PageHero
@@ -503,6 +506,40 @@ export function ContactPage({ supportEmail }: { supportEmail: string | null }) {
             </a>
           ))}
         </div>
+        {hasBusinessDetails(contact) || hasGrievanceOfficer(contact) ? (
+          <div className={`${container} mt-5 grid gap-5 lg:grid-cols-2`}>
+            {hasBusinessDetails(contact) ? (
+              <div className="rounded-xl bg-mk-subtle p-8 ring-1 ring-mk-line sm:p-9">
+                <h2 className="text-lg font-semibold text-mk-fg">Company details</h2>
+                <BusinessDetails contact={contact} grievance={false} className="mt-5" />
+              </div>
+            ) : null}
+            {hasGrievanceOfficer(contact) ? (
+              <div className="rounded-xl bg-mk-subtle p-8 ring-1 ring-mk-line sm:p-9">
+                <h2 className="text-lg font-semibold text-mk-fg">Grievance Officer</h2>
+                <p className="mt-2 text-sm leading-6 text-mk-muted">
+                  For complaints we haven&rsquo;t resolved, content or intellectual-property reports
+                  and data-protection requests. We acknowledge within 24 hours. See the{' '}
+                  <a href="/legal/grievance" className={textLink}>
+                    Grievance Redressal Policy
+                  </a>
+                  .
+                </p>
+                <BusinessDetails
+                  contact={{
+                    ...contact,
+                    legalName: null,
+                    registeredAddress: null,
+                    gstin: null,
+                    supportPhone: null,
+                    supportEmail: null,
+                  }}
+                  className="mt-5"
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div className={`${container} mt-5`}>
           <div className="flex flex-col items-start justify-between gap-6 rounded-xl p-8 ring-1 ring-mk-line sm:flex-row sm:items-center sm:p-9">
             <div className="flex gap-5">

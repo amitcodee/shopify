@@ -1,5 +1,5 @@
-import { LEGAL_DOCS } from './legal-data';
 import { Logo } from './logo';
+import { fetchContact } from './public-api';
 import { apiDocsUrl, loginUrl, signupUrl } from './urls';
 
 const COLUMNS: { title: string; links: { label: string; href: string; external?: boolean }[] }[] = [
@@ -45,11 +45,20 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
   },
   {
     title: 'Legal',
-    links: LEGAL_DOCS.map((d) => ({ label: d.title, href: `/legal/${d.slug}` })),
+    links: [
+      { label: 'Terms of Service', href: '/legal/terms' },
+      { label: 'Privacy Policy', href: '/legal/privacy' },
+      { label: 'Cookie Policy', href: '/legal/cookies' },
+      { label: 'Billing & Refunds', href: '/legal/billing' },
+      { label: 'Grievance Officer', href: '/legal/grievance' },
+      { label: 'All policies', href: '/legal' },
+    ],
   },
 ];
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const contact = await fetchContact();
+  const owner = contact.legalName ?? 'Commerce Platform';
   return (
     <footer className="bg-mk-bg text-mk-dim">
       <div className="mx-auto grid max-w-[90rem] gap-12 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1fr_3.4fr] lg:px-[5.5rem]">
@@ -91,7 +100,15 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-mk-line">
         <div className="mx-auto flex max-w-[90rem] flex-col gap-2 px-5 py-6 text-xs text-mk-dim sm:flex-row sm:justify-between sm:px-8 lg:px-[5.5rem]">
-          <p>© {new Date().getFullYear()} Commerce Platform</p>
+          <div className="space-y-1">
+            <p>
+              © {new Date().getFullYear()} {owner}
+              {contact.gstin ? <> · GSTIN {contact.gstin}</> : null}
+            </p>
+            {contact.registeredAddress ? (
+              <p className="max-w-xl">{contact.registeredAddress.replace(/\s*\n\s*/g, ', ')}</p>
+            ) : null}
+          </div>
           <ul className="flex flex-wrap gap-x-5 gap-y-1">
             {[
               ['Terms', '/legal/terms'],
@@ -107,7 +124,7 @@ export function SiteFooter() {
                 </a>
               </li>
             ))}
-            <li>Plan prices are in US dollars.</li>
+            <li>Plan prices are in Indian rupees and include GST.</li>
           </ul>
         </div>
       </div>

@@ -22,7 +22,7 @@ export interface LegalDoc {
   sections: LegalSection[];
 }
 
-export const LEGAL_UPDATED = '12 November 2026';
+export const LEGAL_UPDATED = '17 November 2026';
 
 const terms: LegalDoc = {
   slug: 'terms',
@@ -35,7 +35,7 @@ const terms: LegalDoc = {
       title: 'About these terms',
       blocks: [
         'These Terms of Service (“Terms”) govern your use of Commerce Platform — the website, the merchant admin, the storefronts we host for you and the API (together, the “Service”). By creating an account or using the Service you agree to these Terms. If you use the Service on behalf of a business, you confirm you are authorised to accept them for that business.',
-        'Our Privacy Policy, Cookie Policy, Acceptable Use Policy, Billing & Refund Policy and Data Processing terms form part of these Terms.',
+        'Our Privacy Policy, Cookie Policy, Acceptable Use Policy, Billing & Refund Policy, Service Delivery Policy, Data Processing Terms, Intellectual Property Policy and Grievance Redressal Policy form part of these Terms.',
       ],
     },
     {
@@ -206,10 +206,12 @@ const privacy: LegalDoc = {
           list: [
             'Hosting and database providers that store the Service’s data.',
             'An email delivery provider that sends account, order and notification emails.',
-            'Stripe or Razorpay, when you connect them to take payments or pay for your plan.',
+            'Razorpay, which collects plan payments, and the payment gateway you choose for your store.',
+            'An AI provider, only when you ask the theme assistant for a design change (it receives your store name, theme settings and request, never customer data).',
             'Professional advisers, and authorities where the law requires it.',
           ],
         },
+        'The current list of providers, what each receives and where, is on our Sub-processors page.',
       ],
     },
     {
@@ -328,6 +330,11 @@ const cookies: LegalDoc = {
                 'theme_preview',
                 'Shows a template preview the visitor asked for',
                 'Until the browser is closed',
+              ],
+              [
+                'theme_draft',
+                'Shows unpublished theme changes inside the store owner’s theme editor only (a partitioned cookie that does not exist outside the editor)',
+                '2 hours',
               ],
             ],
           },
@@ -519,7 +526,7 @@ const dpa: LegalDoc = {
       id: 'subprocessors',
       title: 'Sub-processors',
       blocks: [
-        'We use hosting, database and email-delivery providers to run the Service, and the payment provider you connect. We require them to protect the data to the same standard and will tell you before adding new sub-processors.',
+        'We use hosting, database and email-delivery providers to run the Service, and the payment provider you connect. We require them to protect the data to the same standard and will tell you before adding new sub-processors. The current list is on our Sub-processors page.',
       ],
     },
     {
@@ -544,7 +551,245 @@ const dpa: LegalDoc = {
   ],
 };
 
-export const LEGAL_DOCS: LegalDoc[] = [terms, privacy, cookies, acceptableUse, billing, dpa];
+const serviceDelivery: LegalDoc = {
+  slug: 'service-delivery',
+  title: 'Service Delivery Policy',
+  summary:
+    'How and when the Service is delivered. We sell software online; nothing is shipped to you.',
+  updated: LEGAL_UPDATED,
+  sections: [
+    {
+      id: 'digital',
+      title: 'A digital service',
+      blocks: [
+        'Commerce Platform is software provided online. We do not ship any physical goods to merchants, so there are no shipping charges, couriers or delivery addresses involved in buying a plan.',
+      ],
+    },
+    {
+      id: 'when',
+      title: 'When you get access',
+      blocks: [
+        {
+          list: [
+            'Your store and admin are ready as soon as you verify your email address, usually within a minute of signing up.',
+            'A plan you subscribe to is active as soon as the payment provider confirms your mandate or first payment. Confirmation is shown in your admin and an invoice appears under Billing.',
+            'If access does not start within 24 hours of a successful payment, contact us and we will activate it or refund the charge.',
+          ],
+        },
+      ],
+    },
+    {
+      id: 'store-orders',
+      title: 'Orders placed on your store',
+      blocks: [
+        'Shipping and delivery of the products you sell are between you and your customers. Each store publishes its own shipping policy, which store owners set in their admin.',
+      ],
+    },
+    {
+      id: 'availability',
+      title: 'Availability',
+      blocks: [
+        'We aim to keep the Service available at all times, apart from planned maintenance that we announce in the admin in advance. Availability is described further in our Terms of Service.',
+      ],
+    },
+    {
+      id: 'contact',
+      title: 'Contact',
+      blocks: ['Questions about access to your plan? Contact us using the details below.'],
+    },
+  ],
+};
+
+const subprocessors: LegalDoc = {
+  slug: 'subprocessors',
+  title: 'Sub-processors',
+  summary: 'The service providers that process personal data for us, what they receive and why.',
+  updated: LEGAL_UPDATED,
+  sections: [
+    {
+      id: 'about',
+      title: 'About this list',
+      blocks: [
+        'To run the Service we use a small number of third-party providers. Each is bound by a contract requiring it to protect personal data and use it only to provide its service to us. Payment gateways that you connect to your store (Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal) are your own providers, chosen and contracted by you, and are not listed here.',
+      ],
+    },
+    {
+      id: 'list',
+      title: 'Current sub-processors',
+      blocks: [
+        {
+          table: {
+            head: ['Provider', 'What it does', 'Data it receives'],
+            rows: [
+              [
+                'Cloud hosting provider',
+                'Runs the servers, database and file storage for the Service',
+                'All Service data, encrypted in transit',
+              ],
+              [
+                'Razorpay Software Pvt Ltd (India)',
+                'Collects plan payments and UPI AutoPay or card mandates',
+                'Store owner name, email, phone and the payment details entered at Razorpay checkout',
+              ],
+              [
+                'Postmark by ActiveCampaign (USA)',
+                'Delivers account, order and notification emails',
+                'Recipient name and email address, email content',
+              ],
+              [
+                'Anthropic PBC (USA)',
+                'Powers the optional AI theme assistant',
+                'Store name, theme settings and the request the merchant types; never customer data',
+              ],
+              [
+                'Sentry, Functional Software Inc (USA)',
+                'Error monitoring, when enabled',
+                'Technical error details; personal data is minimised and not intentionally sent',
+              ],
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'changes',
+      title: 'Changes to this list',
+      blocks: [
+        'We update this page before a new sub-processor starts handling personal data, and tell store owners about significant changes by email or in the admin. If you object to a new sub-processor on reasonable data-protection grounds, contact us and we will work with you to address it; if we cannot, you may close your store.',
+      ],
+    },
+    {
+      id: 'contact',
+      title: 'Contact',
+      blocks: ['Questions about sub-processors? Contact us using the details below.'],
+    },
+  ],
+};
+
+const intellectualProperty: LegalDoc = {
+  slug: 'intellectual-property',
+  title: 'Intellectual Property Policy',
+  summary:
+    'How to report a store that infringes your copyright or trademark, and how merchants can respond.',
+  updated: LEGAL_UPDATED,
+  sections: [
+    {
+      id: 'approach',
+      title: 'Our approach',
+      blocks: [
+        'Merchants must only sell goods and use images, text, names and logos they have the right to use. We act on valid reports of infringement under the Copyright Act, 1957, the Trade Marks Act, 1999 and the IT Rules, 2021. We host stores; we do not decide disputes between rights holders and merchants, and a court order prevails over this process.',
+      ],
+    },
+    {
+      id: 'report',
+      title: 'Reporting infringement',
+      blocks: [
+        'Email the Grievance Officer (details below) with:',
+        {
+          list: [
+            'Your name and contact details, and whether you are the rights holder or act for them.',
+            'The work or trademark you own, with a registration number or other proof where you have it.',
+            'The exact store pages (URLs) that infringe it.',
+            'A statement that you believe in good faith the use is not authorised, and that the information in your report is accurate.',
+          ],
+        },
+        'Incomplete reports may delay action. Knowingly false reports can make you liable for the harm they cause.',
+      ],
+    },
+    {
+      id: 'action',
+      title: 'What we do',
+      blocks: [
+        'When a report is complete we may remove or disable the reported content and tell the merchant, sharing your report (including your contact details, so the two of you can resolve it directly). Stores that repeatedly infringe may be suspended or closed under our Acceptable Use Policy.',
+      ],
+    },
+    {
+      id: 'counter',
+      title: 'If your content was removed',
+      blocks: [
+        'If you are a merchant and believe content was removed by mistake, or that you are authorised to use it, reply to our notice with your explanation and evidence. We will pass it to the person who reported it and may restore the content unless they tell us they have started legal proceedings.',
+      ],
+    },
+    {
+      id: 'contact',
+      title: 'Contact',
+      blocks: ['Send reports to the Grievance Officer using the details below.'],
+    },
+  ],
+};
+
+const grievance: LegalDoc = {
+  slug: 'grievance',
+  title: 'Grievance Redressal Policy',
+  summary:
+    'How to raise a complaint with our Grievance Officer, and how quickly we acknowledge and resolve it.',
+  updated: LEGAL_UPDATED,
+  sections: [
+    {
+      id: 'scope',
+      title: 'What this covers',
+      blocks: [
+        'This policy explains how merchants, shoppers and anyone else can raise a complaint about the Service, content hosted on it, or how we handle personal data. It is published under the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, the Consumer Protection (E-Commerce) Rules, 2020 and the Digital Personal Data Protection Act, 2023.',
+        {
+          note: 'A complaint about an order (delivery, a refund, a faulty product) should go first to the store you bought from. Every store lists its contact details and policies on its pages. Escalate to us if the store does not respond.',
+        },
+      ],
+    },
+    {
+      id: 'how',
+      title: 'How to complain',
+      blocks: [
+        'Email our Grievance Officer (details below) with:',
+        {
+          list: [
+            'Your name and a way to reach you.',
+            'The store address or page the complaint is about, if any.',
+            'What happened, with dates, order numbers and screenshots where useful.',
+            'What you would like us to do.',
+          ],
+        },
+      ],
+    },
+    {
+      id: 'timelines',
+      title: 'Our timelines',
+      blocks: [
+        {
+          table: {
+            head: ['Step', 'When'],
+            rows: [
+              ['We acknowledge your complaint', 'Within 24 hours'],
+              ['We resolve it, or explain what we will do', 'Within 15 days of receipt'],
+              [
+                'Removal of content that exposes someone’s private areas or impersonates them',
+                'Within 24 hours of the complaint, as the IT Rules require',
+              ],
+            ],
+          },
+        },
+        'Our acknowledgement gives your complaint a reference number. If you are not satisfied with the outcome, you may approach the appropriate authority, such as the National Consumer Helpline (dial 1915, or consumerhelpline.gov.in) or the Data Protection Board of India.',
+      ],
+    },
+    {
+      id: 'contact',
+      title: 'Grievance Officer',
+      blocks: ['The Grievance Officer’s name and contact details are below.'],
+    },
+  ],
+};
+
+export const LEGAL_DOCS: LegalDoc[] = [
+  terms,
+  privacy,
+  cookies,
+  acceptableUse,
+  billing,
+  serviceDelivery,
+  dpa,
+  subprocessors,
+  intellectualProperty,
+  grievance,
+];
 
 export function findLegalDoc(slug: string): LegalDoc | undefined {
   return LEGAL_DOCS.find((d) => d.slug === slug);

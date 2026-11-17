@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ContactPage } from '@/components/landing/info-pages';
-import { fetchSupportEmail } from '@/components/landing/public-api';
+import { fetchContact } from '@/components/landing/public-api';
 import { requestHost } from '@/lib/api';
 import { isRootHost } from '@/lib/shop';
 
@@ -17,5 +17,5 @@ export async function generateMetadata(): Promise<Metadata> {
 /** Support contact (root host only; stores have no such page). */
 export default async function Page() {
   if (!isRootHost(await requestHost())) notFound();
-  return <ContactPage supportEmail={await fetchSupportEmail()} />;
+  return <ContactPage contact={await fetchContact()} />;
 }

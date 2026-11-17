@@ -1,5 +1,6 @@
 import { Controller, Get, Header } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import type { PublicContact } from '@repo/contracts';
 import { Public } from '../auth/auth.guard.js';
 import { PlansService } from './plans.service.js';
 import { PlatformSettingsService } from './platform-settings.service.js';
@@ -54,14 +55,29 @@ export class PublicPlansController {
   }
 
   /**
-   * How to reach platform support (for the marketing site's contact page). Null until an operator
-   * sets a real address: the default sits on a reserved example domain (RFC 2606) nobody reads.
+   * How to reach the operator, for the marketing site's contact and legal pages. Every field is
+   * null until an operator sets it; the default support email sits on a reserved example domain
+   * (RFC 2606) nobody reads, so it is hidden too.
    */
   @Get('contact')
   @Header('Cache-Control', 'public, max-age=300')
-  @ApiOkResponse({ description: 'The platform support email address, or null if not set.' })
-  async contact(): Promise<{ supportEmail: string | null }> {
-    const { supportEmail } = await this.platformSettings.get();
-    return { supportEmail: RESERVED_EMAIL_DOMAIN.test(supportEmail) ? null : supportEmail };
+  @ApiOkResponse({
+    description:
+      'Support email, legal entity name, registered address, GSTIN, phone and Grievance Officer; null when not set.',
+  })
+  async contact(): Promise<PublicContact> {
+    const s = await this.platformSettings.get();
+    const orNull = (value: string) => (value.trim() === '' ? null : value);
+    const email = (value: string) =>
+      value === '' || RESERVED_EMAIL_DOMAIN.test(value) ? null : value;
+    return {
+      supportEmail: email(s.supportEmail),
+      legalName: orNull(s.legalName),
+      registeredAddress: orNull(s.registeredAddress),
+      gstin: orNull(s.gstin),
+      supportPhone: orNull(s.supportPhone),
+      grievanceOfficerName: orNull(s.grievanceOfficerName),
+      grievanceOfficerEmail: email(s.grievanceOfficerEmail),
+    };
   }
 }
