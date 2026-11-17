@@ -57,7 +57,7 @@ export function SwitchPage() {
         actions={
           <>
             <a href={signupUrl} className={buttonPrimary}>
-              Start for free
+              Start free trial
             </a>
             <a href="#checklist" className={buttonSecondary}>
               See the checklist
@@ -117,7 +117,7 @@ export function SwitchPage() {
                 {
                   icon: 'card',
                   title: 'Payments — new connection',
-                  body: 'Connect Stripe or Razorpay to your new store. Payouts go to your own account.',
+                  body: 'Connect your own Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal account, or offer cash on delivery. Money goes to your own account.',
                   href: '/features/payments',
                 },
                 {
@@ -280,7 +280,7 @@ const SECURITY_AREAS: { icon: IconName; title: string; points: string[] }[] = [
     icon: 'card',
     title: 'Payments without card data',
     points: [
-      'Shoppers enter card details on Stripe’s or Razorpay’s hosted page, keeping the platform within PCI SAQ-A.',
+      'Shoppers enter card details on the payment gateway’s own hosted page, so card numbers never reach our servers.',
       'Totals are calculated on the server from your catalog, never from the browser.',
       'Payment webhooks are signature-verified, de-duplicated and amount-checked.',
     ],
@@ -334,7 +334,7 @@ export function SecurityPage() {
         actions={
           <>
             <a href={signupUrl} className={buttonLight}>
-              Start for free
+              Start free trial
             </a>
             <a href="/features/staff-security" className={buttonGhostDark}>
               Staff & security features
@@ -403,8 +403,8 @@ export function SecurityPage() {
             <div className="mt-8">
               <CheckList
                 items={[
-                  'A security review of the whole platform, with every finding fixed and covered by regression tests.',
-                  'Database backups made with a verified script, with restores rehearsed and recorded.',
+                  'An internal security review of the whole platform; its findings were fixed and are covered by regression tests.',
+                  'Database backups are made with a tested script, and restoring from them has been rehearsed.',
                   'Customer data can be exported or redacted on request.',
                   'Dependencies are pinned with a lockfile and audited before release.',
                   'Two-factor authentication is mandatory for platform administrators in production.',

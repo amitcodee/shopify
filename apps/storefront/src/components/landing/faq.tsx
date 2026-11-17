@@ -1,3 +1,7 @@
+import { fetchPlanTerms } from './public-api';
+
+const FEES_ANSWER = '__FEES__';
+
 const FAQS: { q: string; a: string }[] = [
   {
     q: 'Can I use my own domain?',
@@ -5,7 +9,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'How do I get paid?',
-    a: 'Connect Stripe (via Stripe Connect) or Razorpay and payouts go to your own account. A built-in payment sandbox lets you place test orders before you go live.',
+    a: 'Paste the API keys of your own Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal account and money settles straight to it. You can also offer cash on delivery. Every gateway has a test mode, so you can place test orders before going live.',
   },
   {
     q: 'Do I need to know how to code?',
@@ -17,15 +21,15 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'Can shoppers pay in their own currency?',
-    a: 'Yes. Enable the currencies you want with your own exchange rates and rounding. Shoppers pick a currency on your storefront and check out and pay in it, while your reports stay in your store currency.',
+    a: 'Yes. Enable the currencies you want with your own exchange rates and rounding, and shoppers see prices in the one they pick. They can pay in it when your gateway supports that currency (Stripe or PayPal); Indian gateways charge in rupees. Your reports stay in your store currency.',
   },
   {
     q: 'What fees will I pay?',
-    a: 'Only your plan: free for 7 days, ₹99 a month for your first 3 months, then ₹799 a month, GST included. We take no fee on your sales. Your payment gateway charges its own processing fees separately.',
+    a: FEES_ANSWER,
   },
   {
     q: 'Which payment methods can my customers use?',
-    a: 'Connect your own Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal account so money settles straight to your bank, and offer cash on delivery. Cash orders are confirmed by the shopper from their email, and each phone number is limited to a few open cash orders, which cuts fake orders.',
+    a: 'Connect your own Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal account so money settles straight to your bank, and offer cash on delivery. Each phone number can hold only a few open cash orders, and you can require shoppers to confirm cash orders from their email, which cuts fake orders.',
   },
   {
     q: 'What happens when my trial ends?',
@@ -41,7 +45,12 @@ const FAQS: { q: string; a: string }[] = [
   },
 ];
 
-export function Faq() {
+export async function Faq() {
+  const terms = await fetchPlanTerms();
+  const fees = terms
+    ? `Only your plan: ${terms.phrase}, inclusive of all taxes.${terms.noSalesFee ? ' We take no fee on your sales.' : ''} Your payment gateway charges its own processing fees separately.`
+    : 'Only your plan, shown on this page, inclusive of all taxes. Your payment gateway charges its own processing fees separately.';
+  const faqs = FAQS.map((f) => (f.a === FEES_ANSWER ? { ...f, a: fees } : f));
   return (
     <section id="faq" className="scroll-mt-24 bg-mk-subtle py-20 sm:py-28">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
@@ -52,7 +61,7 @@ export function Faq() {
           </h2>
         </div>
         <div className="mt-12 divide-y divide-mk-line rounded-xl bg-mk-surface shadow-[0_20px_40px_-30px_rgb(10_34_54/0.35)] ring-1 ring-mk-line">
-          {FAQS.map(({ q, a }) => (
+          {faqs.map(({ q, a }) => (
             <details key={q} className="group px-5 sm:px-7">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded py-5 font-semibold text-mk-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg [&::-webkit-details-marker]:hidden">
                 {q}

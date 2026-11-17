@@ -468,7 +468,7 @@ const billing: LegalDoc = {
     {
       id: 'taxes',
       title: 'Taxes',
-      blocks: ['Prices shown in Indian rupees include GST.'],
+      blocks: ['Prices are shown in Indian rupees and are inclusive of all taxes.'],
     },
     {
       id: 'contact',

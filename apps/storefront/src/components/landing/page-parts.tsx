@@ -1,3 +1,4 @@
+import { fetchPlanTerms, termsSentence } from './public-api';
 import type { ReactNode } from 'react';
 import { EmailCapture } from './email-capture';
 import { Icon, type IconName } from './icons';
@@ -339,7 +340,7 @@ export function Steps({
 }
 
 /** The closing call to action used at the bottom of every page: a photo band with sign-up. */
-export function CtaBand({
+export async function CtaBand({
   title = 'Start selling with Commerce Platform',
   body = 'Create your store, pick a template and add your first product in a few minutes.',
   template,
@@ -367,9 +368,7 @@ export function CtaBand({
           <div className="mt-9">
             <EmailCapture signupUrl={signupUrl} template={template} />
           </div>
-          <p className="mt-3 text-sm text-mk-muted">
-            Free for 7 days, then ₹99/month for 3 months.
-          </p>
+          <p className="mt-3 text-sm text-mk-muted">{termsSentence(await fetchPlanTerms())}</p>
         </div>
       </div>
     </section>

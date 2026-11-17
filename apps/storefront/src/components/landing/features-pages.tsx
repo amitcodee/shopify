@@ -104,7 +104,7 @@ export function FeaturesHub() {
         actions={
           <>
             <a href={signupUrl} className={buttonPrimary}>
-              Start for free
+              Start free trial
             </a>
             <a href="/pricing" className={buttonSecondary}>
               See pricing
@@ -185,7 +185,7 @@ export function FeaturePage({ area }: { area: FeatureArea }) {
         actions={
           <>
             <a href={signupUrl} className={buttonPrimary}>
-              Start for free
+              Start free trial
             </a>
             {guides[0] ? (
               <a href={`/guides/${guides[0].slug}`} className={buttonSecondary}>

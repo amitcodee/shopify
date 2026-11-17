@@ -407,7 +407,7 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
               href={links.signupUrl}
               className={`inline-flex items-center rounded-full bg-mk-fg px-5 py-2.5 text-[0.9375rem] font-semibold whitespace-nowrap text-mk-bg transition hover:opacity-85 ${navFocus}`}
             >
-              Start for free
+              Start free trial
             </a>
             <button
               ref={drawerButton}
@@ -550,7 +550,7 @@ export function SiteNav({ links, overlay = false }: { links: MarketingLinks; ove
               href={links.signupUrl}
               className="rounded-full bg-mk-fg px-5 py-3 text-center font-semibold text-mk-bg"
             >
-              Start for free
+              Start free trial
             </a>
             <a
               href={links.loginUrl}

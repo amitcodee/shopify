@@ -31,7 +31,7 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
       { label: 'FAQ', href: '/pricing#faq' },
       { label: 'API docs', href: apiDocsUrl, external: true },
       { label: 'Log in', href: loginUrl },
-      { label: 'Start for free', href: signupUrl },
+      { label: 'Start free trial', href: signupUrl },
     ],
   },
   {
@@ -71,7 +71,7 @@ export async function SiteFooter() {
             href={signupUrl}
             className="mt-6 inline-flex rounded-full bg-mk-fg px-5 py-2.5 text-sm font-semibold text-mk-bg transition hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mk-fg"
           >
-            Start for free
+            Start free trial
           </a>
         </div>
         <nav aria-label="Footer" className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-5">
@@ -124,7 +124,7 @@ export async function SiteFooter() {
                 </a>
               </li>
             ))}
-            <li>Plan prices are in Indian rupees and include GST.</li>
+            <li>Plan prices are in Indian rupees, inclusive of all taxes.</li>
           </ul>
         </div>
       </div>

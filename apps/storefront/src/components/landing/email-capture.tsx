@@ -1,7 +1,7 @@
 import { useId } from 'react';
 
 /**
- * "Enter your email → Start for free": a plain GET form to the admin sign-up, which prefills the
+ * "Enter your email → Start free trial": a plain GET form to the admin sign-up, which prefills the
  * email (the storefront CSP allows form submissions to the admin origin).
  */
 export function EmailCapture({
@@ -48,7 +48,7 @@ export function EmailCapture({
             : 'bg-mk-surface text-mk-bg hover:bg-mk-surface-2 focus-visible:outline-mk-fg'
         }`}
       >
-        Start for free
+        Start free trial
       </button>
     </form>
   );

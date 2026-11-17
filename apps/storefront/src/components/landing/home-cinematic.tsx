@@ -4,11 +4,13 @@ import {
   findThemeTemplate,
   SUPPORTED_CURRENCIES,
   THEME_INDUSTRIES,
+  THEME_STYLES,
   THEME_TEMPLATES,
   type ThemeTemplate,
 } from '@repo/contracts';
 import type { ReactNode } from 'react';
 import { FeatureMock } from './mocks';
+import { fetchPlanTerms, type PlanTerms, termsSentence } from './public-api';
 import { displayFace } from './page-parts';
 import { Photo, productPhoto } from './photos';
 import { HeroWord, StoreTabs } from './store-tabs';
@@ -104,7 +106,7 @@ function Hero() {
         </p>
         <div className="mt-9 flex flex-wrap gap-4">
           <a href={signupUrl} className={pillLight}>
-            Start for free
+            Start free trial
           </a>
           <a href="/templates" className={pillGhost}>
             Browse templates
@@ -165,7 +167,7 @@ function StoreStage() {
       <div className={wrap}>
         <StoreTabs tabs={tabs} />
         <p className="mt-10 text-lg text-mk-muted">
-          Fourteen design styles across {THEME_INDUSTRIES.length} industries.{' '}
+          {THEME_STYLES.length} design styles across {THEME_INDUSTRIES.length} industries.{' '}
           <a href="/templates" className={inlineLink}>
             See all {THEME_TEMPLATES.length} templates
           </a>
@@ -273,7 +275,8 @@ function RunStage() {
         <div className="mk-dark mt-12 grid grid-cols-1 overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#0a2440,#06121c_70%)] ring-1 ring-mk-line lg:grid-cols-[1fr_1.2fr]">
           <div className="px-7 py-12 sm:px-12 sm:py-16">
             <p className="text-lg leading-[1.5] text-mk-muted">
-              Shoppers can pay in any of {SUPPORTED_CURRENCIES.length} currencies. Set{' '}
+              Show prices in up to {SUPPORTED_CURRENCIES.length} currencies, and take payment in
+              them through Stripe or PayPal. Set{' '}
               <a href="/features/international" className={inlineLink}>
                 shipping zones and taxes
               </a>{' '}
@@ -516,10 +519,12 @@ function Globe() {
   );
 }
 
-function TrustStage() {
+function TrustStage({ trialDays }: { trialDays: number | null }) {
   const facts: [string, string, string][] = [
-    ['Currencies', String(SUPPORTED_CURRENCIES.length), 'for shoppers to pay in'],
-    ['Free trial', '14', 'days on every new store'],
+    ['Currencies', String(SUPPORTED_CURRENCIES.length), 'to show prices in'],
+    ...(trialDays
+      ? [['Free trial', String(trialDays), 'days on every new store'] as [string, string, string]]
+      : []),
     ['Card data', '0', 'card numbers ever reach our servers'],
   ];
   return (
@@ -597,7 +602,7 @@ function TrustStage() {
 
 // ── Closing ─────────────────────────────────────────────────────────────────────
 
-function ClosingStage() {
+function ClosingStage({ terms }: { terms: PlanTerms | null }) {
   const steps = ['Pick a template', 'Add your products', 'Connect payments'];
   return (
     <Stage label="Get started" className="bg-mk-subtle pt-16 text-mk-fg sm:pt-24">
@@ -627,11 +632,9 @@ function ClosingStage() {
               ))}
             </ol>
             <a href={signupUrl} className={`mt-10 ${pillLight}`}>
-              Start for free
+              Start free trial
             </a>
-            <p className="mt-4 text-sm text-mk-dim">
-              Free for 7 days, then ₹99/month for 3 months.
-            </p>
+            <p className="mt-4 text-sm text-mk-dim">{termsSentence(terms)}</p>
           </div>
         </div>
       </div>
@@ -640,15 +643,16 @@ function ClosingStage() {
 }
 
 /** The whole home page. */
-export function CinematicHome() {
+export async function CinematicHome() {
+  const terms = await fetchPlanTerms();
   return (
     <div className="bg-mk-bg">
       <Hero />
       <StoreStage />
       <RunStage />
       <BuildStage />
-      <TrustStage />
-      <ClosingStage />
+      <TrustStage trialDays={terms?.trialDays ?? null} />
+      <ClosingStage terms={terms} />
     </div>
   );
 }

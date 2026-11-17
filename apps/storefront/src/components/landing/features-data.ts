@@ -199,7 +199,7 @@ export const FEATURE_AREAS: FeatureArea[] = [
       {
         icon: 'switch',
         title: 'Cash on delivery',
-        body: 'Offer COD with an order limit. Shoppers confirm cash orders from their email, unconfirmed ones release their stock after 12 hours, and each phone number can hold only a few open cash orders.',
+        body: 'Offer COD with an order limit, and each phone number can hold only a few open cash orders. You can also require shoppers to confirm cash orders from their email; unconfirmed ones are cancelled and release their stock after 12 hours.',
       },
       {
         icon: 'code',
@@ -224,7 +224,7 @@ export const FEATURE_AREAS: FeatureArea[] = [
     ],
     showcase: {
       title: 'Card data never touches the platform',
-      body: 'Shoppers pay on your gateway’s hosted page — Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal — which keeps the platform within PCI SAQ-A. Money settles to your own account with no platform fee, and cash on delivery works alongside.',
+      body: 'Shoppers pay on your gateway’s hosted page — Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal — so card details never touch our servers. Money settles to your own account with no platform fee, and cash on delivery works alongside.',
       points: [
         'One gateway per store, chosen by you',
         'Amounts confirmed with the provider before fulfilment',

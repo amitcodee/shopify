@@ -11,7 +11,7 @@ import {
   PhotoPanel,
   SectionHeading,
 } from './page-parts';
-import { fetchPublicPlans, type PublicPlan } from './public-api';
+import { fetchPublicPlans, planTerms, type PublicPlan, termsSentence } from './public-api';
 import { signupUrl } from './urls';
 
 const money = (minor: number, currency: string) =>
@@ -50,7 +50,7 @@ const INCLUDED = [
   'Inventory across locations',
   'Draft orders, returns and packing slips',
   'Your own gateway: Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal',
-  'Cash on delivery with fake-order protection',
+  'Cash on delivery with order limits and optional email confirmation',
   'Admin API tokens and webhooks',
   'Two-factor sign-in for staff',
 ];
@@ -280,6 +280,7 @@ function Comparison({ plans }: { plans: PublicPlan[] }) {
 /** The platform pricing page: plans from the API, what every plan includes, a comparison and FAQ. */
 export async function PricingPage() {
   const plans = await fetchPublicPlans();
+  const terms = plans?.[0] ? planTerms(plans[0]) : null;
   return (
     <>
       <section
@@ -293,9 +294,17 @@ export async function PricingPage() {
           <Eyebrow className="justify-center">Pricing</Eyebrow>
           <h1 className={`mt-5 text-mk-fg ${display}`}>One simple price. Everything included.</h1>
           <p className={`mt-6 text-mk-muted ${lead}`}>
-            Start free for 7 days — no card needed. Then ₹99 a month for your first 3 months, and
-            ₹799 a month after that. No fee on your sales, whichever gateway you use or cash on
-            delivery.
+            {terms ? (
+              <>
+                {termsSentence(terms)}
+                {terms.trialDays > 0 ? ' No card needed to start.' : ''}
+                {terms.noSalesFee
+                  ? ' No fee on your sales, whichever gateway you use or cash on delivery.'
+                  : ''}
+              </>
+            ) : (
+              'One plan with every feature included.'
+            )}
           </p>
         </div>
         <div className="mt-14 px-4 sm:px-6 lg:px-8">
@@ -315,8 +324,8 @@ export async function PricingPage() {
           )}
         </div>
         <p className="mt-10 px-4 text-center text-sm text-mk-dim">
-          Prices in Indian rupees, including GST. Your payment gateway&rsquo;s own processing fees
-          are separate.
+          Prices in Indian rupees, inclusive of all taxes. Your payment gateway&rsquo;s own
+          processing fees are separate.
         </p>
       </section>
       <section aria-labelledby="included-title" className={`${paper} pb-20 sm:pb-28`}>

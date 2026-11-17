@@ -77,7 +77,7 @@ export const GUIDES: Guide[] = [
       },
       {
         title: 'Save, then add images',
-        body: 'Click “Create product”. On the product’s page, use “Media” → “Upload image” (JPEG, PNG, WebP, GIF or AVIF up to 5 MB), add “Alt text” and click “Upload”.',
+        body: 'Click “Create product”. On the product’s page, use “Media” → “Upload image” (JPEG, PNG, WebP, GIF or AVIF up to 20 MB), add “Alt text” and click “Upload”.',
       },
       {
         title: 'Publish it',
@@ -98,23 +98,31 @@ export const GUIDES: Guide[] = [
   {
     slug: 'set-up-payments',
     title: 'Set up payments',
-    summary: 'Connect Stripe or Razorpay, or try the sandbox first.',
+    summary: 'Connect your own gateway, get paid through the platform, or offer cash on delivery.',
     icon: 'card',
     category: 'Getting started',
     intro:
-      'Your store needs a payouts account before it can take orders. Payments settle to your own account with the provider.',
+      'Your store needs a way to get paid before it can take orders: your own gateway keys, a payouts account through the platform, or cash on delivery.',
     where: 'Settings → Payments',
     steps: [
       {
         title: 'Open Payments',
-        body: 'Go to “Settings” and choose the “Payments” tab. The “Payouts account” card shows “Not set up” until you connect a provider.',
+        body: 'Go to “Settings” and choose the “Payments” tab.',
       },
       {
-        title: 'Connect Stripe',
+        title: 'Connect your own gateway',
+        body: 'Under “Ways to get paid”, pick Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal, paste the API keys from that gateway’s dashboard and click “Verify and connect”. Start in “Test (no real money)”, then switch to “Live”. Click “Use for checkout” on the gateway shoppers should pay with.',
+      },
+      {
+        title: 'Offer cash on delivery',
+        body: 'In the “Cash on delivery” card tick “Offer cash on delivery”. Optionally tick “Shoppers confirm by email (cancels fake orders after 12 hours)”, then click “Save”.',
+      },
+      {
+        title: 'Or get paid through the platform: Stripe',
         body: 'On the “Stripe” card, choose your “Country of your business” (this can’t be changed later) and click “Set up Stripe”. Complete Stripe’s onboarding and you come back to your admin.',
       },
       {
-        title: 'Or connect Razorpay',
+        title: 'Or through the platform: Razorpay',
         body: 'Stores selling in Indian rupees can use the “Razorpay” card instead: fill in your business, PAN and bank details and click “Set up Razorpay”.',
       },
       {
@@ -124,7 +132,7 @@ export const GUIDES: Guide[] = [
     ],
     tips: [
       'On a development platform the “Sandbox” card simulates onboarding and payments — no money moves.',
-      'The Payments tab also shows gross sales, platform fees, refunds and chargebacks for recent days.',
+      'The Payments tab also shows gross sales, platform fees (if your plan has any), refunds and chargebacks for recent days.',
     ],
     features: ['payments', 'checkout'],
   },
