@@ -1,6 +1,8 @@
 'use client';
 
 import {
+  type PremiumStyleId,
+  type PremiumTemplate,
   TEMPLATE_LOOKS,
   THEME_INDUSTRIES,
   THEME_PREVIEW_PARAM,
@@ -9,10 +11,21 @@ import {
   type ThemeTemplate,
 } from '@repo/contracts';
 import { TemplateScreen } from '@repo/template-preview';
-import { useActionState, useDeferredValue, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useActionState, useDeferredValue, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Alert, Badge, buttonClass, inputClass } from '@/components/ui';
 import type { FormState } from '@/lib/form';
+import { loadCheckout } from '@/lib/razorpay-checkout';
+import { buyTemplateAction, confirmTemplateAction } from './premium-actions';
+
+/** Whole-rupee premium price, e.g. "₹1,499". */
+const inr = (paise: number) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: paise % 100 === 0 ? 0 : 2,
+  }).format(paise / 100);
 
 type ApplyAction = (state: FormState, formData: FormData) => Promise<FormState>;
 
@@ -25,15 +38,21 @@ const chipClass = (active: boolean) =>
 
 /** Filterable template catalog. Filtering runs in the browser over the bundled catalog. */
 export function TemplateGallery({
+  storeId,
   currentTemplate,
   storefrontUrl,
   applyAction,
+  premium,
 }: {
+  storeId: string;
   currentTemplate: string;
   storefrontUrl: string;
   /** Present only for staff who can edit the theme. */
   applyAction?: ApplyAction;
+  /** Premium styles with whether this store owns them (null when unavailable). */
+  premium: PremiumTemplate[] | null;
 }) {
+  const owned = new Set<string>(premium?.filter((p) => p.owned).map((p) => p.styleId) ?? []);
   const [industry, setIndustry] = useState('all');
   const [look, setLook] = useState('all');
   const [style, setStyle] = useState('all');
@@ -192,6 +211,8 @@ export function TemplateGallery({
               current={template.id === currentTemplate}
               previewHref={previewUrl(storefrontUrl, template.id)}
               formAction={applyAction ? formAction : undefined}
+              storeId={storeId}
+              owned={template.premium === null || owned.has(template.style)}
             />
           ))}
         </ul>
@@ -230,11 +251,16 @@ function TemplateCard({
   current,
   previewHref,
   formAction,
+  storeId,
+  owned,
 }: {
   template: ThemeTemplate;
   current: boolean;
   previewHref: string;
   formAction?: (formData: FormData) => void;
+  storeId: string;
+  /** Free, or a premium style this store has bought. */
+  owned: boolean;
 }) {
   return (
     <li
@@ -255,7 +281,13 @@ function TemplateCard({
       <div className="flex flex-1 flex-col gap-1 px-4 pt-3 pb-4">
         <div className="flex items-center justify-between gap-2">
           <h3 className="truncate text-[15px] font-semibold text-slate-900">{template.name}</h3>
-          {current ? <Badge tone="indigo">Current</Badge> : null}
+          {current ? (
+            <Badge tone="indigo">Current</Badge>
+          ) : template.premium ? (
+            <Badge tone={owned ? 'green' : 'yellow'}>
+              {owned ? 'Owned' : `Premium · ${inr(template.premium.price)}`}
+            </Badge>
+          ) : null}
         </div>
         <p className="text-xs font-medium text-slate-500">
           {template.industryLabel} · {template.styleLabel}
@@ -270,7 +302,14 @@ function TemplateCard({
           >
             Preview<span className="sr-only"> {template.name}</span>
           </a>
-          {formAction ? (
+          {formAction && !owned && template.premium ? (
+            <BuyButton
+              storeId={storeId}
+              styleId={template.style as PremiumStyleId}
+              label={template.styleLabel}
+              price={template.premium.price}
+            />
+          ) : formAction ? (
             <form action={formAction} className="flex flex-1">
               <input type="hidden" name="templateId" value={template.id} />
               <ApplyButton name={template.name} current={current} />
@@ -279,6 +318,91 @@ function TemplateCard({
         </div>
       </div>
     </li>
+  );
+}
+
+interface OrderSuccess {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+}
+
+/** One-time purchase of a premium style through Razorpay Checkout (instant in development). */
+function BuyButton({
+  storeId,
+  styleId,
+  label,
+  price,
+}: {
+  storeId: string;
+  styleId: PremiumStyleId;
+  label: string;
+  price: number;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function buy() {
+    setError(null);
+    startTransition(async () => {
+      const result = await buyTemplateAction(storeId, styleId);
+      if ('error' in result) return setError(result.error);
+      if ('owned' in result) return router.refresh();
+      const { checkout } = result;
+      try {
+        await loadCheckout();
+        const Razorpay = window.Razorpay;
+        if (!Razorpay) throw new Error('Checkout unavailable');
+        const instance = new Razorpay({
+          key: checkout.keyId,
+          order_id: checkout.orderId,
+          amount: checkout.amount,
+          currency: checkout.currency,
+          name: checkout.name,
+          description: checkout.description,
+          prefill: { email: checkout.email },
+          theme: { color: '#111111' },
+          handler: (response: OrderSuccess) => {
+            startTransition(async () => {
+              const confirmed = await confirmTemplateAction(storeId, {
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+              });
+              if (confirmed.error) setError(confirmed.error);
+              router.refresh();
+            });
+          },
+        });
+        instance.on('payment.failed', (response) => {
+          setError(response.error?.description ?? 'The payment did not go through.');
+        });
+        instance.open();
+      } catch {
+        setError('Could not open the payment window. Please try again.');
+      }
+    });
+  }
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <button
+        type="button"
+        onClick={buy}
+        disabled={pending}
+        aria-disabled={pending}
+        className={`${buttonClass('primary', 'sm')} w-full`}
+      >
+        {pending ? 'Opening…' : `Buy ${inr(price)}`}
+        <span className="sr-only"> the {label} premium template</span>
+      </button>
+      {error ? (
+        <p role="alert" className="mt-1 text-xs text-red-600">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

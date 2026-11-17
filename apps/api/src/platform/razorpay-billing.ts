@@ -78,6 +78,15 @@ export function subscriptionNotes(sub: RazorpaySubscription): Partial<Subscripti
  * Without one, the intro months run on their own short subscription and the merchant authorises
  * the regular one when they end (UPI mandates cannot be moved to a dearer plan through the API).
  */
+export interface RazorpayOrder {
+  id: string;
+  amount: number;
+  currency: string;
+  /** "created", "attempted" or "paid". */
+  status: string;
+  notes: Record<string, string> | unknown[];
+}
+
 export class RazorpayBilling {
   private readonly client: RazorpayClient;
 
@@ -158,6 +167,33 @@ export class RazorpayBilling {
   verifyCheckout(paymentId: string, subscriptionId: string, signature: string): boolean {
     const expected = Buffer.from(
       createHmac('sha256', this.keySecret).update(`${paymentId}|${subscriptionId}`).digest('hex'),
+      'hex',
+    );
+    const given = Buffer.from(signature, 'hex');
+    return expected.length === given.length && timingSafeEqual(expected, given);
+  }
+
+  /** A one-time order (premium templates). Amounts are in paise. */
+  createOrder(input: {
+    amount: number;
+    currency: string;
+    receipt: string;
+    notes: Record<string, string>;
+  }): Promise<RazorpayOrder> {
+    return this.client.request<RazorpayOrder>('POST', '/v1/orders', input);
+  }
+
+  fetchOrder(id: string): Promise<RazorpayOrder> {
+    return this.client.request<RazorpayOrder>('GET', `/v1/orders/${encodeURIComponent(id)}`);
+  }
+
+  /**
+   * Checkout's success callback for an order: HMAC-SHA256 of `order_id|payment_id` with the key
+   * secret. The order id must be the one our server created.
+   */
+  verifyOrderPayment(orderId: string, paymentId: string, signature: string): boolean {
+    const expected = Buffer.from(
+      createHmac('sha256', this.keySecret).update(`${orderId}|${paymentId}`).digest('hex'),
       'hex',
     );
     const given = Buffer.from(signature, 'hex');

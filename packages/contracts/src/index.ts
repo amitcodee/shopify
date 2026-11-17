@@ -34,3 +34,4 @@ export * from './apps.js';
 export * from './theme-editor.js';
 export * from './customizations.js';
 export * from './suppliers.js';
+export * from './template-purchases.js';

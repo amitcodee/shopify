@@ -1280,6 +1280,562 @@ export function TemplateThumb({
         </div>
       );
       break;
+    case 'atelier': {
+      const rule = <span style={{ flex: 1, height: 1, background: tint(s.textColor, 25) }} />;
+      const words = template.sample.heroTitle.split(' ');
+      hero = (
+        <div>
+          <div
+            className="flex items-center"
+            style={{ ...eyebrowStyle, color: muted, gap: '0.8em' }}
+          >
+            <span>Collection</span>
+            {rule}
+            {phone ? null : <span>{template.name}</span>}
+            <span>Lookbook</span>
+          </div>
+          <div
+            className={phone ? 'grid' : 'grid grid-cols-[1.3fr_1fr] items-center'}
+            style={{ gap: '1.2em', marginTop: '0.9em' }}
+          >
+            <div>
+              <p
+                style={{
+                  ...heading,
+                  color: s.brandColor,
+                  fontSize: phone ? '2em' : '2.9em',
+                  lineHeight: 0.9,
+                  fontWeight: 400,
+                  margin: 0,
+                  textWrap: 'balance',
+                }}
+              >
+                {words.length > 1 ? `${words.slice(0, -1).join(' ')} ` : ''}
+                <em>{words[words.length - 1]}</em>
+              </p>
+              <div className="flex" style={{ gap: '0.8em', marginTop: '0.9em' }}>
+                <span
+                  style={{
+                    flex: 'none',
+                    width: '1.6em',
+                    height: 1,
+                    marginTop: '0.75em',
+                    background: s.accentColor,
+                  }}
+                />
+                <div>
+                  {subtitle(s.textColor, 'left', {
+                    fontFamily: FONTS[s.headingFont],
+                    fontStyle: 'italic',
+                    fontSize: '0.66em',
+                    margin: 0,
+                  })}
+                  {cta()}
+                </div>
+              </div>
+            </div>
+            <div className="relative" style={{ padding: '0 0 1.8em 1.4em' }}>
+              <div
+                className="absolute overflow-hidden"
+                style={{ top: '-0.7em', right: 0, width: '38%', aspectRatio: '1' }}
+              >
+                <Img src={extra(2)} square priority={priority} />
+              </div>
+              {photo(hero1, {
+                aspectRatio: '4 / 5',
+                marginRight: '14%',
+                zIndex: 1,
+                maxHeight: phone ? '12em' : undefined,
+              })}
+              <div
+                className="absolute overflow-hidden"
+                style={{
+                  left: 0,
+                  bottom: 0,
+                  zIndex: 2,
+                  width: '44%',
+                  aspectRatio: '3 / 4',
+                  border: `0.3em solid ${s.backgroundColor}`,
+                  boxShadow: '0 0.9em 1.8em -0.8em rgb(0 0 0 / 0.45)',
+                }}
+              >
+                <Img src={extra(1)} square priority={priority} />
+              </div>
+            </div>
+          </div>
+          <div
+            className={`grid ${phone ? 'grid-cols-2' : 'grid-cols-3'}`}
+            style={{ gap: '0 1em', marginTop: '1.1em' }}
+          >
+            {categories.slice(0, phone ? 2 : 3).map((c, i) => (
+              <p
+                key={c}
+                className="flex items-baseline"
+                style={{
+                  borderTop: `1px solid ${tint(s.textColor, 30)}`,
+                  gap: '0.5em',
+                  margin: 0,
+                  padding: '0.5em 0',
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: FONTS[s.headingFont],
+                    fontStyle: 'italic',
+                    fontSize: '1em',
+                    color: tint(s.textColor, 45),
+                  }}
+                >
+                  0{i + 1}
+                </span>
+                <span className="truncate" style={{ fontSize: '0.52em', fontWeight: 550 }}>
+                  {c}
+                </span>
+              </p>
+            ))}
+          </div>
+        </div>
+      );
+      break;
+    }
+    case 'gallery': {
+      const wallLabel = (
+        <div
+          style={{
+            background: mix('#ffffff', 55, s.backgroundColor),
+            boxShadow: '0 0.6em 1.4em -0.9em rgb(0 0 0 / 0.4)',
+            border: `1px solid ${tint(s.textColor, 8)}`,
+            padding: '0.7em',
+            fontSize: '0.5em',
+            lineHeight: 1.45,
+            color: muted,
+          }}
+        >
+          <span style={{ display: 'block', fontWeight: 700, color: s.textColor }}>
+            Featured piece
+          </span>
+          <span style={{ display: 'block' }}>{template.name}</span>
+          <span style={{ display: 'block', marginTop: '0.5em', textDecoration: 'underline' }}>
+            View the collection
+          </span>
+        </div>
+      );
+      hero = (
+        <div>
+          <div
+            className={phone ? 'grid' : 'grid grid-cols-[1fr_1.55fr] items-center'}
+            style={{ gap: '1.6em' }}
+          >
+            <div>
+              {eyebrow('Now on view', muted)}
+              {title(s.brandColor, phone ? 1.5 : 1.85, { fontWeight: 400, marginTop: '0.5em' })}
+              <div
+                style={{ width: '1.6em', height: 1, background: s.textColor, marginTop: '0.9em' }}
+              />
+              {subtitle(muted)}
+              {cta()}
+            </div>
+            <div className="flex items-end" style={{ gap: '0.9em' }}>
+              <div
+                style={{
+                  flex: 1,
+                  maxWidth: phone ? '13em' : '12em',
+                  margin: '0 auto',
+                  background: s.textColor,
+                  padding: '0.3em',
+                  boxShadow: '0 1.6em 2.6em -1.4em rgb(0 0 0 / 0.55)',
+                }}
+              >
+                <div
+                  style={{
+                    background: mix('#ffffff', 55, s.backgroundColor),
+                    padding: '1.1em',
+                    boxShadow: 'inset 0 0.1em 0.3em rgb(0 0 0 / 0.18)',
+                  }}
+                >
+                  {photo(hero1, { aspectRatio: '4 / 5' })}
+                </div>
+              </div>
+              {phone ? null : (
+                <div style={{ width: '6.5em', marginBottom: '1em' }}>{wallLabel}</div>
+              )}
+            </div>
+          </div>
+          <div
+            className="flex items-baseline"
+            style={{
+              gap: '1.2em',
+              marginTop: '1.4em',
+              paddingTop: '0.7em',
+              borderTop: `1px solid ${tint(s.textColor, 14)}`,
+            }}
+          >
+            {eyebrow('Rooms', muted)}
+            {categories.slice(0, phone ? 2 : 3).map((c, i) => (
+              <span key={c} className="truncate" style={{ fontSize: '0.55em' }}>
+                <span style={{ color: muted, marginRight: '0.4em' }}>0{i + 1}</span>
+                {c}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+      break;
+    }
+    case 'cinema': {
+      const frames = [hero1, extra(1), extra(2), extra(3), extra(4), extra(1)];
+      const sprockets: CSSProperties = {
+        height: '0.3em',
+        background:
+          'repeating-linear-gradient(to right, transparent 0 0.3em, rgb(255 255 255 / 0.18) 0.3em 0.7em, transparent 0.7em 1em)',
+      };
+      hero = (
+        <div style={{ margin: `0 -${pad}em`, background: '#000', paddingTop: '0.9em' }}>
+          <div
+            className="relative flex overflow-hidden"
+            style={{
+              aspectRatio: phone ? undefined : '2.39 / 1',
+              minHeight: phone ? '14em' : '12em',
+              background: '#0b0b0e',
+            }}
+          >
+            <div style={fill}>
+              <Img src={hero1} priority={priority} />
+            </div>
+            <div
+              style={{
+                ...fill,
+                background:
+                  'linear-gradient(to top, rgb(0 0 0 / 0.92), rgb(0 0 0 / 0.35) 55%, rgb(0 0 0 / 0.5))',
+              }}
+            />
+            <div
+              style={{
+                ...fill,
+                background: 'radial-gradient(ellipse at center, transparent 45%, rgb(0 0 0 / 0.7))',
+              }}
+            />
+            <div
+              className="relative flex w-full flex-col"
+              style={{ padding: `0.9em ${pad + 0.3}em 1.1em` }}
+            >
+              <div
+                className="flex items-center justify-between"
+                style={{ ...eyebrowStyle, color: 'rgb(244 244 245 / 0.7)' }}
+              >
+                <span className="flex items-center" style={{ gap: '0.5em' }}>
+                  <span
+                    style={{
+                      width: '0.6em',
+                      height: '0.6em',
+                      borderRadius: 99,
+                      background: s.accentColor,
+                    }}
+                  />
+                  Now showing
+                </span>
+                <span>{template.name}</span>
+              </div>
+              <div style={{ marginTop: 'auto' }}>
+                {title('#f4f4f5', phone ? 1.8 : 2.6, { lineHeight: 0.9, fontWeight: 700 })}
+                <div
+                  className="flex items-end justify-between"
+                  style={{
+                    gap: '1em',
+                    marginTop: '0.7em',
+                    paddingTop: '0.6em',
+                    borderTop: '1px solid rgb(255 255 255 / 0.2)',
+                  }}
+                >
+                  {subtitle('#f4f4f5', 'left', { margin: 0 })}
+                  {phone ? null : cta('#ffffff', '#111111', '0')}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="overflow-hidden" style={{ padding: '0.45em 0' }}>
+            <div style={sprockets} />
+            <div className="flex" style={{ gap: '0.35em', padding: '0.35em 0' }}>
+              {frames.map((src, i) => (
+                <div
+                  key={i}
+                  className="relative shrink-0 overflow-hidden"
+                  style={{
+                    width: phone ? '5em' : '5.6em',
+                    aspectRatio: '16 / 10',
+                    borderRadius: r,
+                    opacity: 0.8,
+                  }}
+                >
+                  <Img src={src} square priority={priority} />
+                </div>
+              ))}
+            </div>
+            <div style={sprockets} />
+          </div>
+        </div>
+      );
+      break;
+    }
+    case 'magazine': {
+      const hairline = `1px solid ${tint(s.textColor, 22)}`;
+      const lines = (
+        <div>
+          {eyebrow('Inside', muted)}
+          <div style={{ marginTop: '0.4em', borderTop: hairline }}>
+            {categories.slice(0, 3).map((c, i) => (
+              <div key={c} style={{ borderBottom: hairline, padding: '0.45em 0' }}>
+                <p style={{ ...eyebrowStyle, color: s.accentColor }}>0{i + 1}</p>
+                <p
+                  className="truncate"
+                  style={{
+                    ...heading,
+                    textTransform: 'uppercase',
+                    fontSize: '0.8em',
+                    fontWeight: 600,
+                    margin: '0.15em 0 0',
+                  }}
+                >
+                  {c}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+      hero = (
+        <div>
+          <div
+            className="flex justify-between"
+            style={{
+              ...eyebrowStyle,
+              color: muted,
+              borderBottom: `1px solid ${s.textColor}`,
+              paddingBottom: '0.45em',
+            }}
+          >
+            <span>Issue N° 01</span>
+            <span>This month</span>
+          </div>
+          <p
+            className="truncate text-center"
+            style={{
+              ...heading,
+              textTransform: 'uppercase',
+              letterSpacing: '-0.03em',
+              color: s.brandColor,
+              fontSize: phone ? '2.6em' : '4.2em',
+              fontWeight: 700,
+              lineHeight: 0.85,
+              margin: '0.15em 0 0',
+            }}
+          >
+            {template.name}
+          </p>
+          <div
+            style={{
+              height: '0.25em',
+              borderTop: `1px solid ${s.textColor}`,
+              borderBottom: `1px solid ${s.textColor}`,
+              marginTop: '0.4em',
+            }}
+          />
+          <div
+            className={phone ? 'grid' : 'grid grid-cols-[1fr_1.45fr_1fr]'}
+            style={{ gap: '1em', marginTop: '0.8em' }}
+          >
+            {phone ? null : (
+              <div className="flex flex-col">
+                {eyebrow('Cover story', s.accentColor)}
+                {title(s.brandColor, 1.3, { fontWeight: 500 })}
+                {subtitle(s.textColor, 'left', {
+                  fontFamily: FONTS[s.headingFont],
+                  fontStyle: 'italic',
+                })}
+                <div style={{ marginTop: 'auto' }}>{cta()}</div>
+              </div>
+            )}
+            <div className="relative overflow-hidden" style={{ aspectRatio: '4 / 5' }}>
+              <div style={fill}>
+                <Img src={hero1} priority={priority} />
+              </div>
+              <span
+                className="absolute grid place-items-center text-center"
+                style={{
+                  top: '0.5em',
+                  left: '0.5em',
+                  width: '2.6em',
+                  height: '2.6em',
+                  borderRadius: 999,
+                  background: s.accentColor,
+                  color: onAccent,
+                  fontSize: '0.5em',
+                  fontWeight: 800,
+                  lineHeight: 1.1,
+                }}
+              >
+                N° 01
+              </span>
+              <span
+                className="absolute"
+                style={{
+                  right: '0.5em',
+                  bottom: '0.5em',
+                  width: '2.6em',
+                  height: '1.3em',
+                  border: '0.2em solid #fff',
+                  background:
+                    'repeating-linear-gradient(to right, #111 0 0.12em, #fff 0.12em 0.24em, #111 0.24em 0.3em, #fff 0.3em 0.45em)',
+                }}
+              />
+            </div>
+            {phone ? (
+              <div>
+                {title(s.brandColor, 1.4, { fontWeight: 500 })}
+                {cta()}
+              </div>
+            ) : (
+              lines
+            )}
+          </div>
+          <div
+            className="flex items-baseline"
+            style={{
+              gap: '1.2em',
+              marginTop: '1em',
+              paddingTop: '0.5em',
+              borderTop: `0.12em solid ${s.textColor}`,
+            }}
+          >
+            <span
+              style={{
+                ...heading,
+                textTransform: 'uppercase',
+                fontSize: '0.75em',
+                fontWeight: 600,
+              }}
+            >
+              Contents
+            </span>
+            {categories.slice(0, phone ? 2 : 3).map((c, i) => (
+              <span key={c} className="truncate" style={{ fontSize: '0.55em' }}>
+                <span style={{ color: s.accentColor, marginRight: '0.4em' }}>
+                  {String(i * 8 + 6).padStart(2, '0')}
+                </span>
+                {c}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+      break;
+    }
+    case 'studio': {
+      const stage = mix(s.accentColor, 14, s.backgroundColor);
+      hero = (
+        <div
+          className={`relative overflow-hidden ${phone ? 'grid' : 'grid grid-cols-[1fr_1.1fr] items-center'}`}
+          style={{
+            gap: '1.2em',
+            padding: '1.6em',
+            borderRadius: '1.6em',
+            background: `radial-gradient(55% 55% at 68% 38%, rgb(255 255 255 / 0.7), transparent 72%), linear-gradient(to top, ${mix(s.accentColor, 22, s.backgroundColor)}, ${stage} 45%)`,
+          }}
+        >
+          <div>
+            {eyebrow(template.name, s.accentColor)}
+            {title(s.brandColor, phone ? 1.6 : 2.1, { fontWeight: 700 })}
+            {subtitle(s.textColor)}
+            <div className="flex flex-wrap" style={{ gap: '0.35em', marginTop: '0.9em' }}>
+              {categories.slice(0, 3).map((c) => (
+                <span
+                  key={c}
+                  className="inline-flex items-center"
+                  style={{
+                    gap: '0.4em',
+                    padding: '0.4em 0.8em',
+                    borderRadius: 999,
+                    background: tint(s.backgroundColor, 80),
+                    border: `1px solid ${tint(s.textColor, 12)}`,
+                    fontSize: '0.5em',
+                    fontWeight: 600,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '0.5em',
+                      height: '0.5em',
+                      borderRadius: 99,
+                      background: s.accentColor,
+                    }}
+                  />
+                  {c}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="relative mx-auto" style={{ width: phone ? '80%' : '100%' }}>
+            {photo(hero1, {
+              aspectRatio: '1',
+              borderRadius: '1.3em',
+              boxShadow: '0 1.6em 2.4em -1.4em rgb(0 0 0 / 0.45)',
+            })}
+            <div
+              style={{
+                height: '0.8em',
+                width: '80%',
+                margin: '-0.2em auto 0',
+                background: 'radial-gradient(closest-side, rgb(0 0 0 / 0.28), transparent)',
+              }}
+            />
+            <div
+              className="relative overflow-hidden"
+              style={{
+                height: '2em',
+                marginTop: '-0.3em',
+                opacity: 0.25,
+                borderRadius: '1.3em 1.3em 0 0',
+                maskImage: 'linear-gradient(to bottom, #000, transparent 85%)',
+              }}
+            >
+              <div
+                className="absolute"
+                style={{ left: 0, right: 0, top: 0, aspectRatio: '1', transform: 'scaleY(-1)' }}
+              >
+                <Img src={hero1} priority={priority} />
+              </div>
+            </div>
+            <div
+              className="absolute flex items-center"
+              style={{
+                right: phone ? '-0.4em' : '-0.8em',
+                bottom: '2.6em',
+                gap: '0.5em',
+                padding: '0.5em',
+                borderRadius: '0.8em',
+                background: s.backgroundColor,
+                boxShadow: '0 0.9em 1.8em -0.9em rgb(0 0 0 / 0.4)',
+                border: `1px solid ${tint(s.textColor, 8)}`,
+              }}
+            >
+              <span
+                className="block overflow-hidden"
+                style={{ width: '2.2em', height: '2.2em', borderRadius: '0.5em', flex: 'none' }}
+              >
+                <Img src={extra(1)} square priority={priority} />
+              </span>
+              <div>
+                <p style={{ ...eyebrowStyle, fontSize: '0.42em', color: s.accentColor }}>
+                  In the spotlight
+                </p>
+                {cta(undefined, undefined, '0.35em')}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+      break;
+    }
     default:
       // minimal: one large photo with the headline set into its lower corner.
       hero = (

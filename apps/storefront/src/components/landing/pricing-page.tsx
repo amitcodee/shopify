@@ -1,6 +1,8 @@
+/* eslint-disable @next/next/no-html-link-for-pages -- the root layout picks the marketing page from the request path, so links between marketing pages must be full page loads, not client navigations. */
 import { Faq } from './faq';
 import {
   buttonPrimary,
+  buttonSecondary,
   CheckList,
   container,
   CtaBand,
@@ -11,7 +13,9 @@ import {
   PhotoPanel,
   SectionHeading,
 } from './page-parts';
+import { FREE_TEMPLATE_COUNT, PREMIUM_FROM_PRICE, PREMIUM_STYLES } from '@repo/contracts';
 import { fetchPublicPlans, planTerms, type PublicPlan, termsSentence } from './public-api';
+import { inr } from './template-card';
 import { signupUrl } from './urls';
 
 const money = (minor: number, currency: string) =>
@@ -41,7 +45,7 @@ const price = (p: PublicPlan) =>
 
 /** Features with no plan limits: every plan gets them. */
 const INCLUDED = [
-  'Online store with 288 templates',
+  'Online store with 288 free templates',
   'Custom domains with automatic HTTPS',
   'Multi-currency selling',
   'Discount codes and gift cards',
@@ -327,6 +331,20 @@ export async function PricingPage() {
           Prices in Indian rupees, inclusive of all taxes. Your payment gateway&rsquo;s own
           processing fees are separate.
         </p>
+        <div className="mx-auto mt-8 flex max-w-3xl flex-col items-start gap-4 rounded-xl bg-mk-surface px-6 py-5 ring-1 ring-mk-line sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold text-mk-fg">
+              Optional: premium templates from {inr(PREMIUM_FROM_PRICE)}, one-time
+            </p>
+            <p className="mt-1 text-sm text-mk-muted">
+              {PREMIUM_STYLES.map((s) => s.label).join(', ')}. Buy once per store and use the design
+              for every industry. The {FREE_TEMPLATE_COUNT} other templates are free.
+            </p>
+          </div>
+          <a href="/templates" className={`${buttonSecondary} shrink-0`}>
+            See premium designs
+          </a>
+        </div>
       </section>
       <section aria-labelledby="included-title" className={`${paper} pb-20 sm:pb-28`}>
         <div className={`${container} grid items-center gap-14 lg:grid-cols-2 lg:gap-20`}>

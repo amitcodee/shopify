@@ -33,6 +33,7 @@ import {
   type RazorpaySubscription,
   subscriptionNotes,
 } from './razorpay-billing.js';
+import { TemplatePurchasesService } from './template-purchases.js';
 
 /** Regular subscriptions run for 10 years of monthly charges (Razorpay needs a count). */
 const REGULAR_TOTAL_COUNT = 120;
@@ -56,6 +57,7 @@ export class BillingService implements OnApplicationBootstrap {
     @Inject(BILLING_PROVIDER) private readonly provider: BillingProvider,
     @Inject(PLATFORM_DB) private readonly platformDb: PrismaClient,
     @Inject(ENV) private readonly env: Env,
+    private readonly templates: TemplatePurchasesService,
     @Optional() @Inject(RAZORPAY_BILLING) private readonly razorpay: RazorpayBilling | null = null,
   ) {}
 
@@ -913,8 +915,20 @@ export class BillingService implements OnApplicationBootstrap {
     }
     const event = JSON.parse(rawBody.toString('utf8')) as {
       event?: string;
-      payload?: { subscription?: { entity?: { id?: string } } };
+      payload?: {
+        subscription?: { entity?: { id?: string } };
+        order?: { entity?: { id?: string } };
+        payment?: { entity?: { id?: string } };
+      };
     };
+    // One-time premium template orders.
+    if (event.event === 'order.paid') {
+      const orderId = event.payload?.order?.entity?.id;
+      if (orderId) {
+        await this.templates.handleOrderPaid(orderId, event.payload?.payment?.entity?.id);
+      }
+      return { received: true };
+    }
     const eventIdHeader = headers['x-razorpay-event-id'];
     const eventId = Array.isArray(eventIdHeader) ? eventIdHeader[0] : eventIdHeader;
     const subscriptionId = event.payload?.subscription?.entity?.id;

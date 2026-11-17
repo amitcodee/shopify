@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-html-link-for-pages -- the root layout picks the marketing page from the request path, so links between marketing pages must be full page loads, not client navigations. */
-import { THEME_INDUSTRIES, THEME_TEMPLATES } from '@repo/contracts';
+import { FREE_TEMPLATE_COUNT, THEME_INDUSTRIES } from '@repo/contracts';
 import { Icon, type IconName } from './icons';
 import { LEGAL_DOCS, LEGAL_UPDATED, type LegalBlock, type LegalDoc } from './legal-data';
 import {
@@ -371,7 +371,7 @@ export function AboutPage() {
         <div className={container}>
           <dl className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              [String(THEME_TEMPLATES.length), 'store templates'],
+              [String(FREE_TEMPLATE_COUNT), 'free store templates'],
               [String(THEME_INDUSTRIES.length), 'industries covered'],
               ['2', 'payment providers: Stripe and Razorpay'],
               ['0', 'card numbers stored on our servers'],

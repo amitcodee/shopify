@@ -1,4 +1,10 @@
-import { findThemeTemplate, parseTheme, type StoreOverview, type Theme } from '@repo/contracts';
+import {
+  findThemeTemplate,
+  type PremiumTemplate,
+  parseTheme,
+  type StoreOverview,
+  type Theme,
+} from '@repo/contracts';
 import Link from 'next/link';
 import { Icon } from '@/components/icons';
 import { buttonClass, Card } from '@/components/ui';
@@ -21,10 +27,11 @@ export default async function ThemePage({
 }) {
   const [{ storeId }, { tab: rawTab }] = await Promise.all([params, searchParams]);
   const tab: Tab = rawTab === 'customize' ? 'customize' : 'templates';
-  const [store, saved, overview] = await Promise.all([
+  const [store, saved, overview, premium] = await Promise.all([
     getStore(storeId),
     api<Theme>(`/admin/stores/${storeId}/theme`),
     api<StoreOverview[]>('/admin/stores/overview'),
+    api<PremiumTemplate[]>(`/admin/stores/${storeId}/premium-templates`).catch(() => null),
   ]);
   // Fills defaults for any field the stored theme predates, so every control has a value.
   const theme = parseTheme(saved.preset, saved.settings);
@@ -106,9 +113,11 @@ export default async function ThemePage({
       {tab === 'templates' ? (
         <Card
           title="Template store"
-          description="Pick a starting design for your industry. Applying a template changes colors, fonts and layout; your homepage text stays."
+          description="Pick a starting design for your industry. Applying a template changes colors, fonts and layout; your homepage text stays. Premium designs are a one-time purchase per store; preview any of them free."
         >
           <TemplateGallery
+            storeId={storeId}
+            premium={premium}
             currentTemplate={s.template}
             storefrontUrl={storefrontUrl}
             applyAction={canEdit ? applyTemplateAction.bind(null, storeId) : undefined}

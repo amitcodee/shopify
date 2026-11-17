@@ -39,6 +39,7 @@ import { ENV, type Env } from '../config/env.js';
 import { TenantDb } from '../database/database.module.js';
 import { StoreResolver } from '../storefront/store-resolver.js';
 import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
+import { TemplatePurchasesService } from '../platform/template-purchases.js';
 import { THEME_AI_CLIENT, type ThemeAiClient } from './theme-ai.js';
 
 export const PREVIEW_PURPOSE = 'theme-preview';
@@ -216,7 +217,10 @@ type AiBody = z.output<typeof themeAiInputSchema>;
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId')
 export class ThemeEditorController {
-  constructor(private readonly editor: ThemeEditorService) {}
+  constructor(
+    private readonly editor: ThemeEditorService,
+    private readonly templates: TemplatePurchasesService,
+  ) {}
 
   @Get('theme/draft')
   @RequirePermission('settings:read')
@@ -244,11 +248,13 @@ export class ThemeEditorController {
   @Post('theme/draft/publish')
   @RequirePermission('themes:write')
   @HttpCode(200)
-  publish(
+  async publish(
     @CurrentStore() store: StoreContext,
     @CurrentUser() user: AuthUser,
     @ReqMeta() meta: RequestMeta,
   ): Promise<Theme> {
+    const draft = await this.editor.getDraft(store.id);
+    if (draft) await this.templates.assertCanApply(store.id, draft.settings.template);
     return this.editor.publishDraft(store.id, user, meta);
   }
 

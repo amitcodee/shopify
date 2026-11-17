@@ -34,7 +34,7 @@ interface NavCard {
 const WHY_US: NavCard[] = [
   {
     title: 'Templates for every industry',
-    body: '288 designs for 12 industries. Pick one when you sign up and open your store the same day.',
+    body: '288 free designs for 12 industries, plus premium styles. Pick one when you sign up and open your store the same day.',
     href: '/templates',
     icon: 'rocket',
     photo: 'boutique-interior',

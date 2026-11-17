@@ -3,6 +3,8 @@
 import {
   findThemeTemplate,
   SUPPORTED_CURRENCIES,
+  FREE_TEMPLATE_COUNT,
+  PREMIUM_STYLES,
   THEME_INDUSTRIES,
   THEME_STYLES,
   THEME_TEMPLATES,
@@ -106,7 +108,7 @@ function Hero({ terms }: { terms: PlanTerms | null }) {
           </span>
         </h1>
         <p className="mt-6 max-w-xl text-lg leading-[1.45] sm:text-[1.375rem] motion-safe:animate-[cp-rise_0.9s_cubic-bezier(0.2,0.7,0.2,1)_both] motion-safe:[animation-delay:120ms]">
-          {THEME_TEMPLATES.length} templates, payments through Razorpay, PayU, PhonePe, Cashfree,
+          {FREE_TEMPLATE_COUNT} free templates, payments through Razorpay, PayU, PhonePe, Cashfree,
           Stripe or cash on delivery, and one admin for your orders, stock and customers.
         </p>
         <div className="mt-9 flex flex-wrap gap-4 motion-safe:animate-[cp-rise_0.9s_cubic-bezier(0.2,0.7,0.2,1)_both] motion-safe:[animation-delay:240ms]">
@@ -205,7 +207,8 @@ function StoreStage() {
       <div className={wrap}>
         <StoreTabs tabs={tabs} />
         <p className="mt-10 text-lg text-mk-muted">
-          {THEME_STYLES.length} design styles across {THEME_INDUSTRIES.length} industries.{' '}
+          {THEME_STYLES.length - PREMIUM_STYLES.length} free design styles and{' '}
+          {PREMIUM_STYLES.length} premium ones, across {THEME_INDUSTRIES.length} industries.{' '}
           <a href="/templates" className={inlineLink}>
             See all {THEME_TEMPLATES.length} templates
           </a>

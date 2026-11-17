@@ -10,6 +10,7 @@ import { BillingService } from './billing.service.js';
 import { PlatformSettingsService } from './platform-settings.service.js';
 import { PlanLimits, PlansService } from './plans.service.js';
 import { RAZORPAY_BILLING, RazorpayBilling } from './razorpay-billing.js';
+import { TemplatePurchasesService } from './template-purchases.js';
 
 /** Plans, limits, billing and platform settings — used across catalog, staff, checkout and admin. */
 @Global()
@@ -19,6 +20,7 @@ import { RAZORPAY_BILLING, RazorpayBilling } from './razorpay-billing.js';
     PlanLimits,
     BillingService,
     PlatformSettingsService,
+    TemplatePurchasesService,
     {
       provide: BILLING_PROVIDER,
       inject: [ENV],
@@ -43,6 +45,12 @@ import { RAZORPAY_BILLING, RazorpayBilling } from './razorpay-billing.js';
           : null,
     },
   ],
-  exports: [PlansService, PlanLimits, BillingService, PlatformSettingsService],
+  exports: [
+    PlansService,
+    PlanLimits,
+    BillingService,
+    PlatformSettingsService,
+    TemplatePurchasesService,
+  ],
 })
 export class PlatformCoreModule {}

@@ -594,6 +594,8 @@ interface Style {
   headingFont?: ThemeFont;
   /** Light text on a near-black page. */
   dark?: boolean;
+  /** A paid style: one-time price in paise (INR), bought once per store. */
+  premium?: { price: number };
   tokens: Readonly<StyleTokens>;
 }
 
@@ -1046,6 +1048,112 @@ export const THEME_STYLES = [
       headingCase: 'normal',
     },
   },
+  {
+    id: 'atelier',
+    label: 'Atelier',
+    description:
+      'A couture lookbook: oversized serif headline, a layered photo collage and numbered collections',
+    preset: 'editorial',
+    palette: 1,
+    headingFont: 'serif',
+    premium: { price: 149_900 },
+    tokens: {
+      headerStyle: 'centered',
+      cardStyle: 'plain',
+      radius: 'none',
+      buttonStyle: 'outline',
+      imageRatio: 'portrait',
+      gridColumns: 3,
+      density: 'spacious',
+      footerStyle: 'columns',
+      headingCase: 'normal',
+    },
+  },
+  {
+    id: 'gallery',
+    label: 'Gallery',
+    description:
+      'A white-wall gallery: one framed hero piece with a museum caption and generous space',
+    preset: 'minimal',
+    palette: 0,
+    headingFont: 'humanist',
+    premium: { price: 99_900 },
+    tokens: {
+      headerStyle: 'inline',
+      cardStyle: 'framed',
+      radius: 'none',
+      buttonStyle: 'solid',
+      imageRatio: 'portrait',
+      gridColumns: 3,
+      density: 'spacious',
+      footerStyle: 'simple',
+      headingCase: 'normal',
+    },
+  },
+  {
+    id: 'cinema',
+    label: 'Cinema',
+    description:
+      'A widescreen, letterboxed hero with condensed titles and a scrolling product reel',
+    preset: 'fullbleed',
+    palette: 2,
+    headingFont: 'condensed',
+    dark: true,
+    premium: { price: 199_900 },
+    tokens: {
+      headerStyle: 'inline',
+      cardStyle: 'overlay',
+      radius: 'small',
+      buttonStyle: 'solid',
+      imageRatio: 'landscape',
+      gridColumns: 3,
+      density: 'comfortable',
+      footerStyle: 'dark',
+      headingCase: 'uppercase',
+    },
+  },
+  {
+    id: 'magazine',
+    label: 'Magazine',
+    description:
+      'A magazine cover: masthead, issue number and cover lines around one big photo, with a contents strip',
+    preset: 'editorial',
+    palette: 2,
+    headingFont: 'serif',
+    premium: { price: 249_900 },
+    tokens: {
+      headerStyle: 'centered',
+      cardStyle: 'plain',
+      radius: 'none',
+      buttonStyle: 'solid',
+      imageRatio: 'portrait',
+      gridColumns: 4,
+      density: 'comfortable',
+      footerStyle: 'columns',
+      headingCase: 'uppercase',
+    },
+  },
+  {
+    id: 'studio',
+    label: 'Studio',
+    description:
+      'A product studio: one hero product on a colored stage with feature chips and a shoppable spotlight',
+    preset: 'split',
+    palette: 0,
+    headingFont: 'geometric',
+    premium: { price: 299_900 },
+    tokens: {
+      headerStyle: 'inline',
+      cardStyle: 'shadow',
+      radius: 'large',
+      buttonStyle: 'solid',
+      imageRatio: 'square',
+      gridColumns: 3,
+      density: 'spacious',
+      footerStyle: 'dark',
+      headingCase: 'normal',
+    },
+  },
 ] as const satisfies readonly Style[];
 
 export type ThemeStyleId = (typeof THEME_STYLES)[number]['id'];
@@ -1081,6 +1189,13 @@ export const TEMPLATE_LOOKS = [
     sample: 'home-showroom',
   },
   {
+    id: 'premium',
+    label: 'Premium',
+    description: 'Paid designs with richer layouts, bought once per store',
+    styles: ['gallery', 'atelier', 'cinema', 'magazine', 'studio'],
+    sample: 'fashion-atelier',
+  },
+  {
     id: 'dark',
     label: 'Dark & dramatic',
     description: 'High contrast with photos that glow',
@@ -1107,6 +1222,8 @@ export interface ThemeTemplate {
   settings: ThemeSettings;
   /** Placeholder headline and announcement for previews only. */
   sample: { heroTitle: string; announcement: string };
+  /** Paid templates only: one-time price in paise (INR) for the whole style, per store. */
+  premium: { price: number; currency: 'INR' } | null;
 }
 
 function buildTemplate(industry: Industry, style: Style, index: number): ThemeTemplate {
@@ -1126,7 +1243,9 @@ function buildTemplate(industry: Industry, style: Style, index: number): ThemeTe
   });
   return {
     id: `${industry.id}-${style.id}`,
-    name: industry.names[index] ?? `${industry.label} ${style.label}`,
+    name: style.premium
+      ? `${industry.label.split(' & ')[0]} ${style.label}`
+      : (industry.names[index] ?? `${industry.label} ${style.label}`),
     industry: industry.id as ThemeIndustryId,
     industryLabel: industry.label,
     style: style.id as ThemeStyleId,
@@ -1135,16 +1254,38 @@ function buildTemplate(industry: Industry, style: Style, index: number): ThemeTe
     preset: style.preset,
     settings,
     sample: industry.sample,
+    premium: style.premium ? { price: style.premium.price, currency: 'INR' } : null,
   };
 }
 
-/** Every template, grouped by industry then style (288 in all). */
+/** Every template, grouped by industry then style: free ones first within each industry. */
 export const THEME_TEMPLATES: readonly ThemeTemplate[] = THEME_INDUSTRIES.flatMap((industry) =>
   THEME_STYLES.map((style, index) => buildTemplate(industry, style, index)),
 );
 
 export function findThemeTemplate(id: string): ThemeTemplate | undefined {
   return THEME_TEMPLATES.find((t) => t.id === id);
+}
+
+/** Paid styles (each covers all industries), in catalog order. */
+export const PREMIUM_STYLES = THEME_STYLES.filter(
+  (s): s is Extract<(typeof THEME_STYLES)[number], { premium: { price: number } }> =>
+    'premium' in s,
+);
+export type PremiumStyleId = (typeof PREMIUM_STYLES)[number]['id'];
+
+/** The lowest premium price in paise, for "from ₹…" copy. */
+export const PREMIUM_FROM_PRICE = Math.min(...PREMIUM_STYLES.map((s) => s.premium.price));
+
+/** Templates any store can apply without buying anything. */
+export const FREE_TEMPLATE_COUNT = THEME_TEMPLATES.filter((t) => t.premium === null).length;
+/** Paid templates (premium styles x industries). */
+export const PREMIUM_TEMPLATE_COUNT = THEME_TEMPLATES.length - FREE_TEMPLATE_COUNT;
+
+/** The premium style a template id or `settings.template` value belongs to, if it is paid. */
+export function premiumStyleOf(templateId: string): PremiumStyleId | null {
+  const style = PREMIUM_STYLES.find((s) => templateId.endsWith(`-${s.id}`));
+  return style ? style.id : null;
 }
 
 /** The template a new store in this industry starts with. */

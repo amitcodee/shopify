@@ -1,4 +1,6 @@
+import { FREE_TEMPLATE_COUNT, PREMIUM_FROM_PRICE, PREMIUM_STYLES } from '@repo/contracts';
 import { fetchPlanTerms } from './public-api';
+import { inr } from './template-card';
 
 const FEES_ANSWER = '__FEES__';
 
@@ -13,7 +15,11 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'Do I need to know how to code?',
-    a: 'No. Pick one of 288 templates, then change colors, fonts, layout and wording from your admin. Templates are settings rather than code, so switching design never breaks your store.',
+    a: `No. Pick one of ${FREE_TEMPLATE_COUNT} free templates (or a premium design), then change colors, fonts, layout and wording from your admin. Templates are settings rather than code, so switching design never breaks your store.`,
+  },
+  {
+    q: 'Are there paid templates?',
+    a: `Yes, a few premium designs (${PREMIUM_STYLES.map((s) => s.label).join(', ')}), each bought once per store from ${inr(PREMIUM_FROM_PRICE)}, inclusive of all taxes. You can preview them free on your own products first. The other ${FREE_TEMPLATE_COUNT} templates are included in your plan.`,
   },
   {
     q: 'Can I switch templates later?',

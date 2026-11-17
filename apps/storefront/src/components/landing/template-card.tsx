@@ -111,6 +111,11 @@ export function TemplateCard({
           </H>
           <p className="mt-0.5 truncate text-sm text-mk-dim">
             {t.industryLabel.split(' & ')[0]} · {t.styleLabel}
+            {t.premium ? (
+              <span className="ml-2 rounded-full bg-mk-accent-soft px-2 py-0.5 text-xs font-semibold text-mk-accent">
+                Premium · {inr(t.premium.price)}
+              </span>
+            ) : null}
           </p>
         </div>
         <span className="mt-1.5 shrink-0">
@@ -120,3 +125,11 @@ export function TemplateCard({
     </div>
   );
 }
+
+/** One-time premium price, e.g. "₹1,499". */
+export const inr = (paise: number) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: paise % 100 === 0 ? 0 : 2,
+  }).format(paise / 100);

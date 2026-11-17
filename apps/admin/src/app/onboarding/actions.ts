@@ -31,10 +31,13 @@ export async function createStoreAction(_: FormState, formData: FormData): Promi
   // The template picked on the marketing site wins unless the merchant chose another industry.
   const industry = optionalString(formData, 'industry') ?? '';
   const picked = findThemeTemplate(optionalString(formData, 'template') ?? '');
-  const template = picked?.industry === industry ? picked : defaultTemplateFor(industry);
+  // A premium pick is bought from the template store; start on the free default meanwhile.
+  const premiumPick = picked?.industry === industry && picked.premium !== null;
+  const template =
+    picked?.industry === industry && !premiumPick ? picked : defaultTemplateFor(industry);
   if (template) await applyStarterTemplate(store.id, template);
   await clearStartTemplate();
-  redirect(`/s/${store.id}`);
+  redirect(premiumPick ? `/s/${store.id}/settings/theme?tab=templates` : `/s/${store.id}`);
 }
 
 /** Best effort: the store exists either way, and the merchant can pick a template later. */

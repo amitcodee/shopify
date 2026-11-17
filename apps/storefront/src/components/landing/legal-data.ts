@@ -434,6 +434,14 @@ const billing: LegalDoc = {
       ],
     },
     {
+      id: 'premium-templates',
+      title: 'Premium templates',
+      blocks: [
+        'Some storefront designs are premium. Each is a one-time purchase for one store, at the price shown in the admin and on the template’s page, inclusive of all taxes, charged through Razorpay. A purchase unlocks that design in every industry for that store for as long as the store exists; it does not transfer to other stores.',
+        'You can preview any premium design on your own products before buying. Because the design is available the moment payment succeeds, purchases are not refundable, except where the law requires it, where we charged you in error, or where the design does not work as described and we cannot fix it within 15 days of your report.',
+      ],
+    },
+    {
       id: 'trial',
       title: 'Free trial',
       blocks: [

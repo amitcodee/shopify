@@ -4,7 +4,10 @@ import { LogoMark } from './logo';
 
 /** True statements about the product (checked against the code); no figures we cannot back. */
 const POINTS = [
-  { title: '288 storefront templates', body: '24 design styles across 12 industries.' },
+  {
+    title: '288 free storefront templates',
+    body: '24 design styles across 12 industries, plus premium designs.',
+  },
   {
     title: 'Get paid your way',
     body: 'Your own Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal account, or cash on delivery.',

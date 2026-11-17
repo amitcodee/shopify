@@ -18,7 +18,10 @@ export class FakeRazorpay {
   readonly requests: RecordedRequest[] = [];
   /** Activation status returned when the product configuration is updated or fetched. */
   productStatus = 'under_review';
+  /** Status returned when an order is fetched ("created", "attempted" or "paid"). */
+  orderStatus = 'paid';
   private links = 0;
+  private orders = new Map<string, { amount: number; currency: string }>();
 
   readonly fetch: FetchLike = (url, init) => {
     const path = new URL(url).pathname;
@@ -69,6 +72,18 @@ export class FakeRazorpay {
         id: `plink_test${this.links}`,
         short_url: `https://rzp.io/i/test${this.links}`,
       });
+    }
+    if (method === 'POST' && path === '/v1/orders') {
+      const body = this.requests.at(-1)?.body ?? {};
+      const id = `order_test${this.orders.size + 1}`;
+      const order = { amount: Number(body.amount), currency: String(body.currency) };
+      this.orders.set(id, order);
+      return json(200, { id, ...order, status: 'created', notes: body.notes ?? [] });
+    }
+    const orderMatch = /^\/v1\/orders\/([^/]+)$/.exec(path);
+    if (method === 'GET' && orderMatch?.[1] && this.orders.has(orderMatch[1])) {
+      const order = this.orders.get(orderMatch[1]);
+      return json(200, { id: orderMatch[1], ...order, status: this.orderStatus, notes: [] });
     }
     if (method === 'POST' && /^\/v1\/payments\/[^/]+\/refund$/.test(path)) {
       return json(200, { id: 'rfnd_test1', status: 'processed' });

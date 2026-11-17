@@ -45,6 +45,7 @@ import { ApiZodBody, ZodPipe } from '../common/zod.js';
 import { TenantDb } from '../database/database.module.js';
 import { PaymentAccountsService } from '../payments/payment-accounts.service.js';
 import { StoreResolver } from '../storefront/store-resolver.js';
+import { TemplatePurchasesService } from '../platform/template-purchases.js';
 import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
 
 type ZoneInput = z.output<typeof shippingZoneInputSchema>;
@@ -458,7 +459,10 @@ export class CommerceSettingsService {
 @UseGuards(StoreAccessGuard)
 @Controller('admin/stores/:storeId')
 export class CommerceSettingsController {
-  constructor(private readonly settings: CommerceSettingsService) {}
+  constructor(
+    private readonly settings: CommerceSettingsService,
+    private readonly templates: TemplatePurchasesService,
+  ) {}
 
   @Get('theme')
   @RequirePermission('settings:read')
@@ -469,12 +473,13 @@ export class CommerceSettingsController {
   @Put('theme')
   @RequirePermission('themes:write')
   @ApiZodBody(themeInputSchema)
-  saveTheme(
+  async saveTheme(
     @CurrentStore() store: StoreContext,
     @CurrentUser() user: AuthUser,
     @Body(new ZodPipe(themeInputSchema)) body: Theme,
     @ReqMeta() meta: RequestMeta,
   ): Promise<Theme> {
+    await this.templates.assertCanApply(store.id, body.settings.template);
     return this.settings.saveTheme(store.id, body, user, meta);
   }
 

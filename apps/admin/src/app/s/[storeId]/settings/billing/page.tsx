@@ -1,4 +1,9 @@
-import { type BillingOverview, formatMoney, type Plan } from '@repo/contracts';
+import {
+  type BillingOverview,
+  formatMoney,
+  type Plan,
+  type TemplatePurchaseRecord,
+} from '@repo/contracts';
 import { Alert, Badge, Card, formatDateTime, Table, Td } from '@/components/ui';
 import { api } from '@/lib/api';
 import { getStore } from '@/lib/session';
@@ -132,9 +137,12 @@ export default async function BillingPage({
 }) {
   const { storeId } = await params;
   const { upgraded, locked } = await searchParams;
-  const [store, billing] = await Promise.all([
+  const [store, billing, templatePurchases] = await Promise.all([
     getStore(storeId),
     api<BillingOverview>(`/admin/stores/${storeId}/billing`),
+    api<TemplatePurchaseRecord[]>(`/admin/stores/${storeId}/premium-templates/purchases`).catch(
+      () => [] as TemplatePurchaseRecord[],
+    ),
   ]);
   const canManage = store.permissions.includes('billing:manage');
   const subscribed =
@@ -281,6 +289,26 @@ export default async function BillingPage({
           </Table>
         )}
       </Card>
+
+      {templatePurchases.length > 0 ? (
+        <Card
+          title="Premium templates"
+          description="One-time purchases. Each unlocks that design for every industry in this store."
+        >
+          <Table head={['Date', 'Template', 'Amount', 'Status']}>
+            {templatePurchases.map((p) => (
+              <tr key={p.id}>
+                <Td>{formatDateTime(p.paidAt ?? p.createdAt)}</Td>
+                <Td>{p.styleLabel}</Td>
+                <Td>{money(p.amount, p.currency)}</Td>
+                <Td>
+                  <Badge tone="green">paid</Badge>
+                </Td>
+              </tr>
+            ))}
+          </Table>
+        </Card>
+      ) : null}
 
       {canManage && subscribed && !billing.cancelAtPeriodEnd ? (
         <Card

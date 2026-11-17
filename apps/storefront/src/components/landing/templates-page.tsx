@@ -1,5 +1,7 @@
 import {
   findThemeTemplate,
+  FREE_TEMPLATE_COUNT,
+  PREMIUM_TEMPLATE_COUNT,
   TEMPLATE_LOOKS,
   THEME_INDUSTRIES,
   THEME_PREVIEW_PARAM,
@@ -213,9 +215,9 @@ export function TemplatesPage({
               Open with a store that already looks finished
             </h1>
             <p className={`mt-6 text-mk-muted ${lead}`}>
-              {THEME_TEMPLATES.length} storefront designs across {THEME_INDUSTRIES.length}{' '}
-              industries and {THEME_STYLES.length} styles. Preview any of them on a live demo store,
-              then make it yours.
+              {FREE_TEMPLATE_COUNT} free storefront designs across {THEME_INDUSTRIES.length}{' '}
+              industries, plus {PREMIUM_TEMPLATE_COUNT} premium ones you buy once per store. Preview
+              any of them on a live demo store, then make it yours.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <a href="#catalog" className={buttonLight}>

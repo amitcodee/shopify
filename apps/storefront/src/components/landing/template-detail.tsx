@@ -13,7 +13,7 @@ import {
   SectionHeading,
   textLink,
 } from './page-parts';
-import { TemplateCard } from './template-card';
+import { inr, TemplateCard } from './template-card';
 import { TemplateThumb } from '@repo/template-preview';
 import { demoStoreUrl, signupUrl } from './urls';
 
@@ -54,6 +54,9 @@ const LAYOUTS: Record<string, string> = {
   ticker: 'Ticker — a moving headline band over a big photo',
   pop: 'Pop — tilted photo cards and a round sticker',
   swiss: 'Swiss — a strict grid with numbered collections',
+  atelier: 'Atelier — oversized serif headline, a layered photo collage and numbered collections',
+  gallery: 'Gallery — one framed hero piece with a museum-style caption',
+  cinema: 'Cinema — a letterboxed widescreen hero and a scrolling film-strip reel',
 };
 
 const words = {
@@ -184,6 +187,16 @@ export function TemplateDetail({ template }: { template: ThemeTemplate }) {
             </div>
             <div>
               <p className={`text-mk-muted ${lead}`}>{template.description}</p>
+              {template.premium ? (
+                <p className="mt-4 text-sm leading-6 text-mk-fg-soft">
+                  <span className="font-semibold text-mk-fg">
+                    Premium · {inr(template.premium.price)} one-time
+                  </span>{' '}
+                  for your store, inclusive of all taxes. It unlocks this design for every industry.
+                  Start your free trial, preview it on your own products, and buy it from{' '}
+                  <span className="font-medium">Settings → Theme</span> when you are ready.
+                </p>
+              ) : null}
               <div className="mt-7 flex flex-wrap items-center gap-3">
                 <a href={`${signupUrl}?template=${template.id}`} className={buttonPrimary}>
                   Start with this template

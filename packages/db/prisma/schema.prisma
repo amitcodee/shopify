@@ -1307,6 +1307,29 @@ model PlatformInvoice {
   @@index([storeId, createdAt])
 }
 
+/// A premium template style bought by a store (one-time). Kept after the store is erased (tax
+/// records), so storeId is not a foreign key. Read and written through the platform client.
+model TemplatePurchase {
+  id                String    @id @default(uuid(7)) @db.Uuid
+  storeId           String    @db.Uuid
+  /// Premium style id (e.g. "atelier"); unlocks every industry template in that style.
+  styleId           String
+  styleLabel        String
+  amount            Int
+  currency          String    @default("INR") @db.Char(3)
+  /// "PENDING" (checkout opened), "PAID" or "FAILED".
+  status            String    @default("PENDING")
+  /// "razorpay", or "mock" in development.
+  provider          String
+  providerOrderId   String?   @unique
+  providerPaymentId String?
+  purchasedById     String?   @db.Uuid
+  createdAt         DateTime  @default(now())
+  paidAt            DateTime?
+
+  @@index([storeId, styleId])
+}
+
 /// Platform-wide switches (sign-ups open, support email, ...).
 model PlatformSetting {
   key         String   @id

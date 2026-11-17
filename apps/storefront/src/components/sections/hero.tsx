@@ -1170,6 +1170,518 @@ export function Hero(props: HeroProps) {
       );
     }
 
+    case 'atelier': {
+      // Couture lookbook: an oversized serif headline (last word in italics), a layered collage
+      // of up to three photos and a numbered index of the store's collections.
+      const year = new Date().getFullYear();
+      const words = title.trim().split(/\s+/);
+      const lead = words.length > 1 ? `${words.slice(0, -1).join(' ')} ` : '';
+      const last = words[words.length - 1] ?? title;
+      const [front, back] = extras;
+      const index = tiles.slice(0, 4);
+      return (
+        <section className="store-section">
+          <div className="eyebrow flex items-center gap-4 text-zinc-600">
+            <span>Collection {year}</span>
+            <span
+              aria-hidden="true"
+              className="h-px flex-1 bg-[color-mix(in_oklab,var(--store-text)_25%,transparent)]"
+            />
+            <span className="hidden sm:inline">{shopName}</span>
+            <span
+              aria-hidden="true"
+              className="hidden h-px w-10 bg-[color-mix(in_oklab,var(--store-text)_25%,transparent)] sm:block"
+            />
+            <span>Lookbook</span>
+          </div>
+          <div className="mt-8 grid gap-12 sm:mt-12 md:grid-cols-12 md:items-center md:gap-8 lg:gap-12">
+            <div className="md:col-span-7 motion-safe:transition motion-safe:duration-1000 motion-safe:ease-out motion-safe:starting:translate-y-4 motion-safe:starting:opacity-0">
+              <h1 className="t-display text-[clamp(3rem,10.5vw,8.75rem)] leading-[0.9] text-brand break-words">
+                {lead}
+                <em className="font-normal italic">{last}</em>
+              </h1>
+              <div className="mt-8 grid gap-6 sm:mt-10 sm:grid-cols-[auto_1fr] sm:gap-8">
+                <span
+                  aria-hidden="true"
+                  className="hidden h-px w-14 translate-y-3 bg-accent sm:block"
+                />
+                <div>
+                  <p className="max-w-md font-heading text-lg leading-relaxed text-zinc-700 italic sm:text-xl">
+                    {subtitle}
+                  </p>
+                  <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4">
+                    <Cta label={cta} className="" />
+                    <Link
+                      href="/collections"
+                      className="eyebrow text-ink underline decoration-[color-mix(in_oklab,var(--store-text)_35%,transparent)] underline-offset-[6px] hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--store-text)]"
+                    >
+                      The collections
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="relative mx-auto w-full max-w-md pb-14 pl-8 sm:pb-20 sm:pl-14 md:col-span-5 md:max-w-none">
+              {back ? (
+                <div className="absolute -top-8 right-0 hidden aspect-square w-[38%] overflow-hidden bg-surface sm:block">
+                  <Photo
+                    image={{ ...back, alt: '' }}
+                    eager={false}
+                    sizes="(min-width: 768px) 14vw, 30vw"
+                  />
+                </div>
+              ) : null}
+              <div className="relative z-10 aspect-[4/5] overflow-hidden bg-surface sm:mr-[14%] motion-safe:transition-[scale,opacity] motion-safe:duration-[1400ms] motion-safe:ease-out motion-safe:starting:scale-[1.03] motion-safe:starting:opacity-0">
+                {image ? (
+                  <Photo image={image} sizes="(min-width: 768px) 38vw, 90vw" />
+                ) : (
+                  <Wash className="opacity-60" />
+                )}
+              </div>
+              {front ? (
+                <div className="absolute bottom-0 left-0 z-20 aspect-[3/4] w-[44%] overflow-hidden border-[6px] border-[var(--store-bg)] bg-surface shadow-[0_30px_60px_-28px_rgb(0_0_0/0.45)] sm:border-8">
+                  <Photo
+                    image={{ ...front, alt: '' }}
+                    eager={false}
+                    sizes="(min-width: 768px) 17vw, 40vw"
+                  />
+                </div>
+              ) : null}
+              <p
+                aria-hidden="true"
+                className="eyebrow absolute top-0 left-0 text-zinc-500 [writing-mode:vertical-rl] rotate-180"
+              >
+                N° 01 — {shopName}
+              </p>
+            </div>
+          </div>
+          {index.length > 0 ? (
+            <nav aria-label="Collections" className="mt-14 sm:mt-20">
+              <ol
+                className={`grid grid-cols-2 gap-x-6 ${index.length >= 3 ? 'md:grid-cols-4' : ''}`}
+              >
+                {index.map((tile, i) => (
+                  <li
+                    key={tile.href}
+                    className="border-t border-[color-mix(in_oklab,var(--store-text)_30%,transparent)]"
+                  >
+                    <Link
+                      href={tile.href}
+                      className="group flex items-baseline gap-3 py-4 text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--store-text)] sm:py-5"
+                    >
+                      <span className="font-heading text-2xl text-zinc-400 tabular-nums italic sm:text-3xl">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span className="min-w-0 flex-1 text-sm font-medium break-words group-hover:underline group-hover:underline-offset-4">
+                        {tile.label}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="text-zinc-500 transition group-hover:translate-x-1 motion-reduce:transition-none"
+                      >
+                        →
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          ) : null}
+        </section>
+      );
+    }
+
+    case 'gallery': {
+      // A white wall with one framed piece: a dark moulding, a wide white mat, a wall label beside
+      // it and the collections listed as the rooms on view.
+      const rooms = tiles.slice(0, 4);
+      const year = new Date().getFullYear();
+      return (
+        <section className="store-section">
+          <div className="grid gap-12 md:grid-cols-12 md:items-center md:gap-10 lg:gap-16">
+            <div className="md:col-span-5 lg:col-span-4">
+              <p className="eyebrow text-zinc-500">Now on view</p>
+              <h1 className="t-display mt-5 text-[2.6rem] leading-[1.05] font-normal text-brand break-words sm:text-5xl lg:text-6xl">
+                {title}
+              </h1>
+              <div aria-hidden="true" className="mt-7 h-px w-12 bg-ink" />
+              <p className="mt-7 max-w-sm text-base leading-relaxed text-zinc-600 sm:text-lg">
+                {subtitle}
+              </p>
+              <Cta label={cta} className="mt-9" />
+            </div>
+            <figure className="relative md:col-span-7 lg:col-span-8 lg:grid lg:grid-cols-[minmax(0,1fr)_11rem] lg:items-end lg:gap-8">
+              <div
+                aria-hidden="true"
+                className="absolute inset-x-0 -top-12 bottom-1/3 bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--store-accent)_14%,transparent),transparent)]"
+              />
+              <div className="relative mx-auto w-full max-w-[34rem] bg-ink p-2 shadow-[0_50px_90px_-45px_rgb(0_0_0/0.55),0_3px_8px_rgb(0_0_0/0.12)] motion-safe:transition motion-safe:duration-1000 motion-safe:ease-out motion-safe:starting:translate-y-3 motion-safe:starting:opacity-0 sm:p-3">
+                <div className="bg-[color-mix(in_oklab,var(--store-bg)_55%,#ffffff)] p-5 shadow-[inset_0_2px_6px_rgb(0_0_0/0.18)] sm:p-9 lg:p-11">
+                  <div className="relative aspect-[4/5] overflow-hidden bg-surface shadow-[0_0_0_1px_rgb(0_0_0/0.08)]">
+                    {image ? (
+                      <Photo image={image} sizes="(min-width: 768px) 30rem, 80vw" />
+                    ) : (
+                      <Wash className="opacity-60" />
+                    )}
+                  </div>
+                </div>
+              </div>
+              <figcaption className="relative mx-auto mt-6 max-w-[34rem] border-l-2 border-accent pl-4 text-xs leading-relaxed text-zinc-600 sm:mt-8 lg:mx-0 lg:mt-0 lg:mb-10 lg:border-l-0 lg:bg-[color-mix(in_oklab,var(--store-bg)_55%,#ffffff)] lg:p-4 lg:shadow-[0_12px_30px_-18px_rgb(0_0_0/0.35)] lg:ring-1 lg:ring-[color-mix(in_oklab,var(--store-text)_8%,transparent)]">
+                <span className="block text-sm font-semibold break-words text-ink">
+                  {image?.alt || 'Featured piece'}
+                </span>
+                <span className="mt-1 block break-words">
+                  {shopName}, {year}
+                </span>
+                <Link
+                  href="/collections/all"
+                  className="mt-3 inline-block font-medium text-ink underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--store-text)]"
+                >
+                  View the collection
+                </Link>
+              </figcaption>
+            </figure>
+          </div>
+          {rooms.length > 0 ? (
+            <nav
+              aria-label="Collections on view"
+              className="mt-16 flex flex-wrap items-baseline gap-x-8 gap-y-3 border-t border-[color-mix(in_oklab,var(--store-text)_14%,transparent)] pt-6 sm:mt-24"
+            >
+              <p className="eyebrow text-zinc-500">Rooms</p>
+              <ul className="flex flex-wrap gap-x-8 gap-y-3">
+                {rooms.map((tile, i) => (
+                  <li key={tile.href}>
+                    <Link
+                      href={tile.href}
+                      className="group inline-flex items-baseline gap-2 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--store-text)]"
+                    >
+                      <span className="text-xs text-zinc-500 tabular-nums">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span className="break-words group-hover:underline group-hover:underline-offset-4">
+                        {tile.label}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ) : null}
+        </section>
+      );
+    }
+
+    case 'cinema': {
+      // Widescreen and letterboxed: black bars, a 2.39:1 frame with the title over it, and a
+      // film strip of the store's photos that drifts sideways (still with reduced motion).
+      const reelSource = image ? [image, ...extras] : extras;
+      const reel =
+        reelSource.length >= 2
+          ? Array.from({ length: 10 }, (_, i) => reelSource[i % reelSource.length]!)
+          : [];
+      const sprockets =
+        'h-2 bg-[repeating-linear-gradient(to_right,transparent_0_8px,#ffffff2e_8px_18px,transparent_18px_26px)]';
+      return (
+        <section className={`store-section ${FULL_BLEED} bg-[#000000] text-[#f4f4f5]`}>
+          <div aria-hidden="true" className="h-6 sm:h-10" />
+          <div className="relative flex min-h-[32rem] overflow-hidden bg-[#0b0b0e] sm:min-h-[34rem] lg:aspect-[2.39/1] lg:min-h-[32rem]">
+            {image ? (
+              <>
+                <Photo
+                  image={image}
+                  className="motion-safe:transition-[scale] motion-safe:duration-[2400ms] motion-safe:ease-out motion-safe:starting:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#000000f2] via-[#00000059] to-[#00000080]" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,#000000b3)]" />
+              </>
+            ) : (
+              <Wash className="opacity-50" />
+            )}
+            <div className="store-container relative flex w-full flex-col py-6 sm:py-8">
+              <div className="eyebrow flex items-center justify-between gap-4 text-[#f4f4f5b3]">
+                <span className="flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="size-1.5 rounded-full bg-accent motion-safe:animate-pulse"
+                  />
+                  Now showing
+                </span>
+                <span className="min-w-0 truncate">{shopName}</span>
+              </div>
+              <div className="mt-auto pt-16">
+                <h1 className="t-display on-photo max-w-5xl text-[3.25rem] leading-[0.9] break-words sm:text-7xl lg:text-[7.5rem]">
+                  {title}
+                </h1>
+                <div className="mt-6 flex flex-col gap-6 border-t border-[#ffffff33] pt-6 sm:flex-row sm:items-end sm:justify-between">
+                  <p className="max-w-md text-base leading-relaxed text-[#f4f4f5d9] sm:text-lg">
+                    {subtitle}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+                    <Cta label={cta} variant="btn-on-image" className="" />
+                    <Link
+                      href="/collections"
+                      className="eyebrow text-[#f4f4f5] underline decoration-[#ffffff66] underline-offset-[6px] hover:decoration-[#ffffff] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ffffff]"
+                    >
+                      Collections
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {reel.length > 0 ? (
+            <div
+              aria-hidden="true"
+              className="overflow-hidden py-2.5 [mask-image:linear-gradient(to_right,transparent,#000_6%,#000_94%,transparent)]"
+            >
+              <div className={sprockets} />
+              <div className="store-ticker flex w-max py-2.5 hover:[animation-play-state:paused]">
+                {[0, 1].map((group) =>
+                  reel.map((photo, i) => (
+                    <div key={`${group}-${i}`} className="shrink-0 pr-2.5">
+                      <div className="relative aspect-[16/10] w-36 overflow-hidden rounded-sm bg-[#18181d] sm:w-52">
+                        <Photo
+                          image={{ ...photo, alt: '' }}
+                          eager={false}
+                          sizes="208px"
+                          className="opacity-80 transition-opacity duration-500 hover:opacity-100"
+                        />
+                        <span className="absolute top-1 left-1.5 font-mono text-[10px] text-[#ffffffb3] tabular-nums">
+                          {String(i + 1).padStart(2, '0')}
+                        </span>
+                      </div>
+                    </div>
+                  )),
+                )}
+              </div>
+              <div className={sprockets} />
+            </div>
+          ) : (
+            <div aria-hidden="true" className="h-6 sm:h-10" />
+          )}
+        </section>
+      );
+    }
+
+    case 'magazine': {
+      // A printed cover: issue line, the shop name as a huge masthead, cover lines either side
+      // of one portrait photo, and a contents strip of the collections with page-style numbers.
+      const now = new Date();
+      const issue = String(now.getMonth() + 1).padStart(2, '0');
+      const dateline = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const masthead =
+        shopName.length <= 8
+          ? 'text-[clamp(3.5rem,17vw,13rem)]'
+          : shopName.length <= 14
+            ? 'text-[clamp(2.75rem,11vw,9rem)]'
+            : 'text-[clamp(2.25rem,7.5vw,6.5rem)]';
+      const lines = tiles.slice(0, 3);
+      const contents = tiles.slice(0, 6);
+      const rule = 'border-[color-mix(in_oklab,var(--store-text)_22%,transparent)]';
+      return (
+        <section className="store-section">
+          <div className="eyebrow flex items-center justify-between gap-4 border-b border-ink pb-2.5 text-zinc-700">
+            <span>Issue N° {issue}</span>
+            <span className="hidden sm:inline">The {dateline} issue</span>
+            <span>{dateline}</span>
+          </div>
+          <p
+            className={`t-display mt-4 text-center leading-[0.82] tracking-[-0.03em] text-brand uppercase break-words motion-safe:transition motion-safe:duration-1000 motion-safe:ease-out motion-safe:starting:opacity-0 motion-safe:starting:-translate-y-2 sm:mt-6 ${masthead}`}
+          >
+            {shopName}
+          </p>
+          <div aria-hidden="true" className="mt-4 h-1 border-y border-ink sm:mt-6" />
+          <div className="mt-6 grid gap-8 sm:mt-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)_minmax(0,1fr)] md:gap-6 lg:gap-10">
+            <div className="order-2 flex flex-col md:order-1 md:py-2">
+              <p className="eyebrow text-accent">Cover story</p>
+              <h1 className="t-display mt-3 text-4xl text-brand break-words sm:text-5xl md:text-4xl lg:text-[3.25rem]">
+                {title}
+              </h1>
+              <p className="mt-5 max-w-sm font-heading text-lg leading-relaxed text-zinc-700 italic">
+                {subtitle}
+              </p>
+              <div className="mt-8 md:mt-auto md:pt-8">
+                <Cta label={cta} className="" />
+              </div>
+            </div>
+            <figure className="relative order-1 md:order-2">
+              <div className="relative aspect-[4/5] overflow-hidden bg-surface">
+                {image ? (
+                  <Photo
+                    image={image}
+                    sizes="(min-width: 768px) 42vw, 100vw"
+                    className="motion-safe:transition-[scale] motion-safe:duration-[1600ms] motion-safe:ease-out motion-safe:starting:scale-105"
+                  />
+                ) : (
+                  <Wash className="opacity-60" />
+                )}
+                <span className="absolute top-3 left-3 grid size-16 place-items-center rounded-full bg-accent text-center text-[0.625rem] leading-tight font-bold tracking-[0.12em] text-accent-contrast uppercase sm:top-4 sm:left-4 sm:size-20 sm:text-xs">
+                  N° {issue}
+                  <br />
+                  {now.getFullYear()}
+                </span>
+                <div
+                  aria-hidden="true"
+                  className="absolute right-3 bottom-3 bg-[#ffffff] px-2 pt-2 pb-1 sm:right-4 sm:bottom-4"
+                >
+                  <div className="h-8 w-20 bg-[repeating-linear-gradient(to_right,#111111_0_2px,transparent_2px_4px,#111111_4px_5px,transparent_5px_8px,#111111_8px_11px,transparent_11px_12px)]" />
+                  <p className="mt-0.5 text-center font-mono text-[8px] tracking-[0.2em] text-[#111111]">
+                    {issue}
+                    {now.getFullYear()}
+                  </p>
+                </div>
+              </div>
+              {image?.alt ? (
+                <figcaption className="eyebrow mt-2.5 text-zinc-500">
+                  On the cover: {image.alt}
+                </figcaption>
+              ) : null}
+            </figure>
+            <div className="order-3 flex flex-col md:py-2">
+              <p className="eyebrow text-zinc-500">Inside</p>
+              <ul className={`mt-3 border-t ${rule}`}>
+                {(lines.length > 0
+                  ? lines
+                  : [{ label: 'The full collection', href: '/collections/all' }]
+                ).map((tile, i) => (
+                  <li key={tile.href} className={`border-b ${rule}`}>
+                    <Link
+                      href={tile.href}
+                      className="group block py-4 text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--store-text)]"
+                    >
+                      <span className="eyebrow block text-accent">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span className="t-title mt-1.5 block text-2xl break-words uppercase group-hover:underline group-hover:underline-offset-4 lg:text-[1.75rem]">
+                        {tile.label}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/collections"
+                className="eyebrow mt-auto self-start pt-6 text-ink underline underline-offset-[6px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--store-text)]"
+              >
+                Every collection →
+              </Link>
+            </div>
+          </div>
+          {contents.length > 0 ? (
+            <nav
+              aria-label="Contents"
+              className="mt-12 grid gap-4 border-t-2 border-ink pt-4 sm:mt-16 md:grid-cols-[8rem_minmax(0,1fr)]"
+            >
+              <p className="t-title text-xl text-brand uppercase">Contents</p>
+              <ol className="grid grid-cols-2 gap-x-6 sm:grid-cols-3 lg:grid-cols-6">
+                {contents.map((tile, i) => (
+                  <li key={tile.href} className={`border-t ${rule} md:border-t-0`}>
+                    <Link
+                      href={tile.href}
+                      className="group flex items-baseline gap-2.5 py-2.5 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--store-text)]"
+                    >
+                      <span className="font-heading text-lg text-accent tabular-nums">
+                        {String(i * 8 + 6).padStart(2, '0')}
+                      </span>
+                      <span className="min-w-0 break-words group-hover:underline group-hover:underline-offset-4">
+                        {tile.label}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          ) : null}
+        </section>
+      );
+    }
+
+    case 'studio': {
+      // A product stage: the lead photo on an accent-tinted stage with a floor shadow and a soft
+      // reflection, the collections as feature chips, and a spotlight card carrying the CTA.
+      const chips = tiles.slice(0, 3);
+      const thumb = extras[0] ?? image;
+      return (
+        <section className="store-section relative overflow-hidden rounded-[2rem] bg-[color-mix(in_oklab,var(--store-accent)_14%,var(--store-bg))] px-6 py-12 sm:px-12 sm:py-16 lg:px-16">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-[radial-gradient(55%_55%_at_68%_38%,color-mix(in_oklab,#ffffff_70%,transparent),transparent_72%)]"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[color-mix(in_oklab,var(--store-accent)_22%,var(--store-bg))] to-transparent"
+          />
+          <div className="relative grid items-center gap-12 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-16">
+            <div>
+              <p className="eyebrow text-accent">{shopName}</p>
+              <h1 className="t-display mt-4 text-[2.75rem] text-brand break-words sm:text-6xl lg:text-7xl">
+                {title}
+              </h1>
+              <p className="mt-6 max-w-md text-lg leading-relaxed text-zinc-700">{subtitle}</p>
+              {chips.length > 0 ? (
+                <ul aria-label="Shop by collection" className="mt-8 flex flex-wrap gap-2.5">
+                  {chips.map((tile) => (
+                    <li key={tile.href}>
+                      <Link
+                        href={tile.href}
+                        className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[color-mix(in_oklab,var(--store-bg)_80%,transparent)] px-4 py-2 text-sm font-medium text-ink ring-1 ring-[color-mix(in_oklab,var(--store-text)_12%,transparent)] backdrop-blur transition hover:ring-[color-mix(in_oklab,var(--store-text)_35%,transparent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--store-text)] motion-reduce:transition-none"
+                      >
+                        <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />
+                        <span className="break-words">{tile.label}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+            <div className="relative mx-auto w-full max-w-md lg:max-w-lg">
+              <div className="group relative motion-safe:transition motion-safe:duration-1000 motion-safe:ease-out motion-safe:starting:translate-y-6 motion-safe:starting:opacity-0">
+                <div className="relative aspect-square overflow-hidden rounded-[1.75rem] bg-[var(--store-bg)] shadow-[0_40px_70px_-35px_rgb(0_0_0/0.45)] ring-1 ring-[color-mix(in_oklab,var(--store-text)_8%,transparent)] transition-transform duration-700 ease-out group-hover:-translate-y-1.5 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0">
+                  {image ? (
+                    <Photo image={image} sizes="(min-width: 768px) 32rem, 90vw" />
+                  ) : (
+                    <Wash className="opacity-70" />
+                  )}
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="mx-auto -mt-2 h-6 w-4/5 bg-[radial-gradient(closest-side,rgb(0_0_0/0.28),transparent)]"
+                />
+                {image ? (
+                  <div
+                    aria-hidden="true"
+                    className="relative -mt-3 h-14 overflow-hidden rounded-t-[1.75rem] opacity-25 [mask-image:linear-gradient(to_bottom,#000,transparent_85%)] sm:h-20"
+                  >
+                    <div className="absolute inset-x-0 top-0 aspect-square -scale-y-100">
+                      <Photo
+                        image={{ ...image, alt: '' }}
+                        eager={false}
+                        sizes="(min-width: 768px) 32rem, 90vw"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              <div className="relative mt-4 flex items-center gap-4 rounded-2xl bg-[var(--store-bg)] p-4 shadow-[0_24px_50px_-24px_rgb(0_0_0/0.4)] ring-1 ring-[color-mix(in_oklab,var(--store-text)_8%,transparent)] lg:absolute lg:right-[-1.5rem] lg:bottom-16 lg:mt-0 lg:w-80">
+                {thumb ? (
+                  <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-surface">
+                    <Photo image={{ ...thumb, alt: '' }} eager={false} sizes="56px" />
+                  </div>
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <p className="eyebrow text-accent">In the spotlight</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-ink">
+                    {thumb?.alt || shopName}
+                  </p>
+                  <Cta label={cta} className="mt-3" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     default:
       // Minimal: one large photo with the headline set into its lower corner.
       return image ? (
