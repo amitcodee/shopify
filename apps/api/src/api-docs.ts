@@ -1,5 +1,7 @@
+import { randomBytes } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import type { Request, Response } from 'express';
+import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import { API_TOKEN_PREFIX, WEBHOOK_HEADERS, WEBHOOK_TOPICS } from '@repo/contracts';
 import type { Env } from './config/env.js';
 
@@ -44,7 +46,7 @@ Send a bearer token: \`Authorization: Bearer <token>\`.
   only reach the store it was created in.
 - **Session tokens** come from \`POST /api/v1/auth/login\` and act as that user.
 
-Click **Authorize** above and paste a token to try requests from this page.
+Open any endpoint, add your token under **Authentication** and send a test request from this page.
 
 ### Errors
 Errors use [RFC 9457 problem details](https://www.rfc-editor.org/rfc/rfc9457)
@@ -107,9 +109,156 @@ html.dark-mode .swagger-ui .btn.authorize svg { fill: #e5e7eb }
 html.dark-mode .swagger-ui .info a { color: #60a5fa }
 `;
 
+const singular = (word: string) =>
+  word.endsWith('ies')
+    ? `${word.slice(0, -3)}y`
+    : word.endsWith('s') && !word.endsWith('ss')
+      ? word.slice(0, -1)
+      : word;
+
+/** Acronyms and phrasing fixes for generated names. */
+const WORD_FIXES: Record<string, string> = {
+  csv: 'CSV',
+  api: 'API',
+  mfa: 'MFA',
+  '2fa': '2FA',
+  cod: 'COD',
+  tls: 'TLS',
+  ai: 'AI',
+  sku: 'SKU',
+  razorpay: 'Razorpay',
+  stripe: 'Stripe',
+  signup: 'sign up',
+  login: 'sign in',
+  logout: 'sign out',
+};
+const human = (text: string) =>
+  text
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[-_]/g, ' ')
+    .toLowerCase()
+    .split(' ')
+    .map((w) => WORD_FIXES[w] ?? w)
+    .join(' ');
+const capital = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+
+/** Method names that are a bare verb and need the resource from the path. */
+const VERBS: Record<string, string> = {
+  list: 'list',
+  get: 'get',
+  create: 'create',
+  update: 'update',
+  replace: 'update',
+  remove: 'delete',
+  delete: 'delete',
+  save: 'save',
+};
+/** First words that already say what a GET does. */
+const READ_VERBS = new Set([
+  'list',
+  'get',
+  'check',
+  'search',
+  'export',
+  'find',
+  'count',
+  'preview',
+  'download',
+]);
+
+/** Path segments that are namespaces, not resources. */
+const NAMESPACES = new Set(['admin', 'storefront', 'platform', 'public', 'auth', 'me', 'webhooks']);
+
 /**
- * Serves the OpenAPI reference at /api/docs (JSON at /api/docs-json). On unless API_DOCS=false:
- * the reference describes routes that all enforce their own authentication.
+ * A readable name for an endpoint from its controller method and path:
+ * `ProductsController_list` on `/products` -> "List products", `updateVariant` -> "Update variant",
+ * `complete` on `/draft-orders/{id}/complete` -> "Complete draft order".
+ */
+export function operationName(operationId: string, method: string, path: string): string {
+  const fn = operationId.split('_')[1] ?? method;
+  const parts = path.split('/').filter((p) => p && p !== 'api' && !/^v\d+$/.test(p));
+  const isParam = (p: string) => p.startsWith('{');
+  const last = parts.at(-1) ?? '';
+  const resources = parts.filter((p) => !isParam(p) && !NAMESPACES.has(p) && p !== 'stores');
+  const verb = VERBS[fn];
+  if (fn === 'me') return 'Get current user';
+  if (verb) {
+    const noun = resources.at(-1) ?? parts.filter((p) => !isParam(p)).at(-1) ?? '';
+    const one = isParam(last) || (verb !== 'list' && verb !== 'save');
+    return capital(`${verb} ${human(one ? singular(noun) : noun)}`);
+  }
+  const words = human(fn);
+  // A one-word action on one record: "Complete draft order", "Close store".
+  if (!words.includes(' ') && last === fn && method !== 'get') {
+    const owner = parts.at(-2);
+    if (owner && isParam(owner)) {
+      const noun = parts.at(-3) ?? '';
+      return capital(`${words} ${human(singular(noun))}`);
+    }
+  }
+  const first = words.split(' ')[0] ?? '';
+  if (method === 'get' && !READ_VERBS.has(first)) {
+    return capital(`${words.endsWith('s') && !words.endsWith('ss') ? 'list' : 'get'} ${words}`);
+  }
+  return capital(words);
+}
+
+/** Fills in a summary on every operation that has none, so the reference reads as names. */
+function nameOperations(doc: OpenAPIObject): OpenAPIObject {
+  for (const [path, item] of Object.entries(doc.paths)) {
+    for (const method of ['get', 'post', 'put', 'patch', 'delete'] as const) {
+      const op = item[method];
+      if (op && !op.summary) op.summary = operationName(op.operationId ?? '', method, path);
+    }
+  }
+  return doc;
+}
+
+/** Scalar API reference, pinned and loaded from jsDelivr (only on this page). */
+const SCALAR_SRC = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.76.4';
+
+/** Monochrome to match the admin; Scalar's own variables, light and dark. */
+const SCALAR_CSS = `
+.light-mode { --scalar-color-accent: #111827; --scalar-background-1: #ffffff; --scalar-background-2: #f8fafc; --scalar-background-3: #f1f5f9; --scalar-border-color: #e5e7eb }
+.dark-mode { --scalar-color-accent: #f3f4f6; --scalar-background-1: #0b0f14; --scalar-background-2: #11161d; --scalar-background-3: #1a2029; --scalar-border-color: #1f2937 }
+.scalar-app { --scalar-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; --scalar-font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; --scalar-radius: 8px; --scalar-radius-lg: 12px }
+`;
+
+function scalarPage(nonce: string): string {
+  const config = {
+    url: '/api/openapi.json',
+    layout: 'modern',
+    theme: 'none',
+    customCss: SCALAR_CSS,
+    withDefaultFonts: false,
+    showDeveloperTools: 'never',
+    showToolbar: 'never',
+    agent: { disabled: true },
+    hideClientButton: false,
+    defaultHttpClient: { targetKey: 'node', clientKey: 'fetch' },
+    authentication: { preferredSecurityScheme: 'bearer' },
+    metaData: { title: 'API reference · Commerce Platform' },
+  };
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API reference · Commerce Platform</title>
+<meta name="description" content="REST API reference for Commerce Platform: authentication, errors, pagination, webhooks and every endpoint.">
+</head>
+<body>
+<div id="app"></div>
+<script nonce="${nonce}" src="${SCALAR_SRC}"></script>
+<script nonce="${nonce}">Scalar.createApiReference('#app', ${JSON.stringify(config)});</script>
+</body>
+</html>`;
+}
+
+/**
+ * Serves the API reference at /api/docs (Scalar), the OpenAPI document at /api/openapi.json and
+ * the plain Swagger UI at /api/docs/swagger. On unless API_DOCS=false: the reference describes
+ * routes that all enforce their own authentication.
  */
 export function setupApiDocs(app: INestApplication, env: Env): void {
   if (env.API_DOCS === 'false') return;
@@ -124,16 +273,43 @@ export function setupApiDocs(app: INestApplication, env: Env): void {
     });
   for (const [name, text] of TAGS) builder.addTag(name, text);
   const config = builder.build();
-  SwaggerModule.setup('api/docs', app, () => SwaggerModule.createDocument(app, config), {
-    customSiteTitle: 'API reference · Commerce Platform',
-    customCss: CSS,
-    swaggerOptions: {
-      docExpansion: 'none',
-      filter: true,
-      persistAuthorization: true,
-      displayRequestDuration: true,
-      defaultModelsExpandDepth: -1,
-      tryItOutEnabled: false,
+  SwaggerModule.setup(
+    'api/docs/swagger',
+    app,
+    () => nameOperations(SwaggerModule.createDocument(app, config)),
+    {
+      jsonDocumentUrl: 'api/openapi.json',
+      customSiteTitle: 'API reference (Swagger) · Commerce Platform',
+      customCss: CSS,
+      swaggerOptions: {
+        docExpansion: 'none',
+        filter: true,
+        persistAuthorization: true,
+        displayRequestDuration: true,
+        defaultModelsExpandDepth: -1,
+      },
     },
-  });
+  );
+  const serve = (_req: Request, res: Response) => {
+    const nonce = randomBytes(16).toString('base64');
+    res.setHeader(
+      'Content-Security-Policy',
+      [
+        "default-src 'self'",
+        `script-src 'nonce-${nonce}' https://cdn.jsdelivr.net`,
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+        "img-src 'self' data: https:",
+        "font-src 'self' data: https://cdn.jsdelivr.net",
+        "connect-src 'self'",
+        "worker-src 'self' blob:",
+        "frame-ancestors 'none'",
+        "base-uri 'none'",
+        "form-action 'self'",
+      ].join('; '),
+    );
+    res.type('html').send(scalarPage(nonce));
+  };
+  const http = app.getHttpAdapter();
+  http.get('/api/docs', serve);
+  http.get('/api/docs/', serve);
 }
