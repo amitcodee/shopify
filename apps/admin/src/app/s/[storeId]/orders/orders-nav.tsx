@@ -26,7 +26,7 @@ export function OrdersNav({ storeId, active }: { storeId: string; active: Orders
             aria-current={current ? 'page' : undefined}
             className={`-mb-px shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 ${
               current
-                ? 'border-slate-900 text-slate-900'
+                ? 'border-indigo-600 text-slate-900'
                 : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800'
             }`}
           >

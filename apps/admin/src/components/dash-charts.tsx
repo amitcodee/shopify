@@ -1,7 +1,7 @@
 import { currencyDigits, formatMoney } from '@repo/contracts';
 
 /** One hue, dark to light: the best seller is darkest. */
-const SHADES = ['#18181b', '#52525b', '#a1a1aa'];
+const SHADES = ['#4a50d4', '#8c93f3', '#c9cdfb'];
 const REST = '#d4d4d8';
 const EMPTY = 'var(--color-slate-100)';
 
@@ -99,7 +99,7 @@ export function WeekdayBars({ days, currency }: { days: Day[]; currency: string 
                 {total > 0 ? compact.format(total / 10 ** currencyDigits(currency)) : ''}
               </span>
               <div
-                className={`bar-hatch rounded-t-[4px] ${total === max && max > 0 ? 'text-slate-900' : 'text-slate-300'}`}
+                className={`bar-hatch rounded-t-[4px] ${total === max && max > 0 ? 'text-indigo-600' : 'text-indigo-200'}`}
                 style={{ height: total > 0 ? `max(3px, ${(total / max) * 82}%)` : 0 }}
               />
             </div>
@@ -142,9 +142,9 @@ export function OrderHeatmap({ days, weeks = 5 }: { days: Day[]; weeks?: number 
   const shade = (orders: number) => {
     if (orders === 0) return 'bg-slate-100 text-slate-500';
     const level = orders / max;
-    if (level > 0.66) return 'bg-slate-900 text-white';
-    if (level > 0.33) return 'bg-slate-500 text-white';
-    return 'bg-slate-300 text-slate-900';
+    if (level > 0.66) return 'bg-indigo-600 text-white';
+    if (level > 0.33) return 'bg-indigo-500 text-white';
+    return 'bg-indigo-200 text-indigo-900';
   };
   return (
     <div className="grid grid-cols-[3rem_repeat(7,minmax(0,1fr))] items-center gap-1 text-[11px] text-slate-500">

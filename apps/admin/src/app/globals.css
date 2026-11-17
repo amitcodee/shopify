@@ -2,10 +2,10 @@
 @source '../../../../packages/template-preview/src';
 
 /*
- * Admin design tokens. Neutrals are Tailwind's slate scale. The accent is near-black: screens are
- * written with the indigo utilities, and this file remaps that scale to neutrals, so one place
- * sets the look. Semantic colours: emerald = success, amber = attention, red = critical,
- * sky = informational. Blue is kept for chart data only (--chart-current).
+ * Admin design tokens. Neutrals are Tailwind's slate scale (softened). The accent is the brand
+ * indigo (the logo color), tuned a little calmer than Tailwind's: screens are written with the
+ * indigo utilities, so this file alone sets the look. Semantic colours: emerald = success,
+ * amber = attention, red = critical, sky = informational. Charts use --chart-current.
  */
 @theme {
   /* Motion: shared easings (ease-out-soft, ease-spring utilities); durations on :root below. */
@@ -14,25 +14,36 @@
   --font-sans:
     'Inter', 'Inter var', 'Segoe UI Variable Text', 'Segoe UI', ui-sans-serif, system-ui,
     -apple-system, 'Helvetica Neue', Arial, sans-serif;
-  --color-canvas: #f7f7f8;
-  --color-indigo-50: #f4f4f5;
-  --color-indigo-100: #e8e8ea;
-  --color-indigo-200: #d6d6da;
-  --color-indigo-300: #b4b4bb;
-  --color-indigo-400: #7a7a84;
-  --color-indigo-500: #3f3f46;
-  --color-indigo-600: #18181b;
-  --color-indigo-700: #27272a;
-  --color-indigo-800: #18181b;
-  --color-indigo-900: #18181b;
-  --color-indigo-950: #09090b;
+  /* Soft, cool canvas; the accent is the brand's calm indigo (the logo color), softened. */
+  --color-canvas: #f5f6f9;
+  --color-indigo-50: #f2f3ff;
+  --color-indigo-100: #e5e7ff;
+  --color-indigo-200: #cdd1fd;
+  --color-indigo-300: #a7aefa;
+  --color-indigo-400: #7d86f3;
+  --color-indigo-500: #5b63e6;
+  --color-indigo-600: #4a50d4;
+  --color-indigo-700: #3d41b4;
+  --color-indigo-800: #333692;
+  --color-indigo-900: #2c2e74;
+  --color-indigo-950: #1b1c45;
   /* Darker than Tailwind's slate so small muted text stays readable (WCAG AA). */
   --color-slate-400: #66758a;
   --color-slate-500: #556379;
-  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.03);
-  --shadow-raised: 0 1px 2px 0 rgb(15 23 42 / 0.05), 0 6px 16px -4px rgb(15 23 42 / 0.08);
+  /* Softer lines and headings than Tailwind's slate. */
+  --color-slate-100: #eef0f4;
+  --color-slate-200: #e5e8ee;
+  --color-slate-300: #d3d8e1;
+  --color-slate-900: #1b2230;
+  /* Rounder corners everywhere (Tailwind's defaults are one step tighter). */
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
+  --shadow-card: 0 1px 2px 0 rgb(27 34 48 / 0.03), 0 2px 8px -2px rgb(27 34 48 / 0.05);
+  --shadow-raised: 0 2px 4px -1px rgb(27 34 48 / 0.04), 0 12px 28px -8px rgb(27 34 48 / 0.12);
   --shadow-button-primary:
-    inset 0 1px 0 0 rgb(255 255 255 / 0.14), 0 1px 2px 0 rgb(30 27 75 / 0.25);
+    inset 0 1px 0 0 rgb(255 255 255 / 0.12), 0 1px 2px 0 rgb(27 34 48 / 0.18);
 }
 
 /* Fieldsets default to min-width: min-content, which lets wide tables push forms off phones. */
@@ -184,7 +195,7 @@
 
 /* Chart data colors (validated for color-blind separation) and the striped bar fill. */
 :root {
-  --chart-current: #2563eb;
+  --chart-current: #5b63e6;
   --chart-previous: #71717a;
 }
 .bar-hatch {
@@ -216,17 +227,17 @@
   --color-slate-950: #f8fafc;
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-raised: 0 1px 2px 0 rgb(0 0 0 / 0.4), 0 6px 16px -4px rgb(0 0 0 / 0.5);
-  --color-indigo-50: #1d2630;
-  --color-indigo-100: #2a3541;
-  --color-indigo-200: #3c4957;
-  --color-indigo-300: #66758a;
-  --color-indigo-400: #8493a3;
-  --color-indigo-500: #475462;
-  --color-indigo-600: #36424f;
-  --color-indigo-700: #cad3dc;
-  --color-indigo-800: #dde3e9;
-  --color-indigo-900: #eff2f5;
-  --chart-current: #3b82f6;
+  --color-indigo-50: #1b1d38;
+  --color-indigo-100: #24274c;
+  --color-indigo-200: #31356a;
+  --color-indigo-300: #4c52a6;
+  --color-indigo-400: #8c93f6;
+  --color-indigo-500: #7d84f2;
+  --color-indigo-600: #5f66e4;
+  --color-indigo-700: #c5c9fd;
+  --color-indigo-800: #dadcfe;
+  --color-indigo-900: #eceeff;
+  --chart-current: #8c93f6;
   --chart-previous: #8493a3;
   --color-red-50: #34161a;
   --color-red-100: #451c21;

@@ -50,20 +50,20 @@ export function SideNav({ items, permissions }: { items: NavItem[]; permissions:
                   aria-current={active ? 'page' : undefined}
                   className={`group/nav relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors ${
                     active
-                      ? 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-200'
+                      ? 'bg-indigo-50 text-indigo-700'
                       : 'text-slate-600 hover:bg-slate-900/[0.04] hover:text-slate-900'
                   }`}
                 >
                   {active ? (
                     <span
                       aria-hidden
-                      className="absolute top-1/2 -left-2.5 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-slate-900"
+                      className="absolute top-1/2 -left-2.5 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-indigo-600"
                     />
                   ) : null}
                   {item.icon ? (
                     <Icon
                       name={item.icon}
-                      className={`h-4 w-4 ${active ? 'text-slate-900' : 'text-slate-500 group-hover/nav:text-slate-700'}`}
+                      className={`h-4 w-4 ${active ? 'text-indigo-600' : 'text-slate-500 group-hover/nav:text-slate-700'}`}
                       strokeWidth={active ? 2 : 1.75}
                     />
                   ) : null}

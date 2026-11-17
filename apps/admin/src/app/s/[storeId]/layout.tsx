@@ -198,7 +198,7 @@ export default async function StoreLayout({
     >
       <span
         aria-hidden
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-sm font-semibold text-white"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-sm font-semibold text-white"
       >
         {(store.name.trim()[0] ?? 'S').toUpperCase()}
       </span>

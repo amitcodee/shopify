@@ -374,7 +374,7 @@ export default async function StoreOverview({
                 aria-valuenow={doneCount}
               >
                 <div
-                  className="h-full rounded-full bg-slate-900"
+                  className="h-full rounded-full bg-indigo-600"
                   style={{ width: `${(doneCount / steps.length) * 100}%` }}
                 />
               </div>
