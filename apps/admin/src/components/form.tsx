@@ -40,7 +40,12 @@ export function ActionForm({
   return (
     <FormStateContext value={state}>
       <form action={formAction} className={className ?? 'space-y-4'} noValidate={false}>
-        {state?.error ? <Alert tone="error">{state.error}</Alert> : null}
+        {/* Full width, so grid forms keep their fields in place when it appears. */}
+        {state?.error ? (
+          <div className="col-span-full">
+            <Alert tone="error">{state.error}</Alert>
+          </div>
+        ) : null}
         {children}
       </form>
     </FormStateContext>

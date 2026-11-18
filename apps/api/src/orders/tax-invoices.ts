@@ -69,7 +69,29 @@ const PAYMENT_LABELS: Record<string, string> = {
   cod: 'Cash on delivery',
   manual: 'Paid outside the platform',
   none: 'No payment due',
+  mock: 'Online (sandbox test payment)',
 };
+
+const GATEWAY_NAMES: Record<string, string> = {
+  razorpay: 'Razorpay',
+  payu: 'PayU',
+  cashfree: 'Cashfree',
+  phonepe: 'PhonePe',
+  stripe: 'Stripe',
+  paypal: 'PayPal',
+};
+
+/** "own_razorpay_test" -> "Online (Razorpay, test mode)". */
+function paymentLabel(provider: string): string {
+  const known = PAYMENT_LABELS[provider];
+  if (known) return known;
+  const test = provider.endsWith('_test');
+  const key = provider.replace(/^own_/, '').replace(/_test$/, '');
+  const name = GATEWAY_NAMES[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
+  return `Online (${name}${test ? ', test mode' : ''})`;
+}
+
+const countryName = new Intl.DisplayNames(['en'], { type: 'region' });
 
 function split(tax: number, rateBps: number, intra: boolean) {
   const cgst = intra ? Math.floor(tax / 2) : 0;
@@ -187,7 +209,7 @@ export function buildTaxInvoice({ store, registration, order }: InvoiceSource): 
             a.line1,
             a.line2 ?? '',
             [a.city, a.region ?? '', a.postalCode].filter(Boolean).join(', '),
-            a.country,
+            countryName.of(a.country) ?? a.country,
           ].filter(Boolean)
         : [],
     },
@@ -208,7 +230,7 @@ export function buildTaxInvoice({ store, registration, order }: InvoiceSource): 
     total: order.total,
     giftCardAmount: order.giftCardAmount,
     amountInWords: amountInWords(order.total, order.currency),
-    paymentMethod: PAYMENT_LABELS[order.paymentProvider] ?? `Online (${order.paymentProvider})`,
+    paymentMethod: paymentLabel(order.paymentProvider),
     paid: ['PAID', 'PARTIALLY_REFUNDED', 'REFUNDED'].includes(order.financialStatus),
   };
 }

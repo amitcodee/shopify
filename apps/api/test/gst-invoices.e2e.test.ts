@@ -169,6 +169,8 @@ describe('GST tax invoices', () => {
       expect.objectContaining({ hsCode: '910211', rateBps: 1800, cgst: 22_500, sgst: 22_500 }),
     ]);
     expect(invoice.data.amountInWords).toMatch(/^Rupees .* Only$/);
+    expect(invoice.data.buyer.address.at(-1)).toBe('India');
+    expect(invoice.data.paymentMethod).toBe('Online (sandbox test payment)');
 
     // Shopper copy through the order-status token.
     const shopper = await sf('get', `/orders/${urls.orderAccessToken(localId)}/invoice`).expect(
