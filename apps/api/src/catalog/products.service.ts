@@ -304,6 +304,7 @@ export class ProductsService {
             isGiftCard: input.isGiftCard,
             isBundle: input.isBundle,
             supplierId: input.supplierId ?? null,
+            taxRateBps: input.taxRateBps ?? null,
             customizations: customizationsData(input.customizations ?? []),
             publishedAt: publishedAtFor(input.status, input.publishAt, null),
             options: { create: optionsData(input.options) },
@@ -413,6 +414,7 @@ export class ProductsService {
             isGiftCard: input.isGiftCard,
             publishedAt,
             ...(input.supplierId !== undefined && { supplierId: input.supplierId }),
+            ...(input.taxRateBps !== undefined && { taxRateBps: input.taxRateBps }),
             ...(input.customizations && {
               customizations: customizationsData(input.customizations),
             }),

@@ -19,6 +19,7 @@ import {
 } from '../outbox/templates.js';
 import type { DisputeUpdate } from '../payments/payment-provider.js';
 import { StoreUrls } from './store-urls.js';
+import { TaxInvoiceIssuer } from './tax-invoices.js';
 
 type OrderWithLines = Prisma.OrderGetPayload<{ include: { lines: true } }>;
 
@@ -53,7 +54,25 @@ export class OrderLifecycle {
     private readonly giftCards: GiftCardLedger,
     private readonly webhooks: WebhookEmitter,
     @Inject(PLATFORM_DB) private readonly platformDb: PrismaClient,
+    private readonly invoices: TaxInvoiceIssuer,
   ) {}
+
+  /**
+   * Issues the GST invoice when the store is registered (paid, or first shipped for cash on
+   * delivery). Does nothing for unregistered stores or orders that already have one.
+   */
+  async issueInvoice(tx: TenantTx, storeId: string, orderId: string): Promise<void> {
+    const { invoice, created } = await this.invoices.issueNew(tx, storeId, orderId);
+    if (invoice && created) {
+      await this.event(
+        tx,
+        storeId,
+        orderId,
+        'invoice_issued',
+        `Tax invoice ${invoice.number} issued.`,
+      );
+    }
+  }
 
   async event(
     tx: TenantTx,
@@ -454,6 +473,7 @@ export class OrderLifecycle {
       if (order.cartId) await tx.cart.deleteMany({ where: { id: order.cartId, storeId } });
       await this.completeDraft(tx, storeId, order.id);
       await this.event(tx, storeId, order.id, 'paid', 'Payment received.');
+      await this.issueInvoice(tx, storeId, order.id);
       await this.issuePurchasedGiftCards(tx, storeId, order);
       await this.webhooks.emitOrder(tx, storeId, 'orders/paid', order.id);
       await this.sendOrderEmails(tx, storeId, order);
@@ -478,6 +498,7 @@ export class OrderLifecycle {
         ? 'Paid in full with a gift card.'
         : 'No payment required (order total is zero).',
     );
+    await this.issueInvoice(tx, storeId, order.id);
     await this.issuePurchasedGiftCards(tx, storeId, order);
     await this.webhooks.emitOrder(tx, storeId, 'orders/paid', order.id);
     await this.sendOrderEmails(tx, storeId, order);
@@ -592,6 +613,7 @@ export class OrderLifecycle {
       data: { financialStatus: 'PAID', paidAt: new Date() },
     });
     await this.event(tx, storeId, order.id, 'paid', 'Cash collected on delivery.', { actorUserId });
+    await this.issueInvoice(tx, storeId, order.id);
     await this.webhooks.emitOrder(tx, storeId, 'orders/paid', order.id);
   }
 
@@ -631,6 +653,7 @@ export class OrderLifecycle {
         actorUserId,
       },
     );
+    await this.issueInvoice(tx, storeId, order.id);
     await this.issuePurchasedGiftCards(tx, storeId, order);
     await this.webhooks.emitOrder(tx, storeId, 'orders/paid', order.id);
     await this.sendOrderEmails(tx, storeId, order);

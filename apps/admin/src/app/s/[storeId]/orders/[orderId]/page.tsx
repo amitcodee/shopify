@@ -1,4 +1,9 @@
-import { formatMoney, minorToDecimalString, type OrderDetail } from '@repo/contracts';
+import {
+  formatMoney,
+  minorToDecimalString,
+  type OrderDetail,
+  type OrderInvoiceState,
+} from '@repo/contracts';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ActionForm, CheckboxField, Field, SubmitButton } from '@/components/form';
@@ -45,6 +50,9 @@ export default async function OrderPage({
     if (error instanceof ApiError && error.status === 404) notFound();
     throw error;
   }
+  const invoice = await api<OrderInvoiceState>(
+    `/admin/stores/${storeId}/orders/${orderId}/invoice`,
+  ).catch(() => null);
   const money = (n: number) => formatMoney(n, order.currency);
   const canWrite = store.permissions.includes('orders:write');
   const sandboxPaid = order.payments.some((p) => p.provider === 'mock' && p.status === 'SUCCEEDED');
@@ -65,13 +73,24 @@ export default async function OrderPage({
           </>
         }
         actions={
-          <Link
-            href={`/packing-slip/${storeId}/${orderId}`}
-            className={buttonClass('secondary', 'sm')}
-          >
-            <Icon name="orders" className="-ml-0.5 h-4 w-4 text-slate-500" />
-            Print packing slip
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {invoice?.invoice || invoice?.canIssue ? (
+              <Link
+                href={`/tax-invoice/${storeId}/${orderId}`}
+                className={buttonClass('secondary', 'sm')}
+              >
+                <Icon name="download" className="-ml-0.5 h-4 w-4 text-slate-500" />
+                {invoice.invoice ? `Invoice ${invoice.invoice.number}` : 'Tax invoice'}
+              </Link>
+            ) : null}
+            <Link
+              href={`/packing-slip/${storeId}/${orderId}`}
+              className={buttonClass('secondary', 'sm')}
+            >
+              <Icon name="orders" className="-ml-0.5 h-4 w-4 text-slate-500" />
+              Print packing slip
+            </Link>
+          </div>
         }
       />
       {order.disputes.some((d) => d.status === 'NEEDS_RESPONSE') ? (

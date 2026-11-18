@@ -81,6 +81,9 @@ interface Quote {
     trackInventory: boolean;
     isGiftCard: boolean;
     discountable: boolean;
+    /** The product's own tax rate (basis points), or null for the destination's rate. */
+    taxRateBps: number | null;
+    hsCode: string | null;
     /** Customizations as sold (prices in the shopper's currency, included in unitPrice). */
     properties: LineProperty[];
   }[];
@@ -287,6 +290,7 @@ export class CheckoutService {
           discountTotal: quote.pricing.discountTotal,
           shippingTotal: quote.pricing.shippingTotal,
           taxTotal: quote.pricing.taxTotal,
+          shippingTaxTotal: quote.pricing.shippingTax,
           total: quote.pricing.total,
           discountCode: quote.discount?.applied ? quote.discount.code : null,
           shippingMethod: quote.selectedShipping?.name ?? null,
@@ -308,6 +312,9 @@ export class CheckoutService {
               quantity: l.quantity,
               discountTotal: quote.pricing.lineDiscounts[i] ?? 0,
               taxable: l.taxable,
+              hsCode: l.hsCode,
+              taxRateBps: quote.pricing.lineTaxRates[i] ?? 0,
+              taxTotal: quote.pricing.lineTaxes[i] ?? 0,
               requiresShipping: l.requiresShipping,
               weightGrams: l.weightGrams,
               stockReserved: l.trackInventory,
@@ -487,7 +494,11 @@ export class CheckoutService {
     const rows = await tx.cartLine.findMany({
       where: { storeId: shop.id, id: { in: available.map((l) => l.id) } },
       include: {
-        variant: { include: { product: { select: { isGiftCard: true, customizations: true } } } },
+        variant: {
+          include: {
+            product: { select: { isGiftCard: true, customizations: true, taxRateBps: true } },
+          },
+        },
       },
     });
     const byId = new Map(rows.map((r) => [r.id, r]));
@@ -513,6 +524,8 @@ export class CheckoutService {
           trackInventory: v.trackInventory,
           isGiftCard: v.product.isGiftCard,
           discountable: !v.product.isGiftCard,
+          taxRateBps: v.product.isGiftCard ? null : v.product.taxRateBps,
+          hsCode: v.hsCode,
           properties: custom.properties.map((p) => ({ ...p, price: shopPrice(shop, p.price) })),
         },
       ];

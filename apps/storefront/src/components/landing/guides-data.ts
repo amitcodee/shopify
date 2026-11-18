@@ -139,7 +139,7 @@ export const GUIDES: Guide[] = [
   {
     slug: 'shipping-and-taxes',
     title: 'Set up shipping and taxes',
-    summary: 'Create shipping zones and rates, and add tax rates by country.',
+    summary: 'Create shipping zones and rates, add tax rates by country, and issue GST invoices.',
     icon: 'truck',
     category: 'Selling',
     intro:
@@ -158,8 +158,20 @@ export const GUIDES: Guide[] = [
         title: 'Add tax rates',
         body: 'In “Settings” → “Taxes”, use “Add or update a rate”: “Country”, an optional “Region”, a “Name” and “Rate %”. Tick “Also tax shipping” if shipping is taxable, then click “Save rate”.',
       },
+      {
+        title: 'India: turn on GST invoices',
+        body: 'Under “GST invoices” on the same page, enter your “GSTIN”, “Legal name” and “Registered address”, then click “Turn on GST invoices”. Every paid or shipped order then gets a numbered tax invoice (CGST and SGST inside your state, IGST for other states). Print it or save it as a PDF from the order, and customers can download it from their order page.',
+      },
+      {
+        title: 'Give products their GST slab',
+        body: 'On a product, pick its “Tax rate” (for example 5% GST for most clothing) and enter the “HS / HSN code” of each variant, which is printed on the invoice. Products left on “Same as the destination” use the country rate.',
+      },
     ],
-    tips: ['A region-specific rate overrides the country rate for addresses in that region.'],
+    tips: [
+      'A region-specific rate overrides the country rate for addresses in that region.',
+      'Prices are entered before tax: GST is added at checkout on top of the price.',
+      'Invoice numbers restart every April and cannot be edited once issued.',
+    ],
     features: ['checkout', 'international'],
   },
   {

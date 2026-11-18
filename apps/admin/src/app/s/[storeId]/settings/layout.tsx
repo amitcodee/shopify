@@ -52,7 +52,7 @@ function sections(): Record<string, SectionIntroItem> {
     },
     '/taxes': {
       title: 'Taxes',
-      body: 'Tax rates added at checkout, by country or by region.',
+      body: 'Tax rates added at checkout, by country or by region, and your GSTIN for GST tax invoices on every paid order.',
       help: help('shipping-and-taxes', 'How taxes work'),
     },
     '/billing': {

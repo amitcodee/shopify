@@ -261,6 +261,34 @@ export async function deleteTaxRateAction(storeId: string, rateId: string): Prom
   revalidatePath(settingsPath(storeId, 'taxes'));
 }
 
+// GST registration (tax invoices)
+export async function saveGstAction(
+  storeId: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  try {
+    await api(`/admin/stores/${storeId}/gst`, {
+      method: 'PUT',
+      body: {
+        gstin: requiredString(formData, 'gstin'),
+        legalName: requiredString(formData, 'legalName'),
+        address: requiredString(formData, 'address'),
+        invoicePrefix: optionalString(formData, 'invoicePrefix') ?? 'INV',
+      },
+    });
+  } catch (error) {
+    return toFormState(error, formData);
+  }
+  revalidatePath(settingsPath(storeId, 'taxes'));
+  return { success: 'GST details saved. Paid orders now get a tax invoice.' };
+}
+
+export async function removeGstAction(storeId: string): Promise<void> {
+  await api(`/admin/stores/${storeId}/gst`, { method: 'DELETE' });
+  revalidatePath(settingsPath(storeId, 'taxes'));
+}
+
 // Discounts
 export async function createDiscountAction(
   storeId: string,

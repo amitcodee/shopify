@@ -25,7 +25,7 @@ import type { DraftOrder, Prisma, TenantTx } from '@repo/db';
 import { z } from 'zod';
 import { AuditService } from '../audit/audit.service.js';
 import { CheckoutService } from '../checkout/checkout.service.js';
-import { priceCart } from '../checkout/pricing.js';
+import { allocate, priceCart } from '../checkout/pricing.js';
 import { TaxRules } from '../commerce/commerce-rules.js';
 import type { AuthUser, RequestMeta } from '../common/request.js';
 import { ENV, type Env } from '../config/env.js';
@@ -334,7 +334,7 @@ export class DraftOrdersService {
     const variantIds = input.lines.flatMap((l) => ('variantId' in l ? [l.variantId] : []));
     const variants = await tx.productVariant.findMany({
       where: { storeId, id: { in: variantIds } },
-      include: { product: { select: { title: true, isGiftCard: true } } },
+      include: { product: { select: { title: true, isGiftCard: true, taxRateBps: true } } },
     });
     const byId = new Map(variants.map((v) => [v.id, v]));
     const lines: DraftOrderLine[] = input.lines.map((l) => {
@@ -357,6 +357,8 @@ export class DraftOrdersService {
           taxable: v.taxable,
           requiresShipping: v.requiresShipping,
           weightGrams: v.weightGrams,
+          taxRateBps: v.product.taxRateBps,
+          hsCode: v.hsCode,
         };
       }
       return {
@@ -419,6 +421,51 @@ export class DraftOrdersService {
     });
   }
 
+  /**
+   * How the draft's stored tax splits across its lines and shipping. Re-priced with today's
+   * rate; if that no longer matches the stored total (a rate changed since the draft was
+   * saved), the stored total is split by taxable value instead, so the order keeps its total.
+   */
+  private async lineTaxes(
+    tx: TenantTx,
+    storeId: string,
+    draft: DraftOrder,
+    lines: DraftOrderLine[],
+    address: Address,
+  ): Promise<{ lineTaxRates: number[]; lineTaxes: number[]; shippingTax: number }> {
+    const tax = await this.tax.rateFor(tx, storeId, {
+      country: address.country,
+      region: address.region,
+    });
+    const repriced = priceCart({
+      lines,
+      discount: this.discountOf(draft),
+      shippingPrice: draft.shippingPrice,
+      taxRateBps: tax.rateBps,
+      taxShipping: tax.taxShipping,
+    });
+    if (repriced.taxTotal === draft.taxTotal) return repriced;
+    const weights = lines.map((l, i) =>
+      l.taxable ? l.unitPrice * l.quantity - (repriced.lineDiscounts[i] ?? 0) : 0,
+    );
+    if (weights.every((w) => w === 0)) {
+      return {
+        lineTaxRates: lines.map(() => 0),
+        lineTaxes: lines.map(() => 0),
+        shippingTax: draft.taxTotal,
+      };
+    }
+    const lineTaxes = allocate(draft.taxTotal, weights);
+    return {
+      lineTaxes,
+      lineTaxRates: lines.map((l, i) => {
+        const base = weights[i] ?? 0;
+        return base > 0 ? Math.round(((lineTaxes[i] ?? 0) * 10_000) / base) : 0;
+      }),
+      shippingTax: 0,
+    };
+  }
+
   private discountOf(draft: DraftOrder): DraftDiscount | null {
     const parsed = draftDiscountSchema.safeParse({
       type: draft.discountType,
@@ -445,6 +492,7 @@ export class DraftOrdersService {
     await this.limits.assertCanAcceptOrder(tx, storeId);
     const lines = storedLines.parse(draft.lines);
     const pricing = this.pricing(draft, lines);
+    const taxes = await this.lineTaxes(tx, storeId, draft, lines, address);
     const variants = await tx.productVariant.findMany({
       where: { storeId, id: { in: lines.flatMap((l) => (l.variantId ? [l.variantId] : [])) } },
       select: { id: true, trackInventory: true },
@@ -474,6 +522,7 @@ export class DraftOrdersService {
         discountTotal: draft.discountTotal,
         shippingTotal: draft.shippingTotal,
         taxTotal: draft.taxTotal,
+        shippingTaxTotal: taxes.shippingTax,
         total: draft.total,
         shippingMethod: draft.shippingTitle,
         shippingAddress: address,
@@ -500,6 +549,9 @@ export class DraftOrdersService {
             quantity: l.quantity,
             discountTotal: pricing.lineDiscounts[i] ?? 0,
             taxable: l.taxable,
+            hsCode: l.hsCode ?? null,
+            taxRateBps: taxes.lineTaxRates[i] ?? 0,
+            taxTotal: taxes.lineTaxes[i] ?? 0,
             requiresShipping: l.requiresShipping,
             weightGrams: l.weightGrams,
             stockReserved: l.variantId !== null && tracked.has(l.variantId),

@@ -4,6 +4,7 @@ import { GiftCardLedger } from '../gift-cards/gift-card-ledger.js';
 import { OutboxProcessor, OutboxService } from '../outbox/outbox.service.js';
 import { OrderLifecycle } from './order-lifecycle.service.js';
 import { StoreUrls } from './store-urls.js';
+import { TaxInvoiceIssuer } from './tax-invoices.js';
 
 /** Order state machine, pricing rules and outbox, shared by checkout, webhooks, admin and jobs. */
 @Module({
@@ -16,6 +17,7 @@ import { StoreUrls } from './store-urls.js';
     TaxRules,
     DiscountRules,
     GiftCardLedger,
+    TaxInvoiceIssuer,
   ],
   exports: [
     OrderLifecycle,
@@ -26,6 +28,7 @@ import { StoreUrls } from './store-urls.js';
     TaxRules,
     DiscountRules,
     GiftCardLedger,
+    TaxInvoiceIssuer,
   ],
 })
 export class OrdersCoreModule {}

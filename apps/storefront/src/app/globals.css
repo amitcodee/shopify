@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @source '../../../../packages/template-preview/src';
+@source '../../../../packages/invoice-view/src';
 
 /*
  * Theme tokens arrive as --store-* custom properties on <body> (see src/lib/theme.ts), so these

@@ -547,7 +547,7 @@ describe('Product media, fields, scheduling, list and bulk actions', () => {
 
       for (const bad of [
         { countryOfOrigin: 'IND' },
-        { hsCode: '12345' },
+        { hsCode: '123' },
         { hsCode: '12345678901' },
         { costPerItem: -1 },
       ]) {

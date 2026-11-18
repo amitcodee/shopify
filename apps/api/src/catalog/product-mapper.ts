@@ -128,6 +128,7 @@ export function toProductDto(p: ProductWithDetail, media: MediaUrls): ProductDto
     isBundle: p.isBundle,
     supplierId: p.supplierId,
     customizations: parseCustomizations(p.customizations),
+    taxRateBps: p.taxRateBps,
     options: p.options.map((o) => ({
       name: o.name,
       values: o.values,

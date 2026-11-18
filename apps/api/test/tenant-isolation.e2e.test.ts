@@ -123,6 +123,8 @@ describe('Tenant isolation', () => {
         'Domain',
         'Subscription',
         'PlatformInvoice',
+        // Premium template purchases outlive the store (tax records); platform client only.
+        'TemplatePurchase',
         // Looked up by token hash before the store is known; the guard checks its store.
         'ApiToken',
       ];

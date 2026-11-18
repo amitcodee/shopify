@@ -89,7 +89,7 @@ const hsCodeSchema = z
   .pipe(
     z
       .string()
-      .regex(/^\d{6,10}$/, 'HS codes have 6 to 10 digits')
+      .regex(/^\d{4,10}$/, 'HS / HSN codes have 4 to 10 digits')
       .nullable(),
   );
 
@@ -260,6 +260,12 @@ export const productInputSchema = z
     supplierId: z.uuid().nullable().optional(),
     /** Shopper inputs. Replaces the product's customizations when present; omitted keeps them. */
     customizations: customizationsInputSchema.optional(),
+    /**
+     * The product's own tax rate in basis points (1800 = 18% GST), used instead of the
+     * destination's rate wherever that destination is taxed. Null = destination rate; omitted
+     * keeps the stored value.
+     */
+    taxRateBps: z.number().int().min(0).max(10_000).nullable().optional(),
     options: z
       .array(productOptionInputSchema)
       .max(3)
@@ -465,6 +471,7 @@ export const productSchema = z.object({
   isBundle: z.boolean(),
   supplierId: z.uuid().nullable(),
   customizations: z.array(customizationSchema),
+  taxRateBps: z.number().int().nullable(),
   options: z.array(productOptionSchema),
   variants: z.array(variantSchema),
   images: z.array(productImageSchema),

@@ -33,8 +33,31 @@ describe('priceCart', () => {
       lineDiscounts: [0, 0],
       shippingTotal: 0,
       taxTotal: 0,
+      lineTaxRates: [0, 0],
+      lineTaxes: [0, 0],
+      shippingTax: 0,
       total: 4498,
     });
+  });
+
+  it('taxes each line at its own rate where the destination is taxed, rounding once per rate', () => {
+    const lines = [
+      { ...line(999, 3), taxRateBps: 500 },
+      line(1001),
+      { ...line(333), taxRateBps: 500 },
+    ];
+    const taxed = priceCart({ lines, shippingPrice: 1000, taxRateBps: 1800, taxShipping: true });
+    // 5% of 33.30 = 1.665 -> 1.67, split by value; 18% of 10.01 + 10.00 = 3.6018 -> 3.60.
+    expect(taxed.lineTaxRates).toEqual([500, 1800, 500]);
+    expect(taxed.lineTaxes).toEqual([150, 180, 17]);
+    expect(taxed.shippingTax).toBe(180);
+    expect(taxed.taxTotal).toBe(167 + 360);
+    expect(taxed.total).toBe(3330 + 1001 + 1000 + 527);
+
+    // Untaxed destination: product rates do not apply.
+    const untaxed = priceCart({ lines, shippingPrice: 0, taxRateBps: 0, taxShipping: false });
+    expect(untaxed.taxTotal).toBe(0);
+    expect(untaxed.lineTaxRates).toEqual([0, 0, 0]);
   });
 
   it('applies a percentage discount (half-up) allocated across lines, then tax on the discounted base', () => {

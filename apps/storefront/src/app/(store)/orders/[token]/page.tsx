@@ -1,4 +1,5 @@
-import type { PublicOrder } from '@repo/contracts';
+import type { OrderInvoice, PublicOrder } from '@repo/contracts';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { OrderView } from '@/components/order-view';
 import { isNotFound, sf } from '@/lib/api';
@@ -21,6 +22,9 @@ export default async function OrderStatusPage({
     if (isNotFound(error)) notFound();
     throw error;
   }
+  const invoice = await sf<OrderInvoice>(`/orders/${encodeURIComponent(token)}/invoice`).catch(
+    () => null,
+  );
 
   const awaitingCodConfirmation = order.cashOnDelivery && order.status === 'PENDING_PAYMENT';
   const confirmed =
@@ -49,6 +53,17 @@ export default async function OrderStatusPage({
             Orders that are not confirmed within 12 hours are cancelled automatically.
           </p>
         </div>
+      ) : null}
+      {invoice ? (
+        <p className="mb-6 text-sm text-zinc-600">
+          GST tax invoice {invoice.number}:{' '}
+          <Link
+            href={`/orders/${encodeURIComponent(token)}/invoice`}
+            className="font-medium text-zinc-900 underline underline-offset-4"
+          >
+            view or download
+          </Link>
+        </p>
       ) : null}
       <OrderView order={order} />
     </>

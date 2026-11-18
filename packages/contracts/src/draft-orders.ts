@@ -54,6 +54,9 @@ export const draftOrderLineSchema = z.object({
   taxable: z.boolean(),
   requiresShipping: z.boolean(),
   weightGrams: z.number().int(),
+  /** The product's own tax rate (basis points); null/absent = the destination's rate. */
+  taxRateBps: z.number().int().nullable().optional(),
+  hsCode: z.string().nullable().optional(),
 });
 export type DraftOrderLine = z.infer<typeof draftOrderLineSchema>;
 

@@ -441,6 +441,7 @@ export class OrdersService {
       await this.lifecycle.event(tx, store.id, orderId, 'fulfilled', 'Order fulfilled.', {
         actorUserId: actor.id,
       });
+      await this.lifecycle.issueInvoice(tx, store.id, orderId);
       await this.audit.record(tx, {
         storeId: store.id,
         actorUserId: actor.id,

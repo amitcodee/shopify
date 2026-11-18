@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @source '../../../../packages/template-preview/src';
+@source '../../../../packages/invoice-view/src';
 
 /*
  * Admin design tokens. Neutrals are Tailwind's slate scale (softened). The accent is the brand

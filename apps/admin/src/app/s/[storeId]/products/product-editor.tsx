@@ -126,10 +126,13 @@ function combinations(options: { values: string[] }[]): string[][] {
   );
 }
 
-/** HS codes are 6–10 digits; dots and spaces are accepted and dropped. */
+/** GST slabs offered in the tax-rate picker ('' = the destination's rate). */
+const GST_SLABS = ['', '0', '5', '12', '18', '28'];
+
+/** HS / HSN codes are 4–10 digits; dots and spaces are accepted and dropped. */
 function normalizeHsCode(value: string): string | null {
   const digits = value.replace(/[.\s]/g, '');
-  return /^\d{6,10}$/.test(digits) ? digits : null;
+  return /^\d{4,10}$/.test(digits) ? digits : null;
 }
 
 /** ISO instant -> `YYYY-MM-DDTHH:mm` in the viewer's time zone (for datetime-local). */
@@ -197,6 +200,10 @@ export function ProductEditor({
   const [isGiftCard, setIsGiftCard] = useState(product?.isGiftCard ?? false);
   const [isBundle, setIsBundle] = useState(product?.isBundle ?? false);
   const [supplierId, setSupplierId] = useState(product?.supplierId ?? '');
+  /** Percent as typed ('' = use the destination's rate). */
+  const [taxPercent, setTaxPercent] = useState(
+    product?.taxRateBps == null ? '' : String(product.taxRateBps / 100),
+  );
   /** null = untouched (keep the stored publish time); '' = publish now; otherwise local time. */
   const [publishAt, setPublishAt] = useState<string | null>(null);
   const [options, setOptions] = useState<OptionRow[]>(
@@ -368,6 +375,7 @@ export function ProductEditor({
       isGiftCard: isBundle ? false : isGiftCard,
       isBundle,
       supplierId: supplierId || null,
+      taxRateBps: taxPercent.trim() === '' ? null : Math.round(Number(taxPercent) * 100),
       customizations: 'value' in customizationInput ? customizationInput.value : [],
       // Untouched: keep whatever is stored. Cleared: publish now (drops a schedule).
       publishAt:
@@ -432,6 +440,7 @@ export function ProductEditor({
     isGiftCard,
     isBundle,
     supplierId,
+    taxPercent,
     customizationInput,
     components,
     publishAt,
@@ -459,10 +468,15 @@ export function ProductEditor({
     )
       error = 'Cost per item must be a valid amount (or left empty).';
     else if (rows.some((r) => r.hsCode.trim() && !normalizeHsCode(r.hsCode)))
-      error = 'HS codes have 6 to 10 digits (for example 6205.20).';
+      error = 'HS / HSN codes have 4 to 10 digits (for example 6205.20).';
     else if (metafieldErrors.some((e) => e.key || e.value))
       error = 'Fix the highlighted custom fields.';
     else if ('error' in customizationInput) error = customizationInput.error;
+    else if (
+      taxPercent.trim() !== '' &&
+      !(/^\d{1,3}(\.\d{1,2})?$/.test(taxPercent.trim()) && Number(taxPercent) <= 100)
+    )
+      error = 'Enter the tax rate as a percent from 0 to 100 (e.g. 18).';
     else if (isBundle && combos.some((combo) => !components[combo.join(SEP)]?.length))
       error =
         combos.length > 1
@@ -875,7 +889,7 @@ export function ProductEditor({
                       <th>Variant</th>
                       <th>Weight (g)</th>
                       <th>Country/Region of origin</th>
-                      <th>HS code</th>
+                      <th>HS / HSN code</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -929,7 +943,7 @@ export function ProductEditor({
                               placeholder="6205.20"
                               maxLength={14}
                               aria-invalid={hsInvalid || undefined}
-                              title={hsInvalid ? 'Use 6 to 10 digits' : undefined}
+                              title={hsInvalid ? 'Use 4 to 10 digits' : undefined}
                               onChange={(e) => updateRow(combo, { hsCode: e.target.value })}
                             />
                           </td>
@@ -940,7 +954,8 @@ export function ProductEditor({
                 </table>
               </div>
               <p className="border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
-                HS (Harmonized System) codes have 6 to 10 digits; dots and spaces are ignored.
+                HS / HSN codes (Harmonized System; India uses HSN on GST invoices) have 4 to 10
+                digits; dots and spaces are ignored.
               </p>
             </Card>
 
@@ -1174,6 +1189,45 @@ export function ProductEditor({
                       : 'Used to suggest reorders and fill purchase orders.'}
                   </p>
                 </div>
+                {isGiftCard ? null : (
+                  <div className="space-y-1">
+                    <label htmlFor="p-tax-rate" className={label}>
+                      Tax rate
+                    </label>
+                    <select
+                      id="p-tax-rate"
+                      className={input}
+                      value={GST_SLABS.includes(taxPercent) ? taxPercent : 'custom'}
+                      onChange={(e) =>
+                        setTaxPercent(
+                          e.target.value === 'custom' ? taxPercent || '0' : e.target.value,
+                        )
+                      }
+                    >
+                      <option value="">Same as the destination</option>
+                      {GST_SLABS.filter(Boolean).map((slab) => (
+                        <option key={slab} value={slab}>
+                          {slab}% GST
+                        </option>
+                      ))}
+                      <option value="custom">Other rate…</option>
+                    </select>
+                    {GST_SLABS.includes(taxPercent) ? null : (
+                      <input
+                        aria-label="Tax rate %"
+                        className={input}
+                        inputMode="decimal"
+                        value={taxPercent}
+                        onChange={(e) => setTaxPercent(e.target.value)}
+                        placeholder="e.g. 3"
+                      />
+                    )}
+                    <p className={hint}>
+                      Used instead of the rate in Settings → Taxes wherever that destination is
+                      taxed. Pick the GST slab for this product&apos;s HSN code.
+                    </p>
+                  </div>
+                )}
                 {product ? (
                   isBundle ? (
                     <p className="flex items-start gap-2 border-t border-slate-100 pt-4 text-sm text-slate-700">

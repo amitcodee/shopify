@@ -130,6 +130,9 @@ model Store {
   /// offline and the admin is limited to billing until the store pays.
   billingLocked               Boolean     @default(false)
   closedAt                    DateTime?
+  /// India GST registration used on tax invoices (see @repo/contracts gstRegistrationSchema);
+  /// null when the store is not GST-registered (no tax invoices are issued).
+  gstRegistration             Json?
   /// When a closed store's data is permanently erased.
   deletionScheduledAt         DateTime?
   createdAt                   DateTime    @default(now())
@@ -158,6 +161,7 @@ model Store {
   locations      Location[]
   suppliers      Supplier[]
   purchaseOrders PurchaseOrder[]
+  invoices       OrderInvoice[]
   webhooks       WebhookSubscription[]
   subscription   Subscription?
   storeGateways  StoreGateway[]
@@ -246,6 +250,9 @@ model Product {
   supplierId     String?                  @db.Uuid
   /// Shopper inputs such as engraving text or gift wrap (see @repo/contracts customizationSchema).
   customizations Json                     @default("[]")
+  /// Tax rate for this product (basis points, 1800 = 18% GST); overrides the destination's rate
+  /// wherever the destination is taxed. Null = use the destination's rate.
+  taxRateBps     Int?
   seoTitle       String?
   seoDescription String?
   /// Visible on the storefront from this time on (when ACTIVE); a future time means scheduled.
@@ -736,6 +743,8 @@ model Order {
   discountTotal       Int               @default(0)
   shippingTotal       Int               @default(0)
   taxTotal            Int               @default(0)
+  /// Part of taxTotal charged on shipping (the rest is on the lines' taxTotal).
+  shippingTaxTotal    Int               @default(0)
   total               Int
   discountCode        String?
   shippingMethod      String?
@@ -775,6 +784,7 @@ model Order {
   draftOrders  DraftOrder[]
   giftCard     GiftCard?     @relation(fields: [storeId, giftCardId], references: [storeId, id])
   returns      Return[]
+  invoice      OrderInvoice?
 
   @@unique([storeId, id])
   @@unique([storeId, number])
@@ -822,10 +832,38 @@ model OrderLine {
   properties        Json    @default("[]")
   /// Bundle lines: the component stock taken, [{ variantId, quantity (per bundle), locationId }].
   components        Json    @default("[]")
+  /// HS / HSN code as sold (printed on GST invoices).
+  hsCode            String?
+  /// Tax charged on this line: its rate (basis points) and amount (minor units).
+  taxRateBps        Int     @default(0)
+  taxTotal          Int     @default(0)
 
   order Order @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
 
   @@index([orderId])
+}
+
+/// Tenant-scoped (RLS). A GST tax invoice: numbered once per order, in sequence per financial
+/// year, and never changed after it is issued (the snapshot keeps seller, buyer and lines).
+model OrderInvoice {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  storeId       String   @db.Uuid
+  orderId       String   @db.Uuid
+  /// Printed number, e.g. "INV/26-27/0001" (at most 16 characters, as GST rules require).
+  number        String
+  /// Indian financial year (April to March), e.g. "2026-27".
+  financialYear String
+  sequence      Int
+  issuedAt      DateTime @default(now())
+  /// Everything printed on the invoice (see @repo/contracts taxInvoiceSchema).
+  data          Json
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+
+  @@unique([storeId, orderId])
+  @@unique([storeId, financialYear, sequence])
+  @@unique([storeId, number])
 }
 
 enum GiftCardTransactionKind {

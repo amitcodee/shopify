@@ -10,6 +10,11 @@ export interface PricingLine {
   requiresShipping: boolean;
   /** False for gift cards: order discounts never reduce their price. Default true. */
   discountable?: boolean;
+  /**
+   * The product's own tax rate (basis points), e.g. a GST slab. Used instead of the
+   * destination's rate, but only where the destination is taxed at all.
+   */
+  taxRateBps?: number | null;
 }
 
 export interface PricingDiscount {
@@ -34,6 +39,11 @@ export interface PricingResult {
   lineDiscounts: number[];
   shippingTotal: number;
   taxTotal: number;
+  /** Tax rate (basis points) and tax charged on each input line, same order. */
+  lineTaxRates: number[];
+  lineTaxes: number[];
+  /** Part of taxTotal charged on shipping. */
+  shippingTax: number;
   total: number;
 }
 
@@ -87,12 +97,30 @@ export function priceCart(input: PricingInput): PricingResult {
       ? 0
       : Math.max(0, input.shippingPrice);
 
-  const taxableLines = input.lines.reduce(
-    (sum, line, i) => (line.taxable ? sum + (lineTotals[i] ?? 0) - (lineDiscounts[i] ?? 0) : sum),
-    0,
+  // Tax is rounded once per rate (as a tax invoice shows it), then split across the lines (and
+  // shipping) at that rate in proportion to their taxable value.
+  const destinationRate = Math.max(0, input.taxRateBps);
+  const lineTaxRates = input.lines.map((line) =>
+    line.taxable && destinationRate > 0 ? Math.max(0, line.taxRateBps ?? destinationRate) : 0,
   );
-  const taxableBase = taxableLines + (input.taxShipping ? shippingTotal : 0);
-  const taxTotal = divRoundHalfUp(taxableBase * Math.max(0, input.taxRateBps), 10_000);
+  const bases = input.lines.map((_, i) => (lineTotals[i] ?? 0) - (lineDiscounts[i] ?? 0));
+  const shippingRate = input.taxShipping ? destinationRate : 0;
+  const members = [
+    ...bases.map((base, i) => ({ base, rate: lineTaxRates[i] ?? 0 })),
+    { base: shippingTotal, rate: shippingRate },
+  ];
+  const taxes = members.map(() => 0);
+  for (const rate of new Set(members.map((m) => m.rate))) {
+    if (rate === 0) continue;
+    const indexes = members.flatMap((m, i) => (m.rate === rate ? [i] : []));
+    const weights = indexes.map((i) => members[i]?.base ?? 0);
+    const groupBase = weights.reduce((s, w) => s + w, 0);
+    const parts = allocate(divRoundHalfUp(groupBase * rate, 10_000), weights);
+    indexes.forEach((memberIndex, k) => (taxes[memberIndex] = parts[k] ?? 0));
+  }
+  const lineTaxes = taxes.slice(0, input.lines.length);
+  const shippingTax = taxes[input.lines.length] ?? 0;
+  const taxTotal = taxes.reduce((s, t) => s + t, 0);
 
   return {
     subtotal,
@@ -100,6 +128,9 @@ export function priceCart(input: PricingInput): PricingResult {
     lineDiscounts,
     shippingTotal,
     taxTotal,
+    lineTaxRates,
+    lineTaxes,
+    shippingTax,
     total: subtotal - discountTotal + shippingTotal + taxTotal,
   };
 }

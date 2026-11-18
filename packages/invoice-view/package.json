@@ -1,0 +1,19 @@
+{
+  "name": "@repo/invoice-view",
+  "private": true,
+  "version": "0.0.0",
+  "description": "The printable GST tax invoice, shared by the admin and the storefront order page.",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "dependencies": {
+    "@repo/contracts": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "*"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "react": "19.3.1"
+  }
+}
