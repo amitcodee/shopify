@@ -215,6 +215,7 @@ export class ReturnsService {
         },
         actor,
         meta,
+        ret.lines.map((l) => ({ lineId: l.orderLineId, quantity: l.quantity })),
       );
       const last = detail.refunds.at(-1);
       if (!last || last.status === 'FAILED') {

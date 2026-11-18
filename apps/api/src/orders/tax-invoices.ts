@@ -259,19 +259,27 @@ function toInvoice(row: OrderInvoiceRow, notes: CreditNoteRow[] = []): OrderInvo
 
 const creditNotesInclude = { orderBy: { issuedAt: 'asc' as const } };
 
+/** Key of an invoice summary row: HSN code and rate. */
+const rowKey = (hsCode: string | null, rateBps: number) => `${hsCode ?? ''}|${rateBps}`;
+
 /**
- * A credit note for `amount` refunded on an invoiced order. Refunds are amounts, not items, so
- * the amount is split over the invoice's HSN/rate rows by their value (taxable value plus tax),
- * and each row's part is divided back into taxable value and tax at that row's rate.
+ * A credit note for `amount` refunded on an invoiced order. The amount is split over the
+ * invoice's HSN/rate rows: by the value of the items being returned when the refund names them
+ * (`itemValues`, keyed like the rows), otherwise by each row's value. Each row's part is then
+ * divided back into taxable value and tax at that row's rate.
  */
 export function buildCreditNote(
   invoice: { number: string; issuedAt: Date; data: TaxInvoiceData },
   amount: number,
   reason: string | null,
+  itemValues: Map<string, number> = new Map(),
 ): CreditNoteData {
   const d = invoice.data;
   const intra = d.supplyType === 'intra';
-  const values = d.summary.map((r) => r.taxableValue + r.cgst + r.sgst + r.igst);
+  const byItems = d.summary.map((r) => itemValues.get(rowKey(r.hsCode, r.rateBps)) ?? 0);
+  const values = byItems.some((v) => v > 0)
+    ? byItems
+    : d.summary.map((r) => r.taxableValue + r.cgst + r.sgst + r.igst);
   const parts = allocate(amount, values);
   const rows = d.summary.map((r, i) => {
     const part = parts[i] ?? 0;
@@ -393,7 +401,13 @@ export class TaxInvoiceIssuer {
     tx: TenantTx,
     storeId: string,
     orderId: string,
-    refund: { id: string; amount: number; reason: string | null },
+    refund: {
+      id: string;
+      amount: number;
+      reason: string | null;
+      /** Order lines being returned, if the refund names them. */
+      items?: { lineId: string; quantity: number }[];
+    },
   ): Promise<{ number: string } | null> {
     const invoice = await tx.orderInvoice.findUnique({
       where: { storeId_orderId: { storeId, orderId } },
@@ -416,6 +430,20 @@ export class TaxInvoiceIssuer {
       _max: { sequence: true },
     });
     const sequence = (last._max.sequence ?? 0) + 1;
+    const itemValues = new Map<string, number>();
+    if (refund.items?.length) {
+      const lines = await tx.orderLine.findMany({
+        where: { storeId, orderId, id: { in: refund.items.map((i) => i.lineId) } },
+      });
+      for (const item of refund.items) {
+        const line = lines.find((l) => l.id === item.lineId);
+        if (!line || line.quantity <= 0) continue;
+        const value = line.unitPrice * line.quantity - line.discountTotal + line.taxTotal;
+        const key = rowKey(line.hsCode, line.taxRateBps);
+        const share = Math.round((value * Math.min(item.quantity, line.quantity)) / line.quantity);
+        itemValues.set(key, (itemValues.get(key) ?? 0) + share);
+      }
+    }
     const data = buildCreditNote(
       {
         number: invoice.number,
@@ -424,6 +452,7 @@ export class TaxInvoiceIssuer {
       },
       refund.amount,
       refund.reason,
+      itemValues,
     );
     return tx.creditNote.create({
       data: {

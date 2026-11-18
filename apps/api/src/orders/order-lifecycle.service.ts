@@ -66,7 +66,12 @@ export class OrderLifecycle {
     tx: TenantTx,
     storeId: string,
     orderId: string,
-    refund: { id: string; amount: number; reason: string | null },
+    refund: {
+      id: string;
+      amount: number;
+      reason: string | null;
+      items?: { lineId: string; quantity: number }[];
+    },
   ): Promise<void> {
     const note = await this.invoices.issueCreditNote(tx, storeId, orderId, refund);
     if (note) {

@@ -237,11 +237,34 @@ describe('GST tax invoices', () => {
       const tax = row.cgst + row.sgst;
       expect(Math.abs(tax - (row.taxableValue * row.rateBps) / 10_000)).toBeLessThanOrEqual(1);
     }
+    // Naming the returned item puts the whole refund on its rate: the watch, 18%.
+    const detail = await ctx.http().get(`${admin}/orders/${localId}`).set(auth).expect(200);
+    const watchLine = (detail.body.lines as { id: string; title: string }[]).find(
+      (l) => l.title === 'Steel watch',
+    )!;
+    await ctx
+      .http()
+      .post(`${admin}/orders/${localId}/refunds`)
+      .set(auth)
+      .send({ amount: 59_000, restock: [{ lineId: watchLine.id, quantity: 1 }] })
+      .expect(201);
+    const withItems = await ctx
+      .http()
+      .get(`${admin}/orders/${localId}/invoice`)
+      .set(auth)
+      .expect(200);
+    const itemNote = withItems.body.invoice.creditNotes[1];
+    expect(itemNote.number).toMatch(/\/0002$/);
+    expect(itemNote.data.rows).toEqual([
+      expect.objectContaining({ rateBps: 500, taxableValue: 0, cgst: 0, sgst: 0 }),
+      expect.objectContaining({ rateBps: 1800, taxableValue: 50_000, cgst: 4_500, sgst: 4_500 }),
+    ]);
+
     const shopperNotes = await sf(
       'get',
       `/orders/${urls.orderAccessToken(localId)}/invoice`,
     ).expect(200);
-    expect(shopperNotes.body.creditNotes).toHaveLength(1);
+    expect(shopperNotes.body.creditNotes).toHaveLength(2);
 
     // Issued invoices keep their snapshot when the registration changes.
     await ctx

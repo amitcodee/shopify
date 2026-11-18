@@ -222,6 +222,8 @@ export class OrdersService {
     input: z.output<typeof refundInputSchema>,
     actor: AuthUser,
     meta: RequestMeta,
+    /** The items being refunded, for the credit note (default: the items restocked). */
+    creditItems?: { lineId: string; quantity: number }[],
   ): Promise<OrderDetail> {
     const pending = await this.tenantDb.run(store.id, async (tx) => {
       await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId}::uuid AND "storeId" = ${store.id}::uuid FOR UPDATE`;
@@ -372,6 +374,7 @@ export class OrdersService {
           id: recorded.id,
           amount: input.amount,
           reason: input.reason ?? null,
+          items: creditItems ?? input.restock,
         });
       }
       await this.lifecycle.event(

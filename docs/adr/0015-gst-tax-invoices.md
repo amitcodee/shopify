@@ -39,8 +39,9 @@ never changes: later edits to the registration or products do not touch it.
   destination rate.
 - Orders placed before per-line tax was stored have their total tax split by line value.
 - Refunds on an invoiced order issue a credit note (`CreditNote`, RLS) in its own series
-  (`CN/26-27/0001`), against the invoice. Refunds are amounts, not items, so the amount is split
-  over the invoice's HSN/rate rows by value and each part is divided into taxable value and tax at
+  (`CN/26-27/0001`), against the invoice. The amount is split over the invoice's HSN/rate rows by
+  the value of the items being returned (the items restocked, or a return's items); a refund that
+  names no items is split by each row's value. Each part is divided into taxable value and tax at
   that row's rate. One credit note per refund (unique on `refundId`). It is printed after the
   invoice on both invoice pages, each on its own page.
 - Checkout shows a state dropdown when the country is India, storing the state's short code (MH,
