@@ -61,6 +61,25 @@ export class OrderLifecycle {
    * Issues the GST invoice when the store is registered (paid, or first shipped for cash on
    * delivery). Does nothing for unregistered stores or orders that already have one.
    */
+  /** A refund on an invoiced order gets a GST credit note (and a timeline entry). */
+  async issueCreditNote(
+    tx: TenantTx,
+    storeId: string,
+    orderId: string,
+    refund: { id: string; amount: number; reason: string | null },
+  ): Promise<void> {
+    const note = await this.invoices.issueCreditNote(tx, storeId, orderId, refund);
+    if (note) {
+      await this.event(
+        tx,
+        storeId,
+        orderId,
+        'credit_note_issued',
+        `Credit note ${note.number} issued.`,
+      );
+    }
+  }
+
   async issueInvoice(tx: TenantTx, storeId: string, orderId: string): Promise<void> {
     const { invoice, created } = await this.invoices.issueNew(tx, storeId, orderId);
     if (invoice && created) {

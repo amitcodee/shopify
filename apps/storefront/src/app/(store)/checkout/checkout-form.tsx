@@ -1,11 +1,16 @@
 'use client';
 
-import { type CheckoutPreview, formatMoney } from '@repo/contracts';
+import { type CheckoutPreview, formatMoney, GST_STATES } from '@repo/contracts';
 import { useActionState, useState, useTransition } from 'react';
 import { FollowRedirect } from '@/components/follow-redirect';
 import { Notice, Submit, TextField } from '@/components/form';
 import { srcSetFor } from '@/lib/images';
 import { placeOrderAction, previewAction } from './actions';
+
+/** Indian states and union territories, stored by their short code (MH, KA, DL…). */
+const INDIAN_STATES = GST_STATES.map((s) => ({ value: s.aliases[0] ?? s.code, name: s.name })).sort(
+  (a, b) => a.name.localeCompare(b.name),
+);
 
 const COUNTRIES: [string, string][] = [
   ['US', 'United States'],
@@ -177,14 +182,44 @@ export function CheckoutForm({
               required
               error={err.city}
             />
-            <TextField
-              label="State / region"
-              name="region"
-              autoComplete="address-level1"
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-              onBlur={() => refresh({ region })}
-            />
+            {country === 'IN' ? (
+              // Indian states by code: tax rates and GST invoices need the exact state.
+              <div>
+                <label htmlFor="region" className="field-label">
+                  State
+                </label>
+                <select
+                  id="region"
+                  name="region"
+                  autoComplete="address-level1"
+                  required
+                  value={region}
+                  onChange={(e) => {
+                    setRegion(e.target.value);
+                    refresh({ region: e.target.value });
+                  }}
+                  className="field"
+                >
+                  <option value="" disabled>
+                    Select a state
+                  </option>
+                  {INDIAN_STATES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <TextField
+                label="State / region"
+                name="region"
+                autoComplete="address-level1"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                onBlur={() => refresh({ region })}
+              />
+            )}
             <TextField
               label="Postal code"
               name="postalCode"
@@ -202,8 +237,15 @@ export function CheckoutForm({
                 autoComplete="country"
                 value={country}
                 onChange={(e) => {
-                  setCountry(e.target.value);
-                  refresh({ country: e.target.value });
+                  const next = e.target.value;
+                  setCountry(next);
+                  // A typed region rarely matches the state list (and vice versa): start over.
+                  if ((next === 'IN') !== (country === 'IN')) {
+                    setRegion('');
+                    refresh({ country: next, region: '' });
+                  } else {
+                    refresh({ country: next });
+                  }
                 }}
                 className="field"
               >

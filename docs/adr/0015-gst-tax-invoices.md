@@ -38,18 +38,25 @@ never changes: later edits to the registration or products do not touch it.
   Deliveries outside India are marked as exports. Shipping is its own row under SAC 9965 at the
   destination rate.
 - Orders placed before per-line tax was stored have their total tax split by line value.
+- Refunds on an invoiced order issue a credit note (`CreditNote`, RLS) in its own series
+  (`CN/26-27/0001`), against the invoice. Refunds are amounts, not items, so the amount is split
+  over the invoice's HSN/rate rows by value and each part is divided into taxable value and tax at
+  that row's rate. One credit note per refund (unique on `refundId`). It is printed after the
+  invoice on both invoice pages, each on its own page.
+- Checkout shows a state dropdown when the country is India, storing the state's short code (MH,
+  KA, DL…), so tax rates by region and the place of supply match exactly.
 - Admin: printable page `/tax-invoice/:store/:order` (print or save as PDF). Shoppers get the same
   document from their order-status page (`GET /storefront/orders/:token/invoice`). Both use
   `packages/invoice-view`.
 
 ## Not done
 
-- Credit notes for refunds and returns (the invoice stays as issued).
 - B2B: the buyer's GSTIN at checkout, and e-invoicing (IRN/QR from the IRP), which is mandatory
   only above the turnover limit.
 - Tax-inclusive prices (MRP). Prices are still before tax, so merchants who quote GST-inclusive
   prices must enter prices without GST.
 - Signature: the invoice has an "Authorised signatory" space, not a digital signature.
-- A state picker at checkout. Regions are free text, matched as above.
+- A refund that a provider reports as failed later (after it was accepted) keeps its credit
+  note; cancel it by hand.
 - Invoices are erased with the store's data when a closed store is deleted; merchants must keep
   their own copies for the retention period GST law requires.

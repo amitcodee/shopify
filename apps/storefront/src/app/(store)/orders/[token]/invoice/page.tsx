@@ -1,5 +1,5 @@
 import type { OrderInvoice } from '@repo/contracts';
-import { TaxInvoiceDocument } from '@repo/invoice-view';
+import { CreditNoteDocument, TaxInvoiceDocument } from '@repo/invoice-view';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { isNotFound, sf } from '@/lib/api';
@@ -39,6 +39,11 @@ export default async function OrderInvoicePage({ params }: { params: Promise<{ t
         className="overflow-hidden rounded-xl border border-zinc-200 bg-white p-6 sm:p-8"
       >
         <TaxInvoiceDocument invoice={invoice} />
+        {invoice.creditNotes.map((note) => (
+          <div key={note.id} className="mt-10 break-before-page border-t border-zinc-200 pt-8">
+            <CreditNoteDocument note={note} />
+          </div>
+        ))}
       </div>
     </>
   );

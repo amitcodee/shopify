@@ -1,4 +1,4 @@
-import type { OrderInvoice, TaxInvoiceData } from '@repo/contracts';
+import type { CreditNote, OrderInvoice, TaxInvoiceData } from '@repo/contracts';
 import type { ReactNode } from 'react';
 
 /**
@@ -220,6 +220,138 @@ export function TaxInvoiceDocument({ invoice }: { invoice: OrderInvoice }) {
           <div className="mt-10 w-48 border-t border-neutral-400 pt-1 text-[12px]">
             Authorised signatory
           </div>
+        </div>
+      </footer>
+    </article>
+  );
+}
+
+/**
+ * A GST credit note: reduces an issued invoice by a refund. Same plain A4 look as the invoice,
+ * with the refund split by HSN and rate.
+ */
+export function CreditNoteDocument({ note }: { note: CreditNote }) {
+  const d = note.data;
+  const amount = amountFormatter(d.currency);
+  const money = (n: number) => amount.format(n / 100);
+  const intra = d.supplyType === 'intra';
+  const date = (iso: string) =>
+    new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(
+      new Date(iso),
+    );
+
+  return (
+    <article className="mx-auto w-full max-w-[210mm] bg-white text-[13px] leading-5 text-neutral-900 print:max-w-none">
+      <header className="flex flex-wrap items-start justify-between gap-6 border-b-2 border-neutral-900 pb-5">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+            Credit note
+          </p>
+          <h1 className="mt-1 text-xl font-bold">{d.seller.legalName}</h1>
+          <p className="mt-2 max-w-sm whitespace-pre-line text-neutral-700">{d.seller.address}</p>
+          <p className="mt-2">
+            <span className="text-neutral-500">GSTIN </span>
+            <span className="font-mono font-semibold">{d.seller.gstin}</span>
+          </p>
+        </div>
+        <dl className="grid grid-cols-[auto_auto] gap-x-4 gap-y-1">
+          <Meta label="Credit note no.">
+            <span className="font-mono font-semibold">{note.number}</span>
+          </Meta>
+          <Meta label="Date">{date(note.issuedAt)}</Meta>
+          <Meta label="Against invoice">
+            <span className="font-mono">{d.invoiceNumber}</span> · {date(d.invoiceDate)}
+          </Meta>
+          <Meta label="Order">#{d.orderNumber}</Meta>
+          <Meta label="Place of supply">
+            {d.placeOfSupply.name}
+            {d.placeOfSupply.code ? ` (${d.placeOfSupply.code})` : ''}
+          </Meta>
+        </dl>
+      </header>
+
+      <section className="grid gap-6 border-b border-neutral-200 py-5 sm:grid-cols-2">
+        <div>
+          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
+            Issued to
+          </h2>
+          <p className="mt-1 font-semibold">{d.buyer.name}</p>
+          {d.buyer.address.map((line, i) => (
+            <p key={i} className="text-neutral-700">
+              {line}
+            </p>
+          ))}
+        </div>
+        <div className="sm:text-right">
+          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
+            Reason
+          </h2>
+          <p className="mt-1">{d.reason ?? 'Refund'}</p>
+        </div>
+      </section>
+
+      <table className="mt-4 w-full border-collapse">
+        <thead>
+          <tr className="border-y border-neutral-300 bg-neutral-50 text-left text-[11px] uppercase tracking-wide text-neutral-600">
+            <Th>HSN</Th>
+            <Th right>Taxable</Th>
+            <Th right>GST</Th>
+            {intra ? (
+              <>
+                <Th right>CGST</Th>
+                <Th right>SGST</Th>
+              </>
+            ) : (
+              <Th right>IGST</Th>
+            )}
+            <Th right>Amount</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {d.rows.map((row, i) => (
+            <tr key={i} className="border-b border-neutral-200">
+              <Td>{row.hsCode ?? '—'}</Td>
+              <Num>{money(row.taxableValue)}</Num>
+              <Num>{`${trimZeros(row.rateBps / 100)}%`}</Num>
+              {intra ? (
+                <>
+                  <Num>{money(row.cgst)}</Num>
+                  <Num>{money(row.sgst)}</Num>
+                </>
+              ) : (
+                <Num>{money(row.igst)}</Num>
+              )}
+              <Num strong>{money(row.taxableValue + row.cgst + row.sgst + row.igst)}</Num>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <dl className="ml-auto mt-5 max-w-[280px] space-y-1">
+        <Total label="Taxable value">{money(d.taxableTotal)}</Total>
+        {intra ? (
+          <>
+            <Total label="CGST">{money(d.cgstTotal)}</Total>
+            <Total label="SGST">{money(d.sgstTotal)}</Total>
+          </>
+        ) : (
+          <Total label="IGST">{money(d.igstTotal)}</Total>
+        )}
+        <div className="flex justify-between gap-6 border-t-2 border-neutral-900 pt-2 text-base font-bold">
+          <dt>Credited ({d.currency})</dt>
+          <dd className="tabular-nums">{money(d.total)}</dd>
+        </div>
+      </dl>
+
+      <p className="mt-4 border-y border-neutral-200 py-2 text-neutral-700">
+        <span className="text-neutral-500">Amount in words: </span>
+        {d.amountInWords}
+      </p>
+
+      <footer className="mt-10 text-right text-neutral-600">
+        <p>For {d.seller.legalName}</p>
+        <div className="ml-auto mt-10 w-48 border-t border-neutral-400 pt-1 text-[12px]">
+          Authorised signatory
         </div>
       </footer>
     </article>

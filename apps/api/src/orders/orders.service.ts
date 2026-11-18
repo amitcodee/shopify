@@ -366,6 +366,14 @@ export class OrdersService {
           orderId,
         );
       }
+      const recorded = pending.refund ?? pending.giftRefund;
+      if (recorded) {
+        await this.lifecycle.issueCreditNote(tx, store.id, orderId, {
+          id: recorded.id,
+          amount: input.amount,
+          reason: input.reason ?? null,
+        });
+      }
       await this.lifecycle.event(
         tx,
         store.id,

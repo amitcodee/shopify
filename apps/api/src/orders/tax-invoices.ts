@@ -16,6 +16,10 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   addressSchema,
   amountInWords,
+  CREDIT_NOTE_PREFIX,
+  type CreditNote,
+  type CreditNoteData,
+  creditNoteDataSchema,
   financialYearOf,
   GST_STATES,
   type GstRegistration,
@@ -235,13 +239,63 @@ export function buildTaxInvoice({ store, registration, order }: InvoiceSource): 
   };
 }
 
-function toInvoice(row: OrderInvoiceRow): OrderInvoice {
+type CreditNoteRow = { id: string; number: string; issuedAt: Date; data: unknown };
+
+function toInvoice(row: OrderInvoiceRow, notes: CreditNoteRow[] = []): OrderInvoice {
   return {
     id: row.id,
     number: row.number,
     financialYear: row.financialYear,
     issuedAt: row.issuedAt.toISOString(),
     data: taxInvoiceDataSchema.parse(row.data),
+    creditNotes: notes.map((n): CreditNote => ({
+      id: n.id,
+      number: n.number,
+      issuedAt: n.issuedAt.toISOString(),
+      data: creditNoteDataSchema.parse(n.data),
+    })),
+  };
+}
+
+const creditNotesInclude = { orderBy: { issuedAt: 'asc' as const } };
+
+/**
+ * A credit note for `amount` refunded on an invoiced order. Refunds are amounts, not items, so
+ * the amount is split over the invoice's HSN/rate rows by their value (taxable value plus tax),
+ * and each row's part is divided back into taxable value and tax at that row's rate.
+ */
+export function buildCreditNote(
+  invoice: { number: string; issuedAt: Date; data: TaxInvoiceData },
+  amount: number,
+  reason: string | null,
+): CreditNoteData {
+  const d = invoice.data;
+  const intra = d.supplyType === 'intra';
+  const values = d.summary.map((r) => r.taxableValue + r.cgst + r.sgst + r.igst);
+  const parts = allocate(amount, values);
+  const rows = d.summary.map((r, i) => {
+    const part = parts[i] ?? 0;
+    const tax = Math.round((part * r.rateBps) / (10_000 + r.rateBps));
+    return { hsCode: r.hsCode, taxableValue: part - tax, ...split(tax, r.rateBps, intra) };
+  });
+  const sum = (pick: (r: (typeof rows)[number]) => number) => rows.reduce((s, r) => s + pick(r), 0);
+  return {
+    invoiceNumber: invoice.number,
+    invoiceDate: invoice.issuedAt.toISOString(),
+    seller: d.seller,
+    buyer: d.buyer,
+    placeOfSupply: d.placeOfSupply,
+    supplyType: d.supplyType,
+    orderNumber: d.orderNumber,
+    currency: d.currency,
+    reason,
+    rows,
+    taxableTotal: sum((r) => r.taxableValue),
+    cgstTotal: sum((r) => r.cgst),
+    sgstTotal: sum((r) => r.sgst),
+    igstTotal: sum((r) => r.igst),
+    total: amount,
+    amountInWords: amountInWords(amount, d.currency),
   };
 }
 
@@ -330,6 +384,60 @@ export class TaxInvoiceIssuer {
     });
     return { invoice, created: true };
   }
+
+  /**
+   * Records a refund against the order's invoice. Orders without an invoice need none (nothing
+   * was invoiced); a refund already recorded is not recorded twice.
+   */
+  async issueCreditNote(
+    tx: TenantTx,
+    storeId: string,
+    orderId: string,
+    refund: { id: string; amount: number; reason: string | null },
+  ): Promise<{ number: string } | null> {
+    const invoice = await tx.orderInvoice.findUnique({
+      where: { storeId_orderId: { storeId, orderId } },
+    });
+    if (!invoice || refund.amount <= 0) return null;
+    const existing = await tx.creditNote.findUnique({
+      where: { storeId_refundId: { storeId, refundId: refund.id } },
+    });
+    if (existing) return existing;
+    const store = await tx.store.findUniqueOrThrow({
+      where: { id: storeId },
+      select: { timezone: true },
+    });
+    const issuedAt = new Date();
+    const { year, month } = yearMonthIn(issuedAt, store.timezone);
+    const financialYear = financialYearOf(year, month);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`credit-note:${storeId}:${financialYear}`}))`;
+    const last = await tx.creditNote.aggregate({
+      where: { storeId, financialYear },
+      _max: { sequence: true },
+    });
+    const sequence = (last._max.sequence ?? 0) + 1;
+    const data = buildCreditNote(
+      {
+        number: invoice.number,
+        issuedAt: invoice.issuedAt,
+        data: taxInvoiceDataSchema.parse(invoice.data),
+      },
+      refund.amount,
+      refund.reason,
+    );
+    return tx.creditNote.create({
+      data: {
+        storeId,
+        orderId,
+        refundId: refund.id,
+        financialYear,
+        sequence,
+        number: invoiceNumber(CREDIT_NOTE_PREFIX, financialYear, sequence),
+        issuedAt,
+        data,
+      },
+    });
+  }
 }
 
 @Injectable()
@@ -379,11 +487,21 @@ export class TaxInvoicesService {
     return this.tenantDb.run(storeId, async (tx) => {
       const order = await tx.order.findFirst({
         where: { id: orderId, storeId },
-        select: { status: true, invoice: true, store: { select: { gstRegistration: true } } },
+        select: {
+          status: true,
+          invoice: true,
+          creditNotes: creditNotesInclude,
+          store: { select: { gstRegistration: true } },
+        },
       });
       if (!order) throw new NotFoundException('Order not found.');
-      if (order.invoice)
-        return { invoice: toInvoice(order.invoice), canIssue: false, reason: null };
+      if (order.invoice) {
+        return {
+          invoice: toInvoice(order.invoice, order.creditNotes),
+          canIssue: false,
+          reason: null,
+        };
+      }
       const reason = ineligibility(order, parseRegistration(order.store.gstRegistration));
       return { invoice: null, canIssue: reason === null, reason };
     });
@@ -417,7 +535,15 @@ export class TaxInvoicesService {
           meta,
         });
       }
-      return { invoice: toInvoice(row), canIssue: false, reason: null } satisfies OrderInvoiceState;
+      const notes = await tx.creditNote.findMany({
+        where: { storeId, orderId },
+        ...creditNotesInclude,
+      });
+      return {
+        invoice: toInvoice(row, notes),
+        canIssue: false,
+        reason: null,
+      } satisfies OrderInvoiceState;
     });
   }
 
@@ -426,10 +552,10 @@ export class TaxInvoicesService {
     return this.tenantDb.run(shop.id, async (tx) => {
       const order = await tx.order.findFirst({
         where: { storeId: shop.id, accessTokenHash: hashToken(token) },
-        select: { invoice: true },
+        select: { invoice: true, creditNotes: creditNotesInclude },
       });
       if (!order?.invoice) throw new NotFoundException('No tax invoice for this order.');
-      return toInvoice(order.invoice);
+      return toInvoice(order.invoice, order.creditNotes);
     });
   }
 }

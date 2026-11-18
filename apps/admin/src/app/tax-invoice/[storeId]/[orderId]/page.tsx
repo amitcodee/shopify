@@ -1,5 +1,5 @@
 import type { OrderInvoiceState } from '@repo/contracts';
-import { TaxInvoiceDocument } from '@repo/invoice-view';
+import { CreditNoteDocument, TaxInvoiceDocument } from '@repo/invoice-view';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -50,7 +50,16 @@ export default async function TaxInvoicePage({
           <div className="rounded-xl bg-white p-8 shadow-sm ring-1 ring-slate-200 print:rounded-none print:p-0 print:shadow-none print:ring-0">
             <TaxInvoiceDocument invoice={state.invoice} />
           </div>
-        ) : (
+        ) : null}
+        {state.invoice?.creditNotes.map((note) => (
+          <div
+            key={note.id}
+            className="mt-6 break-before-page rounded-xl bg-white p-8 shadow-sm ring-1 ring-slate-200 print:mt-0 print:rounded-none print:p-0 print:shadow-none print:ring-0"
+          >
+            <CreditNoteDocument note={note} />
+          </div>
+        ))}
+        {state.invoice ? null : (
           <div className="mx-auto max-w-lg rounded-xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-200">
             <h1 className="text-lg font-semibold text-slate-900">No tax invoice yet</h1>
             <p className="mt-2 text-sm text-slate-600">

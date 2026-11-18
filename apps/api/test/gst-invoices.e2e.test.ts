@@ -211,6 +211,38 @@ describe('GST tax invoices', () => {
       .expect(200);
     expect(again.body.invoice.number).toBe(manual.body.invoice.number);
 
+    // A partial refund gets a credit note against the invoice, split by the invoice's rows.
+    await ctx
+      .http()
+      .post(`${admin}/orders/${localId}/refunds`)
+      .set(auth)
+      .send({ amount: 118_000, reason: 'Watch strap damaged' })
+      .expect(201);
+    const refunded = await ctx
+      .http()
+      .get(`${admin}/orders/${localId}/invoice`)
+      .set(auth)
+      .expect(200);
+    const [note] = refunded.body.invoice.creditNotes;
+    expect(note.number).toMatch(/^CN\/\d{2}-\d{2}\/0001$/);
+    expect(note.data).toMatchObject({
+      invoiceNumber: invoice.number,
+      reason: 'Watch strap damaged',
+      supplyType: 'intra',
+      total: 118_000,
+    });
+    // Rows add up to the refund, and each row's tax matches its rate.
+    expect(note.data.taxableTotal + note.data.cgstTotal + note.data.sgstTotal).toBe(118_000);
+    for (const row of note.data.rows) {
+      const tax = row.cgst + row.sgst;
+      expect(Math.abs(tax - (row.taxableValue * row.rateBps) / 10_000)).toBeLessThanOrEqual(1);
+    }
+    const shopperNotes = await sf(
+      'get',
+      `/orders/${urls.orderAccessToken(localId)}/invoice`,
+    ).expect(200);
+    expect(shopperNotes.body.creditNotes).toHaveLength(1);
+
     // Issued invoices keep their snapshot when the registration changes.
     await ctx
       .http()

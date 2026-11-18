@@ -162,6 +162,7 @@ model Store {
   suppliers      Supplier[]
   purchaseOrders PurchaseOrder[]
   invoices       OrderInvoice[]
+  creditNotes    CreditNote[]
   webhooks       WebhookSubscription[]
   subscription   Subscription?
   storeGateways  StoreGateway[]
@@ -785,6 +786,7 @@ model Order {
   giftCard     GiftCard?     @relation(fields: [storeId, giftCardId], references: [storeId, id])
   returns      Return[]
   invoice      OrderInvoice?
+  creditNotes  CreditNote[]
 
   @@unique([storeId, id])
   @@unique([storeId, number])
@@ -864,6 +866,30 @@ model OrderInvoice {
   @@unique([storeId, orderId])
   @@unique([storeId, financialYear, sequence])
   @@unique([storeId, number])
+}
+
+/// Tenant-scoped (RLS). A GST credit note: reduces an issued invoice by a refund. Numbered in its
+/// own series per financial year ("CN/26-27/0001"); never changed after it is issued.
+model CreditNote {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  storeId       String   @db.Uuid
+  orderId       String   @db.Uuid
+  /// The refund it records (the provider part when a refund also went to a gift card).
+  refundId      String?  @db.Uuid
+  number        String
+  financialYear String
+  sequence      Int
+  issuedAt      DateTime @default(now())
+  /// Everything printed (see @repo/contracts creditNoteDataSchema).
+  data          Json
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+
+  @@unique([storeId, financialYear, sequence])
+  @@unique([storeId, number])
+  @@unique([storeId, refundId])
+  @@index([orderId])
 }
 
 enum GiftCardTransactionKind {

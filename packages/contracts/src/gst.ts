@@ -199,12 +199,44 @@ export const taxInvoiceDataSchema = z.object({
 });
 export type TaxInvoiceData = z.infer<typeof taxInvoiceDataSchema>;
 
+export const creditNoteDataSchema = z.object({
+  invoiceNumber: z.string(),
+  invoiceDate: z.iso.datetime(),
+  seller: taxInvoiceDataSchema.shape.seller,
+  buyer: taxInvoiceDataSchema.shape.buyer,
+  placeOfSupply: taxInvoiceDataSchema.shape.placeOfSupply,
+  supplyType: taxInvoiceDataSchema.shape.supplyType,
+  orderNumber: z.number().int(),
+  currency: z.string(),
+  reason: z.string().nullable(),
+  /** The refund split over the invoice's HSN/rate rows by their value. */
+  rows: taxInvoiceDataSchema.shape.summary,
+  taxableTotal: z.number().int(),
+  cgstTotal: z.number().int(),
+  sgstTotal: z.number().int(),
+  igstTotal: z.number().int(),
+  /** The amount refunded (taxable value plus tax). */
+  total: z.number().int(),
+  amountInWords: z.string(),
+});
+export type CreditNoteData = z.infer<typeof creditNoteDataSchema>;
+
+export const creditNoteSchema = z.object({
+  id: z.uuid(),
+  number: z.string(),
+  issuedAt: z.iso.datetime(),
+  data: creditNoteDataSchema,
+});
+export type CreditNote = z.infer<typeof creditNoteSchema>;
+
 export const orderInvoiceSchema = z.object({
   id: z.uuid(),
   number: z.string(),
   financialYear: z.string(),
   issuedAt: z.iso.datetime(),
   data: taxInvoiceDataSchema,
+  /** Credit notes issued for refunds on this order, oldest first. */
+  creditNotes: z.array(creditNoteSchema),
 });
 export type OrderInvoice = z.infer<typeof orderInvoiceSchema>;
 
@@ -224,6 +256,9 @@ export function financialYearOf(year: number, month: number): string {
   const start = month >= 4 ? year : year - 1;
   return `${start}-${String((start + 1) % 100).padStart(2, '0')}`;
 }
+
+/** Credit notes have their own series: "CN/26-27/0001". */
+export const CREDIT_NOTE_PREFIX = 'CN';
 
 /** "INV/26-27/0001": at most 16 characters for prefixes of up to 5. */
 export function invoiceNumber(prefix: string, financialYear: string, sequence: number): string {
