@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { toCsv } from './csv.js';
+import { creditNoteSchema, orderInvoiceSchema } from './gst.js';
 import { minorToDecimalString } from './money.js';
 
 /**
@@ -149,6 +150,21 @@ export const gstr1Schema = z.object({
   warnings: z.array(z.string()),
 });
 export type Gstr1Report = z.infer<typeof gstr1Schema>;
+
+/** Documents per page of GET …/gst-returns/documents (invoices first, then credit notes). */
+export const GST_DOCUMENTS_PAGE_SIZE = 100;
+
+export const gstDocumentsSchema = z.object({
+  month: z.string(),
+  page: z.number().int(),
+  pageCount: z.number().int(),
+  invoiceCount: z.number().int(),
+  creditNoteCount: z.number().int(),
+  /** Credit notes are listed separately here, not under their invoices. */
+  invoices: z.array(orderInvoiceSchema),
+  creditNotes: z.array(creditNoteSchema),
+});
+export type GstDocuments = z.infer<typeof gstDocumentsSchema>;
 
 export const GSTR1_SECTIONS = [
   { key: 'b2b', label: 'B2B invoices', table: '4A' },

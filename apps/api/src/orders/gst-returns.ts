@@ -3,6 +3,8 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   creditNoteDataSchema,
   financialYearOf,
+  GST_DOCUMENTS_PAGE_SIZE,
+  type GstDocuments,
   gstMonthSchema,
   type Gstr1Report,
   type TaxInvoiceData,
@@ -12,6 +14,7 @@ import { z } from 'zod';
 import type { StoreContext } from '../common/request.js';
 import { CurrentStore } from '../common/request.js';
 import { ZodPipe } from '../common/zod.js';
+import type { TenantTx } from '@repo/db';
 import { TenantDb } from '../database/database.module.js';
 import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
 import { parseRegistration } from './tax-invoices.js';
@@ -411,32 +414,45 @@ function knownTimeZone(zone: string): string {
 }
 
 const querySchema = z.object({ month: gstMonthSchema.optional() });
+const documentsQuerySchema = querySchema.extend({
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
+});
 
 @Injectable()
 export class GstReturnsService {
   constructor(private readonly tenantDb: TenantDb) {}
 
-  /** GSTR-1 tables for a calendar month in the store's time zone (default: this month). */
-  gstr1(storeId: string, month?: string): Promise<Gstr1Report> {
-    return this.tenantDb.run(storeId, async (tx) => {
-      const store = await tx.store.findUniqueOrThrow({
-        where: { id: storeId },
-        select: { timezone: true, gstRegistration: true },
-      });
-      const timeZone = knownTimeZone(store.timezone);
-      const period = month ?? localDate(new Date(), timeZone).slice(0, 7);
-      const year = Number(period.slice(0, 4));
-      const m = Number(period.slice(5, 7));
-      const [bounds] = await tx.$queryRaw<{ from: Date; to: Date }[]>`
-        SELECT (make_timestamp(${year}::int, ${m}::int, 1, 0, 0, 0) AT TIME ZONE ${timeZone}) AS "from",
-               ((make_timestamp(${year}::int, ${m}::int, 1, 0, 0, 0) + interval '1 month') AT TIME ZONE ${timeZone}) AS "to"`;
-      if (!bounds) throw new Error('Could not compute the month bounds.');
+  /** The month (default: this month in the store's time zone) and its document filter. */
+  private async period(tx: TenantTx, storeId: string, month?: string) {
+    const store = await tx.store.findUniqueOrThrow({
+      where: { id: storeId },
+      select: { timezone: true, gstRegistration: true },
+    });
+    const timeZone = knownTimeZone(store.timezone);
+    const period = month ?? localDate(new Date(), timeZone).slice(0, 7);
+    const year = Number(period.slice(0, 4));
+    const m = Number(period.slice(5, 7));
+    const [bounds] = await tx.$queryRaw<{ from: Date; to: Date }[]>`
+      SELECT (make_timestamp(${year}::int, ${m}::int, 1, 0, 0, 0) AT TIME ZONE ${timeZone}) AS "from",
+             ((make_timestamp(${year}::int, ${m}::int, 1, 0, 0, 0) + interval '1 month') AT TIME ZONE ${timeZone}) AS "to"`;
+    if (!bounds) throw new Error('Could not compute the month bounds.');
+    return {
+      month: period,
+      timeZone,
+      registration: parseRegistration(store.gstRegistration),
       // A calendar month lies inside one financial year, which narrows the index range.
-      const where = {
+      where: {
         storeId,
         financialYear: financialYearOf(year, m),
         issuedAt: { gte: bounds.from, lt: bounds.to },
-      };
+      },
+    };
+  }
+
+  /** GSTR-1 tables for a calendar month in the store's time zone (default: this month). */
+  gstr1(storeId: string, month?: string): Promise<Gstr1Report> {
+    return this.tenantDb.run(storeId, async (tx) => {
+      const { where, ...p } = await this.period(tx, storeId, month);
       const [invoices, creditNotes] = await Promise.all([
         tx.orderInvoice.findMany({
           where,
@@ -455,12 +471,60 @@ export class GstReturnsService {
         }),
       ]);
       return buildGstr1({
-        month: period,
-        timeZone,
-        registration: parseRegistration(store.gstRegistration),
+        ...p,
         invoices,
         creditNotes: creditNotes.map(({ order, ...n }) => ({ ...n, invoice: order.invoice })),
       });
+    });
+  }
+
+  /**
+   * The month's invoices, then its credit notes, in number order, a page at a time: for printing
+   * or saving them all as PDF.
+   */
+  documents(storeId: string, month: string | undefined, page: number): Promise<GstDocuments> {
+    return this.tenantDb.run(storeId, async (tx) => {
+      const { where, month: period } = await this.period(tx, storeId, month);
+      const [invoiceCount, noteCount] = await Promise.all([
+        tx.orderInvoice.count({ where }),
+        tx.creditNote.count({ where }),
+      ]);
+      const total = invoiceCount + noteCount;
+      const pageCount = Math.max(1, Math.ceil(total / GST_DOCUMENTS_PAGE_SIZE));
+      const start = (Math.min(page, pageCount) - 1) * GST_DOCUMENTS_PAGE_SIZE;
+      const invoiceTake = Math.max(0, Math.min(GST_DOCUMENTS_PAGE_SIZE, invoiceCount - start));
+      const noteSkip = Math.max(0, start - invoiceCount);
+      const noteTake = GST_DOCUMENTS_PAGE_SIZE - invoiceTake;
+      const order = [{ sequence: 'asc' as const }];
+      const [invoices, notes] = await Promise.all([
+        invoiceTake > 0
+          ? tx.orderInvoice.findMany({ where, orderBy: order, skip: start, take: invoiceTake })
+          : [],
+        noteTake > 0
+          ? tx.creditNote.findMany({ where, orderBy: order, skip: noteSkip, take: noteTake })
+          : [],
+      ]);
+      return {
+        month: period,
+        page: Math.min(page, pageCount),
+        pageCount,
+        invoiceCount,
+        creditNoteCount: noteCount,
+        invoices: invoices.map((i) => ({
+          id: i.id,
+          number: i.number,
+          financialYear: i.financialYear,
+          issuedAt: i.issuedAt.toISOString(),
+          data: taxInvoiceDataSchema.parse(i.data),
+          creditNotes: [],
+        })),
+        creditNotes: notes.map((n) => ({
+          id: n.id,
+          number: n.number,
+          issuedAt: n.issuedAt.toISOString(),
+          data: creditNoteDataSchema.parse(n.data),
+        })),
+      };
     });
   }
 }
@@ -480,5 +544,15 @@ export class GstReturnsController {
     @Query(new ZodPipe(querySchema)) query: z.infer<typeof querySchema>,
   ): Promise<Gstr1Report> {
     return this.returns.gstr1(store.id, query.month);
+  }
+
+  /** The month's invoices and credit notes in full, a page at a time (for printing). */
+  @Get('documents')
+  @RequirePermission('orders:read')
+  documents(
+    @CurrentStore() store: StoreContext,
+    @Query(new ZodPipe(documentsQuerySchema)) query: z.infer<typeof documentsQuerySchema>,
+  ): Promise<GstDocuments> {
+    return this.returns.documents(store.id, query.month, query.page);
   }
 }

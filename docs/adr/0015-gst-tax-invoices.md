@@ -82,7 +82,9 @@ Warnings flag non-INR documents, missing HSN codes, blank places of supply, seve
 test-mode payments. The same page shows GSTR-3B tables 3.1(a)-(c) (taxable, zero-rated = exports,
 nil-rated = 0% rows in India) and 3.2 (other-state sales to unregistered buyers by place of supply),
 all net of credit notes. Input tax credit (table 4) is not tracked: the store has no purchase tax
-data. It prepares figures only; nothing is filed.
+data. It prepares figures only; nothing is filed. "All invoices (PDF)" opens
+`/tax-invoice/:store/month/:month`: every invoice then credit note of the month, one per printed
+page, 100 per part (`GET …/gst-returns/documents?month=&page=`), to print or save as PDF for records.
 
 ## Not done
 
@@ -94,4 +96,5 @@ data. It prepares figures only; nothing is filed.
 - A refund that a provider reports as failed later (after it was accepted) keeps its credit
   note; cancel it by hand.
 - Invoices are erased with the store's data when a closed store is deleted; merchants must keep
-  their own copies for the retention period GST law requires.
+  their own copies for the retention period GST law requires (the month print above makes that one
+  step per month).

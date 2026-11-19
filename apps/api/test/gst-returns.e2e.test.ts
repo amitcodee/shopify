@@ -303,6 +303,19 @@ describe('GST returns (GSTR-1)', () => {
     expect(json.hsn.hsn_b2b[0]).toMatchObject({ hsn_sc: '6211', uqc: 'NOS', qty: 3, rt: 5 });
     expect(json.doc_issue.doc_det.map((d: { doc_num: number }) => d.doc_num)).toEqual([1, 5]);
 
+    // Every document in full, invoices first, for printing.
+    const docs = await ctx.http().get(`${admin}/gst-returns/documents`).set(auth).expect(200);
+    expect(docs.body).toMatchObject({ page: 1, pageCount: 1, invoiceCount: 6, creditNoteCount: 2 });
+    expect(docs.body.invoices.map((i: { number: string }) => i.number.slice(-4))).toEqual([
+      '0001',
+      '0002',
+      '0003',
+      '0004',
+      '0005',
+      '0006',
+    ]);
+    expect(docs.body.creditNotes[1]).toMatchObject({ data: { total: 1_770_000 } });
+
     // Another month has nothing.
     const other = await ctx
       .http()

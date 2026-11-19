@@ -198,6 +198,15 @@ export default async function GstReturnsPage({
             Show
           </button>
           {t.invoices + t.creditNotes > 0 ? (
+            <Link
+              href={`/tax-invoice/${storeId}/month/${report.month}`}
+              className={buttonClass('secondary', 'sm')}
+              title="Every invoice and credit note of the month, to print or save as PDF"
+            >
+              All invoices (PDF)
+            </Link>
+          ) : null}
+          {t.invoices + t.creditNotes > 0 ? (
             // A route handler download: plain <a>, no client-side navigation.
             <a
               href={`${base}/export?month=${report.month}&format=json`}
