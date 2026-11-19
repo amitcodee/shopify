@@ -32,11 +32,14 @@ post them as customers.
   shipped within 14 days past that delay are emailed, so turning the app on does not mail old
   customers. The email lists live products the customer has not reviewed yet (none: no email) and
   asks for honest reviews; the order timeline records it. Guest buyers sign up with the same email
-  to claim their orders, then review.
+  to claim their orders, then review. Each email links to `/reviews/emails-off/:token` (HMAC of the
+  customer id); the button there POSTs (so mail link scanners cannot trigger it) and sets
+  `Customer.reviewEmailsOptOutAt`, after which that customer gets no more review requests from
+  the store. Order and shipping emails are unaffected.
 - Demo data has no reviews: seeding them would be exactly the fake content this avoids.
 
 ## Not done
 
 - Photos in reviews, "helpful" votes, sorting and filtering by stars.
-- An unsubscribe link for review requests (they are one per order and can be turned off per store).
+- Showing a customer's review-email choice in the admin, or turning it back on.
 - Importing reviews from another platform (they could not be verified against orders here).

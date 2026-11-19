@@ -1,10 +1,24 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  Controller,
+  HttpCode,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import type { PrismaClient, TenantTx } from '@repo/db';
+import { Public } from '../auth/auth.guard.js';
 import { PLATFORM_DB, TenantDb } from '../database/database.module.js';
 import { OrderLifecycle } from '../orders/order-lifecycle.service.js';
 import { StoreUrls } from '../orders/store-urls.js';
 import { OutboxService } from '../outbox/outbox.service.js';
 import { reviewRequestEmail } from '../outbox/templates.js';
+import { CurrentShop, StorefrontGuard } from '../storefront/storefront.guard.js';
+import type { ShopContext } from '../storefront/store-resolver.js';
 import { liveProductWhere } from './product-visibility.js';
 
 /**
@@ -79,10 +93,11 @@ export class ReviewRequestsService {
         number: true,
         email: true,
         customerId: true,
+        customer: { select: { reviewEmailsOptOutAt: true } },
         lines: { select: { productId: true, quantity: true } },
       },
     });
-    if (!order.customerId) return false;
+    if (!order.customerId || order.customer?.reviewEmailsOptOutAt) return false;
     const productIds = [
       ...new Set(order.lines.flatMap((l) => (l.productId && l.quantity > 0 ? [l.productId] : []))),
     ];
@@ -116,6 +131,7 @@ export class ReviewRequestsService {
           title: p.title,
           url: `${origin}/products/${p.handle}#reviews`,
         })),
+        unsubscribeUrl: `${origin}/reviews/emails-off/${this.urls.reviewEmailsToken(order.customerId)}`,
       }),
     );
     await this.lifecycle.event(
@@ -126,5 +142,38 @@ export class ReviewRequestsService {
       `Review request emailed to ${order.email}.`,
     );
     return true;
+  }
+
+  /** Turns review request emails off for the customer a link was sent to. */
+  async optOut(shop: ShopContext, token: string): Promise<void> {
+    const customerId = this.urls.verifyReviewEmailsToken(token);
+    if (!customerId) throw new NotFoundException('This link is not valid.');
+    const updated = await this.tenantDb.run(shop.id, (tx) =>
+      tx.customer.updateMany({
+        where: { id: customerId, storeId: shop.id, reviewEmailsOptOutAt: null },
+        data: { reviewEmailsOptOutAt: new Date() },
+      }),
+    );
+    if (updated.count === 0) {
+      const exists = await this.tenantDb.run(shop.id, (tx) =>
+        tx.customer.count({ where: { id: customerId, storeId: shop.id } }),
+      );
+      if (exists === 0) throw new NotFoundException('This link is not valid.');
+    }
+  }
+}
+
+@ApiTags('Storefront')
+@Public()
+@UseGuards(StorefrontGuard)
+@Controller('storefront/review-emails')
+export class StorefrontReviewEmailsController {
+  constructor(private readonly requests: ReviewRequestsService) {}
+
+  /** A POST (from a button), so link scanners in mail systems cannot turn emails off. */
+  @Post('off/:token')
+  @HttpCode(204)
+  async off(@CurrentShop() shop: ShopContext, @Param('token') token: string): Promise<void> {
+    await this.requests.optOut(shop, token.slice(0, 200));
   }
 }

@@ -604,16 +604,18 @@ model CartLine {
 // ──────────────────────────── Customers (tenant, RLS) ────────────────────────────
 
 model Customer {
-  id               String    @id @default(uuid(7)) @db.Uuid
-  storeId          String    @db.Uuid
-  email            String
-  name             String?
+  id                   String    @id @default(uuid(7)) @db.Uuid
+  storeId              String    @db.Uuid
+  email                String
+  name                 String?
   /// Null for guest customers (created at checkout without an account).
-  passwordHash     String?
-  acceptsMarketing Boolean   @default(false)
-  disabledAt       DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  passwordHash         String?
+  acceptsMarketing     Boolean   @default(false)
+  /// Set when the customer turned off review request emails (Product reviews app).
+  reviewEmailsOptOutAt DateTime?
+  disabledAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   store       Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
   sessions    CustomerSession[]

@@ -70,4 +70,21 @@ export class StoreUrls {
     const given = Buffer.from(token);
     return given.length === expected.length && timingSafeEqual(given, expected) ? orderId : null;
   }
+
+  /** Link in review request emails that turns them off for this customer. */
+  reviewEmailsToken(customerId: string): string {
+    const mac = createHmac('sha256', this.env.STOREFRONT_SHARED_SECRET)
+      .update(`review-emails-off:${customerId}`)
+      .digest('base64url');
+    return `${customerId}.${mac}`;
+  }
+
+  /** The customer id a review-emails token was issued for, or null when it is not authentic. */
+  verifyReviewEmailsToken(token: string): string | null {
+    const customerId = token.split('.', 1)[0] ?? '';
+    if (!/^[0-9a-f-]{36}$/.test(customerId)) return null;
+    const expected = Buffer.from(this.reviewEmailsToken(customerId));
+    const given = Buffer.from(token);
+    return given.length === expected.length && timingSafeEqual(given, expected) ? customerId : null;
+  }
 }

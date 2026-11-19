@@ -312,6 +312,7 @@ export function reviewRequestEmail(
     storeName: string;
     orderNumber: number;
     products: { title: string; url: string }[];
+    unsubscribeUrl: string;
   },
 ): EmailMessage {
   const list = data.products.map((p) => `- ${p.title}: ${p.url}`).join('\n');
@@ -322,7 +323,9 @@ export function reviewRequestEmail(
 
 ${list}
 
-Sign in with this email address to write a review. You can say what you liked and what you didn't: honest reviews help everyone.`,
+Sign in with this email address to write a review. You can say what you liked and what you didn't: honest reviews help everyone.
+
+Don't want these emails? ${data.unsubscribeUrl}`,
     html: layout(
       data.storeName,
       `<p>Thanks again for your order <strong>#${data.orderNumber}</strong>. If you have a minute, tell other shoppers what you think:</p><ul>${data.products
@@ -332,7 +335,7 @@ Sign in with this email address to write a review. You can say what you liked an
         )
         .join(
           '',
-        )}</ul><p style="color:#666;font-size:13px">Sign in with this email address to write a review. You can say what you liked and what you didn't: honest reviews help everyone.</p>`,
+        )}</ul><p style="color:#666;font-size:13px">Sign in with this email address to write a review. You can say what you liked and what you didn't: honest reviews help everyone.</p><p style="color:#666;font-size:12px"><a href="${escapeHtml(data.unsubscribeUrl)}" style="color:#666">Stop review request emails</a></p>`,
     ),
   };
 }

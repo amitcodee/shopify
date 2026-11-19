@@ -274,6 +274,36 @@ describe('Product reviews', () => {
     expect(message?.text).not.toContain('clay-mug');
     // Never twice.
     expect(await sendAndRead()).toEqual([]);
+    // The link in the email turns them off (a POST from the page); forged links do nothing.
+    const token = /\/reviews\/emails-off\/([^\s]+)/.exec(message?.text ?? '')?.[1];
+    expect(token).toBeTruthy();
+    const forged = `${token!.slice(0, -1)}${token!.endsWith('A') ? 'B' : 'A'}`;
+    await sf('post', `/review-emails/off/${forged}`).expect(404);
+    await sf('post', `/review-emails/off/${token}`).expect(204);
+    await sf('post', `/review-emails/off/${token}`).expect(204);
+    const cart2 = (await sf('post', '/cart').expect(201)).body.token as string;
+    await sf('post', '/cart/lines', { cart: cart2 })
+      .send({ variantId: bowl, quantity: 1 })
+      .expect(201);
+    const placed2 = await sf('post', '/checkout', { cart: cart2, customer })
+      .send({ email, shippingAddress: address, idempotencyKey: randomUUID() })
+      .expect(201);
+    await payMock(sf, placed2.body.paymentUrl);
+    const order2 = await ctx.platform.order.findFirstOrThrow({
+      where: { storeId: store.id, number: placed2.body.orderNumber },
+    });
+    await ctx
+      .http()
+      .post(`${admin}/orders/${order2.id}/fulfillments`)
+      .set(auth)
+      .send({})
+      .expect(201);
+    await ctx.platform.fulfillment.updateMany({
+      where: { orderId: order2.id },
+      data: { createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) },
+    });
+    expect(await sendAndRead()).toEqual([]);
+
     const timeline = await ctx.platform.orderEvent.findMany({ where: { orderId: order.id } });
     expect(timeline.map((e) => e.type)).toContain('review_request_sent');
   });
