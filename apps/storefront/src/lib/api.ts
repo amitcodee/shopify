@@ -33,7 +33,7 @@ export async function requestHost(): Promise<string> {
 }
 
 interface SfOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   cartToken?: string | null;
   customerToken?: string | null;

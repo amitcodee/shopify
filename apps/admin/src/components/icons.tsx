@@ -102,6 +102,7 @@ const PATHS = {
   trendUp: <path d="m3 16 6-6 4 4 8-8M15 6h6v6" />,
   trendDown: <path d="m3 8 6 6 4-4 8 8M15 18h6v-6" />,
   chart: <path d="M3 20h18M6 20v-8M12 20V5M18 20v-5" />,
+  star: <path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z" />,
   calendar: <path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4" />,
   download: <path d="M12 4v11M7 10.5 12 15.5l5-5M5 20h14" />,
   upload: <path d="M12 16V5M7 9.5 12 4.5l5 5M5 20h14" />,

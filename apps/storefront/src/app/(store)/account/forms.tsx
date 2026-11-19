@@ -6,11 +6,12 @@ import { FollowRedirect } from '@/components/follow-redirect';
 import { type FormResult, Notice, Submit, TextField } from '@/components/form';
 import { completeLinkAction, forgotPasswordAction, loginAction, registerAction } from './actions';
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const [state, action] = useActionState(loginAction, undefined);
   return (
     <form action={action} className="space-y-5">
       <FollowRedirect to={state?.redirectTo} />
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <Notice result={state} />
       <TextField label="Email" name="email" type="email" autoComplete="email" required />
       <TextField

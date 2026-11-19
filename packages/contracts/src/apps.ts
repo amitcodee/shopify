@@ -43,6 +43,13 @@ export const storeAppsSchema = z.strictObject({
     })
     .default({ enabled: false, newDays: 14 }),
   shareButtons: z.strictObject({ enabled: z.boolean().default(false) }).default({ enabled: false }),
+  productReviews: z
+    .strictObject({
+      enabled: z.boolean().default(false),
+      /** Publish new and edited reviews at once instead of waiting for approval. */
+      autoPublish: z.boolean().default(false),
+    })
+    .default({ enabled: false, autoPublish: false }),
   cookieNotice: z
     .strictObject({
       enabled: z.boolean().default(false),
@@ -72,6 +79,14 @@ export const STORE_APP_CATALOG: {
   description: string;
   category: 'Conversion' | 'Customer support' | 'Social' | 'Compliance';
 }[] = [
+  {
+    id: 'productReviews',
+    name: 'Product reviews',
+    tagline: 'Star ratings and reviews from real buyers',
+    description:
+      'Customers who bought a product can rate and review it from its page. You approve each review (or publish them automatically) and can reply. Ratings show on product pages, product cards and in search results.',
+    category: 'Conversion',
+  },
   {
     id: 'freeShippingBar',
     name: 'Free shipping bar',

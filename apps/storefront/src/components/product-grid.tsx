@@ -1,6 +1,7 @@
 import { formatMoney, type ProductCard, type ThemeSettings } from '@repo/contracts';
 import Link from 'next/link';
 import { cardSizes, srcSetFor } from '@/lib/images';
+import { RatingSummary } from '@/components/product/stars';
 
 export function Price({
   min,
@@ -121,6 +122,11 @@ export function ProductCardLink({
         <h3 className="card-title line-clamp-2 text-zinc-900 decoration-1 underline-offset-4 group-hover:underline">
           {p.title}
         </h3>
+        {p.rating ? (
+          <p className="mt-1">
+            <RatingSummary rating={p.rating} />
+          </p>
+        ) : null}
         <p className="mt-1.5 text-zinc-900">
           <Price
             min={p.minPrice}

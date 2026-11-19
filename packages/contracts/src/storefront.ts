@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ratingSchema } from './reviews.js';
 import { storeAppsSchema } from './apps.js';
 import {
   customizationSchema,
@@ -71,6 +72,8 @@ export const productCardSchema = z.object({
   /** Smaller WebP copies of the first image for `srcset` (narrowest first). */
   imageRenditions: z.array(z.object({ width: z.number().int(), url: z.string() })).optional(),
   secondImageRenditions: z.array(z.object({ width: z.number().int(), url: z.string() })).optional(),
+  /** Published reviews (Product reviews app); null when off or none yet. */
+  rating: ratingSchema.nullable().optional(),
 });
 export type ProductCard = z.infer<typeof productCardSchema>;
 
@@ -169,6 +172,8 @@ export const storefrontProductSchema = z.object({
       }),
     )
     .optional(),
+  /** Published reviews (Product reviews app); null when off or none yet. */
+  rating: ratingSchema.nullable().optional(),
 });
 export type StorefrontProduct = z.infer<typeof storefrontProductSchema>;
 

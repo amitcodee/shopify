@@ -19,6 +19,8 @@ import { ProductGrid, RATIOS } from '@/components/product-grid';
 import { isNotFound, sf } from '@/lib/api';
 import { ShareButtons } from '@/components/apps/share-buttons';
 import { getShop, storeOrigin } from '@/lib/shop';
+import { RatingSummary } from '@/components/product/stars';
+import { ProductReviewsSection } from './reviews';
 import { VariantPicker } from './variant-picker';
 
 const getProduct = cache(async (handle: string): Promise<StorefrontProduct | null> => {
@@ -124,10 +126,11 @@ export default async function ProductPage({
   searchParams,
 }: {
   params: Promise<{ handle: string }>;
-  searchParams: Promise<{ collection?: string | string[] }>;
+  searchParams: Promise<{ collection?: string | string[]; reviews?: string | string[] }>;
 }) {
   const { handle } = await params;
-  const { collection: rawCollection } = await searchParams;
+  const { collection: rawCollection, reviews: rawReviewsPage } = await searchParams;
+  const reviewsPage = Math.min(1000, Math.max(1, Number(rawReviewsPage) || 1));
   const [product, shop] = await Promise.all([getProduct(handle), getShop()]);
   if (!product || !shop) notFound();
   const [related, crumbCollection, origin] = await Promise.all([
@@ -146,6 +149,15 @@ export default async function ProductPage({
     description: product.description,
     image: product.images.map((i) => i.url),
     brand: product.vendor ? { '@type': 'Brand', name: product.vendor } : undefined,
+    aggregateRating: product.rating
+      ? {
+          '@type': 'AggregateRating',
+          ratingValue: product.rating.average,
+          reviewCount: product.rating.count,
+          bestRating: 5,
+          worstRating: 1,
+        }
+      : undefined,
     offers: product.variants.map((v) => ({
       '@type': 'Offer',
       sku: v.sku ?? undefined,
@@ -192,6 +204,11 @@ export default async function ProductPage({
           <h1 className="t-title text-3xl break-words text-zinc-900 sm:text-4xl lg:text-[2.75rem]">
             {product.title}
           </h1>
+          {product.rating ? (
+            <a href="#reviews" className="mt-3 inline-flex rounded hover:underline">
+              <RatingSummary rating={product.rating} className="size-4" text="text-sm" />
+            </a>
+          ) : null}
           {product.isGiftCard ? (
             <p className="mt-3 rounded-lg bg-surface px-4 py-3 text-sm text-zinc-700">
               Delivered by email: you receive a gift card code as soon as your order is paid.
@@ -233,6 +250,9 @@ export default async function ProductPage({
           </div>
         </div>
       </div>
+      {shop.apps.productReviews.enabled && !product.isGiftCard ? (
+        <ProductReviewsSection handle={product.handle} page={reviewsPage} />
+      ) : null}
       {related.length > 0 ? (
         <section
           aria-labelledby="related-heading"

@@ -9,7 +9,7 @@ import type {
   StorefrontProductQuery,
   StorefrontSitemap,
 } from '@repo/contracts';
-import { parseCustomizations } from '@repo/contracts';
+import { parseCustomizations, ratingOf } from '@repo/contracts';
 import { Prisma, type TenantTx } from '@repo/db';
 import { decryptSecret } from '../common/crypto.js';
 import { ENV, type Env, decryptionKeys } from '../config/env.js';
@@ -35,6 +35,8 @@ interface CardRow {
   second_image_key: string | null;
   second_image_widths: number[] | null;
   published_at: Date | null;
+  review_count: number;
+  rating_sum: number;
 }
 
 /** Whether the store's New arrival badges app marks a product published at `publishedAt`. */
@@ -259,6 +261,7 @@ export class StorefrontCatalogService {
 
       const details = await tx.$queryRaw<CardRow[]>`
         SELECT p.id, p.title, p.handle, p."publishedAt" AS published_at,
+               p."reviewCount" AS review_count, p."ratingSum" AS rating_sum,
                MIN(v.price)::int AS min_price,
                MAX(v.price)::int AS max_price,
                MAX(v."compareAtPrice")::int AS compare_at,
@@ -376,6 +379,9 @@ export class StorefrontCatalogService {
         type: m.type,
         value: m.value,
       })),
+      rating: shop.apps.productReviews.enabled
+        ? ratingOf(product.reviewCount, product.ratingSum)
+        : null,
     };
   }
 
@@ -444,6 +450,7 @@ export class StorefrontCatalogService {
       available: r.available,
       publishedAt: r.published_at ? r.published_at.toISOString() : null,
       isNew: isNewArrival(shop, r.published_at),
+      rating: shop.apps.productReviews.enabled ? ratingOf(r.review_count, r.rating_sum) : null,
       imageUrl: r.image_key ? this.media.url(r.image_key) : null,
       imageAlt: r.image_alt || r.title,
       secondImageUrl: r.second_image_key ? this.media.url(r.second_image_key) : null,

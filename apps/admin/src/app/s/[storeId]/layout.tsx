@@ -49,6 +49,12 @@ export default async function StoreLayout({
       permission: 'products:read',
     },
     {
+      label: 'Reviews',
+      icon: 'star',
+      href: `${base}/reviews`,
+      permission: 'products:read',
+    },
+    {
       label: 'Customers',
       icon: 'customers',
       href: `${base}/customers`,

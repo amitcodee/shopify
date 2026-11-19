@@ -165,6 +165,7 @@ model Store {
   purchaseOrders PurchaseOrder[]
   invoices       OrderInvoice[]
   creditNotes    CreditNote[]
+  productReviews ProductReview[]
   webhooks       WebhookSubscription[]
   subscription   Subscription?
   storeGateways  StoreGateway[]
@@ -258,6 +259,9 @@ model Product {
   taxRateBps     Int?
   seoTitle       String?
   seoDescription String?
+  /// Published reviews (ProductReview): count and sum of ratings, kept in step on every change.
+  reviewCount    Int                      @default(0)
+  ratingSum      Int                      @default(0)
   /// Visible on the storefront from this time on (when ACTIVE); a future time means scheduled.
   publishedAt    DateTime?
   createdAt      DateTime                 @default(now())
@@ -271,6 +275,7 @@ model Product {
   images      ProductImage[]
   collections CollectionProduct[]
   metafields  ProductMetafield[]
+  reviews     ProductReview[]
   supplier    Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@unique([storeId, id])
@@ -616,6 +621,7 @@ model Customer {
   orders      Order[]
   draftOrders DraftOrder[]
   giftCards   GiftCard[]
+  reviews     ProductReview[]
 
   @@unique([storeId, id])
   @@unique([storeId, email])
@@ -787,8 +793,8 @@ model Order {
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
-  store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  customer     Customer?     @relation(fields: [storeId, customerId], references: [storeId, id])
+  store        Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer     Customer?       @relation(fields: [storeId, customerId], references: [storeId, id])
   lines        OrderLine[]
   payments     Payment[]
   refunds      Refund[]
@@ -796,10 +802,11 @@ model Order {
   fulfillments Fulfillment[]
   events       OrderEvent[]
   draftOrders  DraftOrder[]
-  giftCard     GiftCard?     @relation(fields: [storeId, giftCardId], references: [storeId, id])
+  giftCard     GiftCard?       @relation(fields: [storeId, giftCardId], references: [storeId, id])
   returns      Return[]
   invoice      OrderInvoice?
   creditNotes  CreditNote[]
+  reviews      ProductReview[]
 
   @@unique([storeId, id])
   @@unique([storeId, number])
@@ -1708,4 +1715,46 @@ model InventoryLevel {
 
   @@id([variantId, locationId])
   @@index([storeId, locationId])
+}
+
+enum ReviewStatus {
+  /// Waiting for the merchant (new or edited).
+  PENDING
+  PUBLISHED
+  REJECTED
+}
+
+/// Tenant-scoped (RLS). A product review by a customer who bought the product: one per customer
+/// and product, tied to the order that proves the purchase. Edits send it back to PENDING unless
+/// the store publishes reviews automatically.
+model ProductReview {
+  id          String       @id @default(uuid(7)) @db.Uuid
+  storeId     String       @db.Uuid
+  productId   String       @db.Uuid
+  customerId  String       @db.Uuid
+  orderId     String       @db.Uuid
+  /// 1 to 5 (check constraint).
+  rating      Int
+  title       String?
+  body        String
+  /// Shown publicly: the name the customer chose (first name and initial by default).
+  authorName  String
+  status      ReviewStatus @default(PENDING)
+  /// The merchant's public reply.
+  reply       String?
+  repliedAt   DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  store    Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
+  customer Customer @relation(fields: [storeId, customerId], references: [storeId, id], onDelete: Cascade)
+  order    Order    @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+
+  @@unique([storeId, productId, customerId])
+  @@index([storeId, productId, status, publishedAt(sort: Desc)])
+  @@index([storeId, status, createdAt(sort: Desc)])
+  @@index([customerId])
+  @@index([orderId])
 }

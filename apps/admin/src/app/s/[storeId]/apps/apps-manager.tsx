@@ -18,6 +18,7 @@ const ICONS: Record<StoreAppId, IconName> = {
   whatsapp: 'inbox',
   shareButtons: 'link',
   cookieNotice: 'info',
+  productReviews: 'star',
 };
 
 const TINTS: Record<StoreAppId, string> = {
@@ -26,6 +27,7 @@ const TINTS: Record<StoreAppId, string> = {
   whatsapp: 'bg-green-50 text-green-700 ring-green-600/15',
   shareButtons: 'bg-sky-50 text-sky-700 ring-sky-600/15',
   cookieNotice: 'bg-amber-50 text-amber-700 ring-amber-600/15',
+  productReviews: 'bg-orange-50 text-orange-700 ring-orange-600/15',
 };
 
 /** The store's apps: switch each on or off and edit its settings. */
@@ -298,6 +300,24 @@ function AppSettings({
           />
         )}
       </Field>
+    );
+  }
+  if (id === 'productReviews') {
+    return (
+      <label className="flex items-start gap-3 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          className="mt-0.5 h-4 w-4 rounded border-slate-300"
+          checked={apps.productReviews.autoPublish}
+          onChange={(e) => update('productReviews', { autoPublish: e.target.checked })}
+        />
+        <span>
+          <span className="font-medium text-slate-900">Publish reviews automatically</span>
+          <span className="mt-0.5 block text-xs text-slate-500">
+            Off: each new or edited review waits under Reviews until you approve it.
+          </span>
+        </span>
+      </label>
     );
   }
   if (id === 'cookieNotice') {

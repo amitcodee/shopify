@@ -32,7 +32,9 @@ describe('crypto helpers', () => {
     expect(sealed).not.toContain('JBSWY3DPEHPK3PXP');
     expect(decryptSecret(key, sealed)).toBe('JBSWY3DPEHPK3PXP');
     const [iv, tag, data] = sealed.split('.');
-    const tampered = [iv, tag, `${data?.slice(0, -2)}AA`].join('.');
+    // Change the first character for sure (a fixed replacement could equal the original).
+    const first = data?.charAt(0) === 'A' ? 'B' : 'A';
+    const tampered = [iv, tag, `${first}${data?.slice(1)}`].join('.');
     expect(() => decryptSecret(key, tampered)).toThrow();
     expect(() => decryptSecret('y'.repeat(40), sealed)).toThrow();
   });

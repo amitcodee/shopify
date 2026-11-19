@@ -33,7 +33,12 @@ export async function loginAction(_: FormResult, formData: FormData): Promise<Fo
   } catch (error) {
     return toResult(error);
   }
-  return { redirectTo: '/account' };
+  return { redirectTo: safeReturnPath(str(formData, 'next')) ?? '/account' };
+}
+
+/** A path on this store to go back to after signing in; anything else is ignored. */
+function safeReturnPath(value: string): string | null {
+  return /^\/(?!\/)[\w\-./?=&#%]{0,300}$/.test(value) ? value : null;
 }
 
 export async function registerAction(_: FormResult, formData: FormData): Promise<FormResult> {
