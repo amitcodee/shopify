@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { gstr1Csv } from '@repo/contracts';
+import { gstr1Csv, gstr1Json } from '@repo/contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   createStore,
@@ -261,6 +261,47 @@ describe('GST returns (GSTR-1)', () => {
       /^29AAACB1234C1ZB,Bengaluru Retail LLP,KH\/\d\d-\d\d\/0003,\d\d-[A-Z][a-z]{2}-\d{4},3150\.00,29-Karnataka,N,,Regular B2B,,5,3000\.00,0\.00$/,
     );
     expect(gstr1Csv(report, 'b2cs')).toContain('OE,27-Maharashtra,,5,2000.00,0.00,');
+
+    // Portal JSON (offline tool schema): rupees, dd-mm-yyyy, fp = MMYYYY.
+    // Read back as parsed JSON, the way the portal sees it.
+    const json = JSON.parse(JSON.stringify(gstr1Json(report)));
+    expect(json.gstin).toBe(registration.gstin);
+    expect(json.fp).toMatch(/^\d{6}$/);
+    expect(json.b2b).toEqual([
+      {
+        ctin: '29AAACB1234C1ZB',
+        inv: [
+          expect.objectContaining({
+            val: 3150,
+            pos: '29',
+            rchrg: 'N',
+            inv_typ: 'R',
+            idt: expect.stringMatching(/^\d\d-\d\d-\d{4}$/),
+            itms: [
+              {
+                num: 501,
+                itm_det: { txval: 3000, rt: 5, iamt: 150, camt: 0, samt: 0, csamt: 0 },
+              },
+            ],
+          }),
+        ],
+      },
+    ]);
+    expect(json.b2cs).toContainEqual({
+      sply_ty: 'INTRA',
+      pos: '27',
+      typ: 'OE',
+      txval: 2000,
+      rt: 5,
+      camt: 50,
+      samt: 50,
+      csamt: 0,
+    });
+    expect(json.b2cl[0]).toMatchObject({ pos: '29', inv: [{ val: 177000 }] });
+    expect(json.exp[0]).toMatchObject({ exp_typ: 'WOPAY' });
+    expect(json.cdnur[0]).toMatchObject({ typ: 'B2CL', ntty: 'C', val: 17700, pos: '29' });
+    expect(json.hsn.hsn_b2b[0]).toMatchObject({ hsn_sc: '6211', uqc: 'NOS', qty: 3, rt: 5 });
+    expect(json.doc_issue.doc_det.map((d: { doc_num: number }) => d.doc_num)).toEqual([1, 5]);
 
     // Another month has nothing.
     const other = await ctx

@@ -131,7 +131,7 @@ export default async function GstReturnsPage({
     <>
       <PageHeader
         title="GST returns"
-        description="Your tax invoices and credit notes for a month, sorted into the tables of GSTR-1. Download each table as CSV in the GST Offline Tool's layout, or copy the totals into the GST portal."
+        description="Your tax invoices and credit notes for a month, sorted into the tables of GSTR-1. Download the GSTR-1 JSON for the portal's offline upload (check it in the GST Offline Tool first), or each table as CSV in the tool's layout."
       />
       <OrdersNav storeId={storeId} active="gst" />
     </>
@@ -197,6 +197,18 @@ export default async function GstReturnsPage({
           <button type="submit" className={buttonClass('secondary', 'sm')}>
             Show
           </button>
+          {t.invoices + t.creditNotes > 0 ? (
+            // A route handler download: plain <a>, no client-side navigation.
+            <a
+              href={`${base}/export?month=${report.month}&format=json`}
+              className={buttonClass('primary', 'sm')}
+              download
+              title="GSTR-1 JSON for the GST portal (Prepare offline → Upload). Open it in the GST Offline Tool first to check it."
+            >
+              <Icon name="download" className="-ml-0.5 h-4 w-4" />
+              GSTR-1 JSON
+            </a>
+          ) : null}
         </form>
       </div>
 

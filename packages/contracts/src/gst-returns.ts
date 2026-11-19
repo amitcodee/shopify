@@ -402,3 +402,169 @@ export function gstr1Csv(report: Gstr1Report, section: Gstr1Section): string {
       ]);
   }
 }
+
+/** Rupees as a JSON number with two decimals (the portal rejects more). */
+const rupees = (minor: number) => Math.round(minor) / 100;
+/** "2026-11-19" -> "19-11-2026". */
+const portalDate = (isoDate: string) => isoDate.split('-').reverse().join('-');
+const portalRate = (bps: number) => bps / 100;
+
+/** Groups rows by a key, keeping first-seen order. */
+function groupBy<T>(rows: readonly T[], key: (row: T) => string): T[][] {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) groups.set(key(row), [...(groups.get(key(row)) ?? []), row]);
+  return [...groups.values()];
+}
+
+/** Item numbers as the offline tool writes them: rate x 100 + 1 (5% -> 501). */
+const itemNumber = (bps: number) => bps + 1;
+
+/**
+ * GSTR-1 as the JSON file the GST portal takes under "Prepare offline → Upload", following the
+ * GSTN offline tool's schema. Amounts in rupees, dates dd-mm-yyyy, `fp` is MMYYYY. Validate it in
+ * the offline tool before uploading: the portal refuses a file with any error in it.
+ */
+export function gstr1Json(report: Gstr1Report): Record<string, unknown> {
+  const [year, month] = report.month.split('-');
+  const tax = (
+    r: { taxableValue: number; igst: number; cgst?: number; sgst?: number },
+    bps: number,
+  ) => ({
+    txval: rupees(r.taxableValue),
+    rt: portalRate(bps),
+    iamt: rupees(r.igst),
+    ...(r.cgst !== undefined ? { camt: rupees(r.cgst), samt: rupees(r.sgst ?? 0) } : {}),
+    csamt: 0,
+  });
+  const json: Record<string, unknown> = {
+    gstin: report.gstin ?? '',
+    fp: `${month}${year}`,
+    version: 'GST3.2.2',
+    hash: 'hash',
+  };
+  if (report.b2b.length) {
+    json.b2b = groupBy(report.b2b, (r) => r.gstin).map((rows) => ({
+      ctin: rows[0]?.gstin,
+      inv: groupBy(rows, (r) => r.invoiceNumber).map((inv) => ({
+        inum: inv[0]?.invoiceNumber,
+        idt: portalDate(inv[0]?.invoiceDate ?? ''),
+        val: rupees(inv[0]?.invoiceValue ?? 0),
+        pos: inv[0]?.placeOfSupply.code ?? '',
+        rchrg: 'N',
+        inv_typ: 'R',
+        itms: inv.map((r) => ({ num: itemNumber(r.rateBps), itm_det: tax(r, r.rateBps) })),
+      })),
+    }));
+  }
+  if (report.b2cl.length) {
+    json.b2cl = groupBy(report.b2cl, (r) => r.placeOfSupply.code ?? '').map((rows) => ({
+      pos: rows[0]?.placeOfSupply.code ?? '',
+      inv: groupBy(rows, (r) => r.invoiceNumber).map((inv) => ({
+        inum: inv[0]?.invoiceNumber,
+        idt: portalDate(inv[0]?.invoiceDate ?? ''),
+        val: rupees(inv[0]?.invoiceValue ?? 0),
+        itms: inv.map((r) => ({ num: itemNumber(r.rateBps), itm_det: tax(r, r.rateBps) })),
+      })),
+    }));
+  }
+  if (report.b2cs.length) {
+    json.b2cs = report.b2cs.map((r) => ({
+      sply_ty: r.supplyType === 'intra' ? 'INTRA' : 'INTER',
+      pos: r.placeOfSupply.code ?? '',
+      typ: 'OE',
+      ...(r.supplyType === 'intra'
+        ? { ...tax(r, r.rateBps), iamt: undefined }
+        : {
+            txval: rupees(r.taxableValue),
+            rt: portalRate(r.rateBps),
+            iamt: rupees(r.igst),
+            csamt: 0,
+          }),
+    }));
+  }
+  if (report.exports.length) {
+    json.exp = groupBy(report.exports, (r) => r.exportType).map((rows) => ({
+      exp_typ: rows[0]?.exportType,
+      inv: groupBy(rows, (r) => r.invoiceNumber).map((inv) => ({
+        inum: inv[0]?.invoiceNumber,
+        idt: portalDate(inv[0]?.invoiceDate ?? ''),
+        val: rupees(inv[0]?.invoiceValue ?? 0),
+        itms: inv.map((r) => ({
+          txval: rupees(r.taxableValue),
+          rt: portalRate(r.rateBps),
+          iamt: rupees(r.igst),
+          csamt: 0,
+        })),
+      })),
+    }));
+  }
+  if (report.cdnr.length) {
+    json.cdnr = groupBy(report.cdnr, (r) => r.gstin).map((rows) => ({
+      ctin: rows[0]?.gstin,
+      nt: groupBy(rows, (r) => r.noteNumber).map((nt) => ({
+        ntty: 'C',
+        nt_num: nt[0]?.noteNumber,
+        nt_dt: portalDate(nt[0]?.noteDate ?? ''),
+        val: rupees(nt[0]?.noteValue ?? 0),
+        pos: nt[0]?.placeOfSupply.code ?? '',
+        rchrg: 'N',
+        inv_typ: 'R',
+        itms: nt.map((r) => ({ num: itemNumber(r.rateBps), itm_det: tax(r, r.rateBps) })),
+      })),
+    }));
+  }
+  if (report.cdnur.length) {
+    json.cdnur = groupBy(report.cdnur, (r) => r.noteNumber).map((nt) => ({
+      typ: nt[0]?.urType,
+      ntty: 'C',
+      nt_num: nt[0]?.noteNumber,
+      nt_dt: portalDate(nt[0]?.noteDate ?? ''),
+      val: rupees(nt[0]?.noteValue ?? 0),
+      ...(nt[0]?.urType === 'B2CL' ? { pos: nt[0]?.placeOfSupply.code ?? '' } : {}),
+      itms: nt.map((r) => ({ num: itemNumber(r.rateBps), itm_det: tax(r, r.rateBps) })),
+    }));
+  }
+  const hsnRows = (audience: 'b2b' | 'b2c') =>
+    report.hsn
+      .filter((r) => r.audience === audience)
+      .map((r, i) => ({
+        num: i + 1,
+        hsn_sc: r.hsCode ?? '',
+        desc: r.description.slice(0, 30),
+        uqc: r.uqc,
+        qty: r.quantity,
+        rt: portalRate(r.rateBps),
+        txval: rupees(r.taxableValue),
+        iamt: rupees(r.igst),
+        camt: rupees(r.cgst),
+        samt: rupees(r.sgst),
+        csamt: 0,
+      }));
+  if (report.hsn.length) json.hsn = { hsn_b2b: hsnRows('b2b'), hsn_b2c: hsnRows('b2c') };
+  if (report.documents.length) {
+    json.doc_issue = {
+      doc_det: (
+        [
+          [1, 'Invoices for outward supply', 'invoice'],
+          [5, 'Credit Note', 'credit_note'],
+        ] as const
+      )
+        .map(([docNum, docTyp, nature]) => ({
+          doc_num: docNum,
+          doc_typ: docTyp,
+          docs: report.documents
+            .filter((d) => d.nature === nature)
+            .map((d, i) => ({
+              num: i + 1,
+              from: d.from,
+              to: d.to,
+              totnum: d.total,
+              cancel: d.cancelled,
+              net_issue: d.total - d.cancelled,
+            })),
+        }))
+        .filter((d) => d.docs.length > 0),
+    };
+  }
+  return JSON.parse(JSON.stringify(json)) as Record<string, unknown>;
+}
