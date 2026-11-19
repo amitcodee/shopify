@@ -5,6 +5,7 @@ const SECTIONS = [
   { key: 'drafts', label: 'Drafts', path: '/drafts' },
   { key: 'abandoned', label: 'Abandoned checkouts', path: '/abandoned' },
   { key: 'returns', label: 'Returns', path: '/returns' },
+  { key: 'gst', label: 'GST returns', path: '/gst' },
 ] as const;
 
 export type OrdersSection = (typeof SECTIONS)[number]['key'];

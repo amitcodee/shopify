@@ -22,6 +22,7 @@ import { DraftOrdersController, InvoicesController } from '../orders/draft-order
 import { DraftOrdersService } from '../orders/draft-orders.service.js';
 import { OrdersController } from '../orders/orders.controller.js';
 import { OrdersService } from '../orders/orders.service.js';
+import { GstReturnsController, GstReturnsService } from '../orders/gst-returns.js';
 import {
   StorefrontInvoicesController,
   TaxInvoicesController,
@@ -53,6 +54,7 @@ import { DeveloperModule } from '../webhooks/developer.js';
     DraftOrdersController,
     InvoicesController,
     TaxInvoicesController,
+    GstReturnsController,
     StorefrontInvoicesController,
     AdminCustomersController,
     SegmentsController,
@@ -65,6 +67,7 @@ import { DeveloperModule } from '../webhooks/developer.js';
     CustomerAuthService,
     OrdersService,
     TaxInvoicesService,
+    GstReturnsService,
     ReturnsService,
     DraftOrdersService,
     AdminCustomersService,

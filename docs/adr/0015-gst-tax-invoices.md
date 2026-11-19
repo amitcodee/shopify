@@ -66,9 +66,21 @@ store's, including the check digit) and registered name, stored on `Order.buyerG
 claim input tax credit. Place of supply stays the delivery state. Draft orders take the same two
 fields (Customer card) and pass them to the order they create; outside India they are dropped.
 
+**GST returns (added 2026-11-19).** Orders → GST returns shows a month (in the store's time zone)
+of issued invoices and credit notes sorted into the GSTR-1 tables, built only from the stored
+documents (`apps/api/src/orders/gst-returns.ts`, `GET /admin/stores/:id/gst-returns/gstr1?month=`):
+B2B (4A, buyer GSTIN), B2CL (5, other-state consumer invoices above Rs 1 lakh), exports (6A, WPAY
+when IGST was charged), B2CS (7, by place of supply and rate, net of their credit notes), CDNR and
+CDNUR (9B, classified by the invoice the note reduces), HSN summary split B2B/B2C (12, net of credit
+notes; quantities only from invoices, shipping as SAC 9965 with UQC NA) and the document ranges (13).
+Each table downloads as CSV with the GST Offline Tool's template headings (`gstr1Csv` in contracts).
+Warnings flag non-INR documents, missing HSN codes, blank places of supply, several GSTINs and
+test-mode payments. It prepares figures only; nothing is filed.
+
 ## Not done
 
 - E-invoicing (IRN/QR from the IRP), mandatory only above the turnover limit.
+- Filing GSTR-1 or GSTR-3B through a GSP, and the portal JSON upload format (CSV only).
 - Checking a buyer's GSTIN against the GST portal (only its format and check digit are checked).
 - Signature: the invoice has an "Authorised signatory" space, not a digital signature.
 - A refund that a provider reports as failed later (after it was accepted) keeps its credit

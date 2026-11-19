@@ -1,0 +1,450 @@
+import { Controller, Get, Injectable, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  creditNoteDataSchema,
+  financialYearOf,
+  gstMonthSchema,
+  type Gstr1Report,
+  type TaxInvoiceData,
+  taxInvoiceDataSchema,
+} from '@repo/contracts';
+import { z } from 'zod';
+import type { StoreContext } from '../common/request.js';
+import { CurrentStore } from '../common/request.js';
+import { ZodPipe } from '../common/zod.js';
+import { TenantDb } from '../database/database.module.js';
+import { RequirePermission, StoreAccessGuard } from '../tenancy/store-access.guard.js';
+import { parseRegistration } from './tax-invoices.js';
+
+/** Other-state consumer invoices above this (Rs 1 lakh, in paise) are reported one by one. */
+export const B2CL_LIMIT = 100_000_00;
+
+export interface IssuedDocument {
+  number: string;
+  issuedAt: Date;
+  data: unknown;
+}
+
+export interface CreditNoteDocument extends IssuedDocument {
+  /** The invoice the note reduces. */
+  invoice: IssuedDocument | null;
+}
+
+/** YYYY-MM-DD of an instant in a time zone. */
+function localDate(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+type Kind = 'b2b' | 'b2cl' | 'export' | 'b2cs';
+
+/** Which GSTR-1 table an invoice belongs to. */
+function kindOf(d: TaxInvoiceData): Kind {
+  if (d.buyer.gstin) return 'b2b';
+  if (d.supplyType === 'export') return 'export';
+  if (d.supplyType === 'inter' && d.currency === 'INR' && d.total > B2CL_LIMIT) return 'b2cl';
+  return 'b2cs';
+}
+
+/** Place of supply for a domestic invoice; same-state sales without a known state use the seller's. */
+type Placed = Pick<TaxInvoiceData, 'placeOfSupply' | 'supplyType' | 'seller'>;
+
+function placeOf(d: Placed) {
+  if (d.placeOfSupply.code) return d.placeOfSupply;
+  if (d.supplyType === 'intra') return { code: d.seller.stateCode, name: d.seller.stateName };
+  return d.placeOfSupply;
+}
+
+const isService = (hsCode: string | null) => hsCode?.startsWith('99') ?? false;
+
+/**
+ * Sorts a month's invoices and credit notes into GSTR-1 tables. Rows with no value (a credit
+ * note's untouched rates) are left out. B2C small sales and both HSN summaries are net of the
+ * month's credit notes; quantities are not, since a credit note records an amount.
+ */
+export function buildGstr1(input: {
+  month: string;
+  timeZone: string;
+  registration: { gstin: string; legalName: string } | null;
+  invoices: IssuedDocument[];
+  creditNotes: CreditNoteDocument[];
+}): Gstr1Report {
+  const { timeZone } = input;
+  const report: Gstr1Report = {
+    month: input.month,
+    gstin: input.registration?.gstin ?? null,
+    legalName: input.registration?.legalName ?? null,
+    currency: 'INR',
+    b2b: [],
+    b2cl: [],
+    exports: [],
+    b2cs: [],
+    cdnr: [],
+    cdnur: [],
+    hsn: [],
+    documents: [],
+    totals: { invoices: 0, creditNotes: 0, taxableValue: 0, igst: 0, cgst: 0, sgst: 0 },
+    warnings: [],
+  };
+  const currencies = new Set<string>();
+  const sellerGstins = new Set<string>();
+  let missingHsn = 0;
+  let unknownPlace = 0;
+  let testPayments = 0;
+
+  const b2cs = new Map<string, Gstr1Report['b2cs'][number]>();
+  const addB2cs = (
+    d: Placed,
+    row: { rateBps: number; taxableValue: number; igst: number; cgst: number; sgst: number },
+    sign: 1 | -1,
+  ) => {
+    const place = placeOf(d);
+    const supplyType = d.supplyType === 'intra' ? 'intra' : 'inter';
+    const key = `${supplyType}|${place.code ?? ''}|${row.rateBps}`;
+    const entry = b2cs.get(key) ?? {
+      supplyType,
+      placeOfSupply: place,
+      rateBps: row.rateBps,
+      taxableValue: 0,
+      igst: 0,
+      cgst: 0,
+      sgst: 0,
+    };
+    entry.taxableValue += sign * row.taxableValue;
+    entry.igst += sign * row.igst;
+    entry.cgst += sign * row.cgst;
+    entry.sgst += sign * row.sgst;
+    b2cs.set(key, entry);
+  };
+
+  const hsn = new Map<string, Gstr1Report['hsn'][number]>();
+  const addHsn = (
+    audience: 'b2b' | 'b2c',
+    row: {
+      hsCode: string | null;
+      description: string;
+      quantity: number;
+      rateBps: number;
+      taxableValue: number;
+      igst: number;
+      cgst: number;
+      sgst: number;
+    },
+    sign: 1 | -1,
+  ) => {
+    const key = `${audience}|${row.hsCode ?? ''}|${row.rateBps}`;
+    const service = isService(row.hsCode);
+    const entry = hsn.get(key) ?? {
+      audience,
+      hsCode: row.hsCode,
+      description: row.description,
+      uqc: service ? 'NA' : 'NOS',
+      quantity: 0,
+      totalValue: 0,
+      rateBps: row.rateBps,
+      taxableValue: 0,
+      igst: 0,
+      cgst: 0,
+      sgst: 0,
+    };
+    if (!service) entry.quantity += sign * row.quantity;
+    entry.taxableValue += sign * row.taxableValue;
+    entry.igst += sign * row.igst;
+    entry.cgst += sign * row.cgst;
+    entry.sgst += sign * row.sgst;
+    entry.totalValue = entry.taxableValue + entry.igst + entry.cgst + entry.sgst;
+    hsn.set(key, entry);
+  };
+
+  const addTotals = (
+    rows: { taxableValue: number; igst: number; cgst: number; sgst: number }[],
+    sign: 1 | -1,
+  ) => {
+    for (const r of rows) {
+      report.totals.taxableValue += sign * r.taxableValue;
+      report.totals.igst += sign * r.igst;
+      report.totals.cgst += sign * r.cgst;
+      report.totals.sgst += sign * r.sgst;
+    }
+  };
+
+  const invoices = [...input.invoices].sort((a, b) => a.issuedAt.getTime() - b.issuedAt.getTime());
+  for (const invoice of invoices) {
+    const d = taxInvoiceDataSchema.parse(invoice.data);
+    currencies.add(d.currency);
+    sellerGstins.add(d.seller.gstin);
+    if (d.paymentMethod.includes('test')) testPayments++;
+    const kind = kindOf(d);
+    const date = localDate(invoice.issuedAt, timeZone);
+    const rows = d.summary.filter((r) => r.taxableValue !== 0 || r.igst + r.cgst + r.sgst !== 0);
+    if (kind !== 'export' && !placeOf(d).code) unknownPlace++;
+    report.totals.invoices++;
+    addTotals(rows, 1);
+
+    // Rows of the same rate (different HSN codes) are one row in the invoice tables.
+    const byRate = new Map<
+      number,
+      { taxableValue: number; igst: number; cgst: number; sgst: number }
+    >();
+    for (const r of rows) {
+      const e = byRate.get(r.rateBps) ?? { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 };
+      e.taxableValue += r.taxableValue;
+      e.igst += r.igst;
+      e.cgst += r.cgst;
+      e.sgst += r.sgst;
+      byRate.set(r.rateBps, e);
+    }
+    for (const [rateBps, r] of byRate) {
+      const head = { invoiceNumber: invoice.number, invoiceDate: date, invoiceValue: d.total };
+      if (kind === 'b2b') {
+        report.b2b.push({
+          gstin: d.buyer.gstin ?? '',
+          name: d.buyer.legalName ?? d.buyer.name,
+          ...head,
+          placeOfSupply: placeOf(d),
+          rateBps,
+          ...r,
+        });
+      } else if (kind === 'b2cl') {
+        report.b2cl.push({
+          ...head,
+          placeOfSupply: placeOf(d),
+          rateBps,
+          taxableValue: r.taxableValue,
+          igst: r.igst,
+        });
+      } else if (kind === 'export') {
+        report.exports.push({
+          exportType: d.igstTotal > 0 ? 'WPAY' : 'WOPAY',
+          ...head,
+          rateBps,
+          taxableValue: r.taxableValue,
+          igst: r.igst,
+        });
+      } else {
+        addB2cs(d, { rateBps, ...r }, 1);
+      }
+    }
+
+    // HSN summary: product lines (with quantities) and shipping as SAC 9965.
+    const audience = kind === 'b2b' ? 'b2b' : 'b2c';
+    for (const l of d.lines) {
+      if (!l.hsCode) missingHsn++;
+      addHsn(audience, { ...l, description: l.description }, 1);
+    }
+    if (
+      d.shipping &&
+      d.shipping.taxableValue + d.shipping.igst + d.shipping.cgst + d.shipping.sgst > 0
+    ) {
+      addHsn(
+        audience,
+        { ...d.shipping, hsCode: '9965', description: 'Goods transport (shipping)', quantity: 0 },
+        1,
+      );
+    }
+  }
+
+  const notes = [...input.creditNotes].sort((a, b) => a.issuedAt.getTime() - b.issuedAt.getTime());
+  for (const note of notes) {
+    const n = creditNoteDataSchema.parse(note.data);
+    currencies.add(n.currency);
+    const original = note.invoice ? taxInvoiceDataSchema.parse(note.invoice.data) : null;
+    // Classify by the invoice it reduces (its value decides B2CL); fall back to the note itself.
+    const kind: Kind = original
+      ? kindOf(original)
+      : n.buyer.gstin
+        ? 'b2b'
+        : n.supplyType === 'export'
+          ? 'export'
+          : 'b2cs';
+    const date = localDate(note.issuedAt, timeZone);
+    const rows = n.rows.filter((r) => r.taxableValue !== 0 || r.igst + r.cgst + r.sgst !== 0);
+    report.totals.creditNotes++;
+    addTotals(rows, -1);
+    for (const r of rows) {
+      const head = {
+        noteNumber: note.number,
+        noteDate: date,
+        invoiceNumber: n.invoiceNumber,
+        placeOfSupply: placeOf(n),
+        noteValue: n.total,
+        rateBps: r.rateBps,
+      };
+      if (kind === 'b2b') {
+        report.cdnr.push({
+          gstin: n.buyer.gstin ?? '',
+          name: n.buyer.legalName ?? n.buyer.name,
+          ...head,
+          taxableValue: r.taxableValue,
+          igst: r.igst,
+          cgst: r.cgst,
+          sgst: r.sgst,
+        });
+      } else if (kind === 'b2cl' || kind === 'export') {
+        report.cdnur.push({
+          urType:
+            kind === 'b2cl' ? 'B2CL' : (original?.igstTotal ?? r.igst) > 0 ? 'EXPWP' : 'EXPWOP',
+          ...head,
+          taxableValue: r.taxableValue,
+          igst: r.igst,
+        });
+      } else {
+        addB2cs(n, r, -1);
+      }
+      const description =
+        original?.lines.find((l) => l.hsCode === r.hsCode)?.description ??
+        (r.hsCode === '9965' ? 'Goods transport (shipping)' : 'Returned items');
+      addHsn(kind === 'b2b' ? 'b2b' : 'b2c', { ...r, description, quantity: 0 }, -1);
+    }
+  }
+
+  report.b2cs = [...b2cs.values()]
+    .filter((r) => r.taxableValue !== 0 || r.igst + r.cgst + r.sgst !== 0)
+    .sort(
+      (a, b) =>
+        (a.placeOfSupply.code ?? '').localeCompare(b.placeOfSupply.code ?? '') ||
+        a.rateBps - b.rateBps,
+    );
+  report.hsn = [...hsn.values()].sort(
+    (a, b) =>
+      a.audience.localeCompare(b.audience) ||
+      (a.hsCode ?? '').localeCompare(b.hsCode ?? '') ||
+      a.rateBps - b.rateBps,
+  );
+  report.documents = [...series(invoices, 'invoice'), ...series(notes, 'credit_note')];
+
+  const [only] = currencies;
+  if (currencies.size === 1 && only) report.currency = only;
+  if (currencies.size > 1 || (only && only !== 'INR')) {
+    report.warnings.push(
+      `Some documents are in ${[...currencies].filter((c) => c !== 'INR').join(', ')}, not rupees. GST returns are filed in INR: convert these amounts at the rate on the invoice date before filing.`,
+    );
+  }
+  if (sellerGstins.size > 1) {
+    report.warnings.push(
+      `Invoices this month carry ${sellerGstins.size} different GSTINs (${[...sellerGstins].join(', ')}). Each GSTIN files its own return.`,
+    );
+  }
+  if (missingHsn > 0) {
+    report.warnings.push(
+      `${missingHsn} invoice line${missingHsn === 1 ? ' has' : 's have'} no HSN code, so ${missingHsn === 1 ? 'it shows' : 'they show'} with a blank HSN in the summary. Add HSN codes on the product pages (new orders pick them up).`,
+    );
+  }
+  if (unknownPlace > 0) {
+    report.warnings.push(
+      `${unknownPlace} invoice${unknownPlace === 1 ? '' : 's'} to another state had no recognised Indian state, so the place of supply is blank. Fill it in before filing.`,
+    );
+  }
+  if (testPayments > 0) {
+    report.warnings.push(
+      `${testPayments} invoice${testPayments === 1 ? ' is' : 's are'} for test-mode payments. They are numbered invoices: report them, or issue credit notes if the orders were not real sales.`,
+    );
+  }
+  return report;
+}
+
+/** Number ranges per series ("INV/26-27/"), in issue order. Invoices are never cancelled here. */
+function series(docs: IssuedDocument[], nature: 'invoice' | 'credit_note') {
+  const groups = new Map<string, string[]>();
+  for (const doc of docs) {
+    const prefix = doc.number.replace(/\d+$/, '');
+    groups.set(prefix, [...(groups.get(prefix) ?? []), doc.number]);
+  }
+  return [...groups.values()].map((numbers) => {
+    const sorted = [...numbers].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+    return {
+      nature,
+      from: sorted[0] ?? '',
+      to: sorted.at(-1) ?? '',
+      total: sorted.length,
+      cancelled: 0,
+    };
+  });
+}
+
+/** The zone if the database will accept it (the setting is free text), otherwise UTC. */
+function knownTimeZone(zone: string): string {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: zone });
+    return zone;
+  } catch {
+    return 'UTC';
+  }
+}
+
+const querySchema = z.object({ month: gstMonthSchema.optional() });
+
+@Injectable()
+export class GstReturnsService {
+  constructor(private readonly tenantDb: TenantDb) {}
+
+  /** GSTR-1 tables for a calendar month in the store's time zone (default: this month). */
+  gstr1(storeId: string, month?: string): Promise<Gstr1Report> {
+    return this.tenantDb.run(storeId, async (tx) => {
+      const store = await tx.store.findUniqueOrThrow({
+        where: { id: storeId },
+        select: { timezone: true, gstRegistration: true },
+      });
+      const timeZone = knownTimeZone(store.timezone);
+      const period = month ?? localDate(new Date(), timeZone).slice(0, 7);
+      const year = Number(period.slice(0, 4));
+      const m = Number(period.slice(5, 7));
+      const [bounds] = await tx.$queryRaw<{ from: Date; to: Date }[]>`
+        SELECT (make_timestamp(${year}::int, ${m}::int, 1, 0, 0, 0) AT TIME ZONE ${timeZone}) AS "from",
+               ((make_timestamp(${year}::int, ${m}::int, 1, 0, 0, 0) + interval '1 month') AT TIME ZONE ${timeZone}) AS "to"`;
+      if (!bounds) throw new Error('Could not compute the month bounds.');
+      // A calendar month lies inside one financial year, which narrows the index range.
+      const where = {
+        storeId,
+        financialYear: financialYearOf(year, m),
+        issuedAt: { gte: bounds.from, lt: bounds.to },
+      };
+      const [invoices, creditNotes] = await Promise.all([
+        tx.orderInvoice.findMany({
+          where,
+          select: { number: true, issuedAt: true, data: true },
+        }),
+        tx.creditNote.findMany({
+          where,
+          select: {
+            number: true,
+            issuedAt: true,
+            data: true,
+            order: {
+              select: { invoice: { select: { number: true, issuedAt: true, data: true } } },
+            },
+          },
+        }),
+      ]);
+      return buildGstr1({
+        month: period,
+        timeZone,
+        registration: parseRegistration(store.gstRegistration),
+        invoices,
+        creditNotes: creditNotes.map(({ order, ...n }) => ({ ...n, invoice: order.invoice })),
+      });
+    });
+  }
+}
+
+@ApiTags('Orders')
+@ApiBearerAuth()
+@UseGuards(StoreAccessGuard)
+@Controller('admin/stores/:storeId/gst-returns')
+export class GstReturnsController {
+  constructor(private readonly returns: GstReturnsService) {}
+
+  /** The month's invoices and credit notes in GSTR-1 tables. */
+  @Get('gstr1')
+  @RequirePermission('orders:read')
+  gstr1(
+    @CurrentStore() store: StoreContext,
+    @Query(new ZodPipe(querySchema)) query: z.infer<typeof querySchema>,
+  ): Promise<Gstr1Report> {
+    return this.returns.gstr1(store.id, query.month);
+  }
+}
