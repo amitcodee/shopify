@@ -75,11 +75,15 @@ CDNUR (9B, classified by the invoice the note reduces), HSN summary split B2B/B2
 notes; quantities only from invoices, shipping as SAC 9965 with UQC NA) and the document ranges (13).
 Each table downloads as CSV with the GST Offline Tool's template headings (`gstr1Csv` in contracts).
 Warnings flag non-INR documents, missing HSN codes, blank places of supply, several GSTINs and
-test-mode payments. It prepares figures only; nothing is filed.
+test-mode payments. The same page shows GSTR-3B tables 3.1(a)-(c) (taxable, zero-rated = exports,
+nil-rated = 0% rows in India) and 3.2 (other-state sales to unregistered buyers by place of supply),
+all net of credit notes. Input tax credit (table 4) is not tracked: the store has no purchase tax
+data. It prepares figures only; nothing is filed.
 
 ## Not done
 
 - E-invoicing (IRN/QR from the IRP), mandatory only above the turnover limit.
+- GSTR-3B input tax credit (table 4) and RCM inward supplies (3.1(d)).
 - Filing GSTR-1 or GSTR-3B through a GSP, and the portal JSON upload format (CSV only).
 - Checking a buyer's GSTIN against the GST portal (only its format and check digit are checked).
 - Signature: the invoice has an "Authorised signatory" space, not a digital signature.

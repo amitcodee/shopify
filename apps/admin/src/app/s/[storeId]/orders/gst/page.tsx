@@ -231,6 +231,77 @@ export default async function GstReturnsPage({
           </Alert>
         ) : null}
 
+        {t.invoices + t.creditNotes > 0 ? (
+          <Card
+            title="GSTR-3B · Outward supplies"
+            description="What goes into tables 3.1 and 3.2 of your monthly GSTR-3B, after credit notes. Input tax credit (table 4) comes from your purchases, which this store does not track."
+            flush
+          >
+            <Table
+              bare
+              head={[
+                'Table',
+                'Nature of supplies',
+                'Taxable value',
+                'IGST',
+                'CGST',
+                'SGST / UTGST',
+              ]}
+              numeric={[2, 3, 4, 5]}
+            >
+              {(
+                [
+                  [
+                    '3.1(a)',
+                    'Outward taxable supplies (other than zero, nil rated and exempted)',
+                    report.gstr3b.outwardTaxable,
+                  ],
+                  ['3.1(b)', 'Outward taxable supplies (zero rated)', report.gstr3b.zeroRated],
+                  [
+                    '3.1(c)',
+                    'Other outward supplies (nil rated, exempted)',
+                    report.gstr3b.nilRated,
+                  ],
+                ] as const
+              ).map(([table, label, r]) => (
+                <tr key={table}>
+                  <Td className="font-mono text-xs">{table}</Td>
+                  <Td>{label}</Td>
+                  <Td numeric>{money(r.taxableValue)}</Td>
+                  <Td numeric>{money(r.igst)}</Td>
+                  <Td numeric>{money(r.cgst)}</Td>
+                  <Td numeric>{money(r.sgst)}</Td>
+                </tr>
+              ))}
+            </Table>
+            <div className="border-t border-slate-100 px-5 py-4">
+              <p className="text-[13px] font-medium text-slate-900">
+                3.2 · Inter-state supplies to unregistered persons
+              </p>
+              {report.gstr3b.interStateUnregistered.length === 0 ? (
+                <p className="mt-1 text-[13px] text-slate-500">None this month.</p>
+              ) : (
+                <ul className="mt-2 grid gap-x-6 gap-y-1.5 text-[13px] sm:grid-cols-2 lg:grid-cols-3">
+                  {report.gstr3b.interStateUnregistered.map((r) => (
+                    <li
+                      key={r.placeOfSupply.code ?? 'none'}
+                      className="flex justify-between gap-3 rounded-md bg-slate-50 px-3 py-1.5"
+                    >
+                      <span className="text-slate-700">
+                        {gstPlace(r.placeOfSupply) || 'Place not given'}
+                      </span>
+                      <span className="text-slate-900 tabular-nums">
+                        {money(r.taxableValue)}{' '}
+                        <span className="text-slate-500">· IGST {money(r.igst)}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Card>
+        ) : null}
+
         <Section
           title="B2B invoices"
           table="4A"

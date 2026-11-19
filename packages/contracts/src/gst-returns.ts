@@ -128,6 +128,23 @@ export const gstr1Schema = z.object({
     taxableValue: z.number().int(),
     ...taxSchema,
   }),
+  /** GSTR-3B outward supplies, net of credit notes (input tax credit is not tracked here). */
+  gstr3b: z.object({
+    /** 3.1(a): taxable supplies other than zero-rated and nil-rated. */
+    outwardTaxable: z.object({ taxableValue: z.number().int(), ...taxSchema }),
+    /** 3.1(b): zero-rated (exports). */
+    zeroRated: z.object({ taxableValue: z.number().int(), ...taxSchema }),
+    /** 3.1(c): nil-rated and exempt (0% rows in India). */
+    nilRated: z.object({ taxableValue: z.number().int(), ...taxSchema }),
+    /** 3.2: other-state supplies to unregistered persons, by place of supply. */
+    interStateUnregistered: z.array(
+      z.object({
+        placeOfSupply: placeSchema,
+        taxableValue: z.number().int(),
+        igst: z.number().int(),
+      }),
+    ),
+  }),
   /** Things to fix or check before filing. */
   warnings: z.array(z.string()),
 });

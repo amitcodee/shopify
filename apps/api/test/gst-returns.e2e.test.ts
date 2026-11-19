@@ -237,6 +237,20 @@ describe('GST returns (GSTR-1)', () => {
         cancelled: 0,
       },
     ]);
+    // GSTR-3B: domestic rated sales less credit notes; the export is zero-rated; 3.2 is the
+    // Karnataka consumer sales (the sofa and one kurta) less the sofa's credit note.
+    expect(report.gstr3b).toEqual({
+      outwardTaxable: { taxableValue: 14_100_000, igst: 2_450_000, cgst: 5_000, sgst: 5_000 },
+      zeroRated: { taxableValue: 100_000, igst: 0, cgst: 0, sgst: 0 },
+      nilRated: { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 },
+      interStateUnregistered: [
+        {
+          placeOfSupply: { code: '29', name: 'Karnataka' },
+          taxableValue: 13_600_000,
+          igst: 2_435_000,
+        },
+      ],
+    });
     // Sandbox payments are flagged.
     expect(report.warnings.join(' ')).toMatch(/test-mode payments/);
 

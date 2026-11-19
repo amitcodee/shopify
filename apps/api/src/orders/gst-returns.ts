@@ -88,6 +88,12 @@ export function buildGstr1(input: {
     hsn: [],
     documents: [],
     totals: { invoices: 0, creditNotes: 0, taxableValue: 0, igst: 0, cgst: 0, sgst: 0 },
+    gstr3b: {
+      outwardTaxable: { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 },
+      zeroRated: { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 },
+      nilRated: { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 },
+      interStateUnregistered: [],
+    },
     warnings: [],
   };
   const currencies = new Set<string>();
@@ -160,15 +166,40 @@ export function buildGstr1(input: {
     hsn.set(key, entry);
   };
 
+  type Amounts = { taxableValue: number; igst: number; cgst: number; sgst: number };
+  const add = (into: Amounts, r: Amounts, sign: 1 | -1) => {
+    into.taxableValue += sign * r.taxableValue;
+    into.igst += sign * r.igst;
+    into.cgst += sign * r.cgst;
+    into.sgst += sign * r.sgst;
+  };
+  const interUnregistered = new Map<
+    string,
+    Gstr1Report['gstr3b']['interStateUnregistered'][number]
+  >();
+  /** Adds a document's rows to the month totals and to the GSTR-3B tables 3.1 and 3.2. */
   const addTotals = (
-    rows: { taxableValue: number; igst: number; cgst: number; sgst: number }[],
+    rows: (Amounts & { rateBps: number })[],
     sign: 1 | -1,
+    doc: Placed & { kind: Kind },
   ) => {
+    const b = report.gstr3b;
     for (const r of rows) {
-      report.totals.taxableValue += sign * r.taxableValue;
-      report.totals.igst += sign * r.igst;
-      report.totals.cgst += sign * r.cgst;
-      report.totals.sgst += sign * r.sgst;
+      add(report.totals, r, sign);
+      if (doc.kind === 'export') add(b.zeroRated, r, sign);
+      else if (r.rateBps === 0) add(b.nilRated, r, sign);
+      else add(b.outwardTaxable, r, sign);
+      if (doc.kind !== 'b2b' && doc.kind !== 'export' && doc.supplyType === 'inter') {
+        const place = placeOf(doc);
+        const entry = interUnregistered.get(place.code ?? '') ?? {
+          placeOfSupply: place,
+          taxableValue: 0,
+          igst: 0,
+        };
+        entry.taxableValue += sign * r.taxableValue;
+        entry.igst += sign * r.igst;
+        interUnregistered.set(place.code ?? '', entry);
+      }
     }
   };
 
@@ -183,7 +214,7 @@ export function buildGstr1(input: {
     const rows = d.summary.filter((r) => r.taxableValue !== 0 || r.igst + r.cgst + r.sgst !== 0);
     if (kind !== 'export' && !placeOf(d).code) unknownPlace++;
     report.totals.invoices++;
-    addTotals(rows, 1);
+    addTotals(rows, 1, { ...d, kind });
 
     // Rows of the same rate (different HSN codes) are one row in the invoice tables.
     const byRate = new Map<
@@ -264,7 +295,7 @@ export function buildGstr1(input: {
     const date = localDate(note.issuedAt, timeZone);
     const rows = n.rows.filter((r) => r.taxableValue !== 0 || r.igst + r.cgst + r.sgst !== 0);
     report.totals.creditNotes++;
-    addTotals(rows, -1);
+    addTotals(rows, -1, { ...n, kind });
     for (const r of rows) {
       const head = {
         noteNumber: note.number,
@@ -315,6 +346,9 @@ export function buildGstr1(input: {
       (a.hsCode ?? '').localeCompare(b.hsCode ?? '') ||
       a.rateBps - b.rateBps,
   );
+  report.gstr3b.interStateUnregistered = [...interUnregistered.values()]
+    .filter((r) => r.taxableValue !== 0 || r.igst !== 0)
+    .sort((a, b) => (a.placeOfSupply.code ?? '').localeCompare(b.placeOfSupply.code ?? ''));
   report.documents = [...series(invoices, 'invoice'), ...series(notes, 'credit_note')];
 
   const [only] = currencies;
