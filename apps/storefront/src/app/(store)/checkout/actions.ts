@@ -51,6 +51,13 @@ export async function placeOrderAction(_: FormResult, formData: FormData): Promi
         giftCardCode: field(formData, 'giftCardCode'),
         note: field(formData, 'note'),
         paymentMethod: field(formData, 'paymentMethod'),
+        // Only sent for Indian addresses (the fields are shown only then).
+        ...(field(formData, 'country') === 'IN'
+          ? {
+              buyerGstin: field(formData, 'buyerGstin'),
+              buyerLegalName: field(formData, 'buyerLegalName'),
+            }
+          : {}),
         shippingAddress: {
           name: field(formData, 'name') ?? '',
           line1: field(formData, 'line1') ?? '',

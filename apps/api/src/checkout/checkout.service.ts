@@ -132,6 +132,7 @@ export class CheckoutService {
         discountTotal: quote.pricing.discountTotal,
         shippingTotal: quote.pricing.shippingTotal,
         taxTotal: quote.pricing.taxTotal,
+        taxesIncluded: quote.pricing.taxesIncluded,
         total: quote.pricing.total,
         lines: cart.lines,
         requiresShipping: quote.requiresShipping,
@@ -291,7 +292,15 @@ export class CheckoutService {
           shippingTotal: quote.pricing.shippingTotal,
           taxTotal: quote.pricing.taxTotal,
           shippingTaxTotal: quote.pricing.shippingTax,
+          taxesIncluded: quote.pricing.taxesIncluded,
           total: quote.pricing.total,
+          // A business buyer's GSTIN only means something on an Indian (domestic) invoice.
+          ...(input.shippingAddress.country === 'IN' && input.buyerGstin
+            ? {
+                buyerGstin: input.buyerGstin,
+                buyerLegalName: input.buyerLegalName ?? input.shippingAddress.name,
+              }
+            : {}),
           discountCode: quote.discount?.applied ? quote.discount.code : null,
           shippingMethod: quote.selectedShipping?.name ?? null,
           shippingAddress: input.shippingAddress,
@@ -562,6 +571,7 @@ export class CheckoutService {
       shippingPrice: selectedShipping?.price ?? 0,
       taxRateBps: tax.rateBps,
       taxShipping: tax.taxShipping,
+      taxesIncluded: shop.pricesIncludeTax,
     });
     let giftCard: Quote['giftCard'] = null;
     let giftCardError: string | null = null;
@@ -785,6 +795,7 @@ export function toPublicOrder(
     discountTotal: order.discountTotal,
     shippingTotal: order.shippingTotal,
     taxTotal: order.taxTotal,
+    taxesIncluded: order.taxesIncluded,
     total: order.total,
     giftCardAmount: order.giftCardAmount,
     shippingMethod: order.shippingMethod,

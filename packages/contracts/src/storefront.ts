@@ -47,6 +47,8 @@ export const shopSchema = z.object({
   baseCurrency: z.string(),
   /** Currencies the shopper can switch between (store currency first). */
   currencies: z.array(z.string()),
+  /** Prices shown already include tax (GST-inclusive / MRP). */
+  pricesIncludeTax: z.boolean().default(false),
 });
 export type Shop = z.infer<typeof shopSchema>;
 

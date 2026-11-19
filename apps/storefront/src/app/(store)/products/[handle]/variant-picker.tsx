@@ -39,10 +39,13 @@ const BADGE =
 export function VariantPicker({
   product,
   currency,
+  taxesIncluded = false,
   children,
 }: {
   product: StorefrontProduct;
   currency: string;
+  /** The store's prices include tax. */
+  taxesIncluded?: boolean;
   children?: ReactNode;
 }) {
   const [selected, setSelected] = useState<string[]>(() => initialVariant(product)?.options ?? []);
@@ -135,9 +138,13 @@ export function VariantPicker({
           ) : null}
         </div>
 
-        {extra > 0 && variant ? (
+        {(extra > 0 && variant) || taxesIncluded ? (
           <p className="-mt-4 text-sm text-zinc-500">
-            Includes {formatMoney(extra, currency)} for personalisation.
+            {taxesIncluded ? 'Tax included.' : null}
+            {taxesIncluded && extra > 0 && variant ? ' ' : null}
+            {extra > 0 && variant
+              ? `Includes ${formatMoney(extra, currency)} for personalisation.`
+              : null}
           </p>
         ) : null}
 

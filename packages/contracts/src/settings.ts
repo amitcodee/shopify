@@ -314,6 +314,16 @@ export const taxRateSchema = z.object({
 });
 export type TaxRate = z.infer<typeof taxRateSchema>;
 
+/** How the store's prices relate to tax. */
+export const taxSettingsSchema = z.strictObject({
+  /**
+   * Product prices and shipping rates already include tax (GST-inclusive / MRP pricing): checkout
+   * takes the tax out of them instead of adding it on top.
+   */
+  pricesIncludeTax: z.boolean(),
+});
+export type TaxSettings = z.infer<typeof taxSettingsSchema>;
+
 // ── Discounts ──────────────────────────────────────────────────────────────────
 
 export const discountTypeSchema = z.enum(['PERCENTAGE', 'FIXED_AMOUNT', 'FREE_SHIPPING']);

@@ -133,6 +133,8 @@ model Store {
   /// India GST registration used on tax invoices (see @repo/contracts gstRegistrationSchema);
   /// null when the store is not GST-registered (no tax invoices are issued).
   gstRegistration             Json?
+  /// Catalog prices and shipping rates already include tax (GST-inclusive / MRP pricing).
+  pricesIncludeTax            Boolean     @default(false)
   /// When a closed store's data is permanently erased.
   deletionScheduledAt         DateTime?
   createdAt                   DateTime    @default(now())
@@ -712,6 +714,8 @@ model DraftOrder {
   discountTotal   Int              @default(0)
   shippingTotal   Int              @default(0)
   taxTotal        Int              @default(0)
+  /// Prices on the draft already include taxTotal (the store priced tax-inclusive when saved).
+  taxesIncluded   Boolean          @default(false)
   total           Int              @default(0)
   /// Latest order created from this draft (awaiting payment, or the completed order).
   orderId         String?          @db.Uuid
@@ -746,6 +750,12 @@ model Order {
   taxTotal            Int               @default(0)
   /// Part of taxTotal charged on shipping (the rest is on the lines' taxTotal).
   shippingTaxTotal    Int               @default(0)
+  /// Line prices and shipping already include taxTotal (sold at tax-inclusive prices), so
+  /// total = subtotal - discountTotal + shippingTotal.
+  taxesIncluded       Boolean           @default(false)
+  /// Buyer's GSTIN and registered name, for a B2B tax invoice (India).
+  buyerGstin          String?
+  buyerLegalName      String?
   total               Int
   discountCode        String?
   shippingMethod      String?

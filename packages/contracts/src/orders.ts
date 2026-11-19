@@ -99,6 +99,11 @@ export const orderDetailSchema = orderListItemSchema.extend({
   discountTotal: z.number().int(),
   shippingTotal: z.number().int(),
   taxTotal: z.number().int(),
+  /** Prices already include taxTotal (tax-inclusive pricing); it is not added to the total. */
+  taxesIncluded: z.boolean().default(false),
+  /** Buyer's GSTIN for a B2B tax invoice (India). */
+  buyerGstin: z.string().nullable().default(null),
+  buyerLegalName: z.string().nullable().default(null),
   /** Part of the total paid with a gift card. */
   giftCardAmount: z.number().int(),
   discountCode: z.string().nullable(),
@@ -193,6 +198,8 @@ export const publicOrderSchema = z.object({
   discountTotal: z.number().int(),
   shippingTotal: z.number().int(),
   taxTotal: z.number().int(),
+  /** Prices already include taxTotal (tax-inclusive pricing); it is not added to the total. */
+  taxesIncluded: z.boolean().default(false),
   total: z.number().int(),
   giftCardAmount: z.number().int(),
   shippingMethod: z.string().nullable(),

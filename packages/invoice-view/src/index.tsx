@@ -73,6 +73,12 @@ export function TaxInvoiceDocument({ invoice }: { invoice: OrderInvoice }) {
               {line}
             </p>
           ))}
+          {d.buyer.gstin ? (
+            <p className="mt-1">
+              <span className="text-neutral-500">GSTIN </span>
+              <span className="font-mono font-semibold">{d.buyer.gstin}</span>
+            </p>
+          ) : null}
           <p className="text-neutral-600">
             {[d.buyer.phone, d.buyer.email].filter(Boolean).join(' · ')}
           </p>
@@ -281,6 +287,12 @@ export function CreditNoteDocument({ note }: { note: CreditNote }) {
               {line}
             </p>
           ))}
+          {d.buyer.gstin ? (
+            <p className="mt-1">
+              <span className="text-neutral-500">GSTIN </span>
+              <span className="font-mono font-semibold">{d.buyer.gstin}</span>
+            </p>
+          ) : null}
         </div>
         <div className="sm:text-right">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-neutral-500">

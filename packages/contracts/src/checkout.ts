@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { emailSchema } from './common.js';
 import { giftCardCodeInputSchema } from './gift-cards.js';
+import { gstinSchema } from './gst.js';
 import { cartLineSchema } from './storefront.js';
 
 export const addressSchema = z.strictObject({
@@ -46,6 +47,8 @@ export const checkoutTotalsSchema = z.object({
   discountTotal: z.number().int(),
   shippingTotal: z.number().int(),
   taxTotal: z.number().int(),
+  /** Prices already include taxTotal (tax-inclusive pricing); it is not added to the total. */
+  taxesIncluded: z.boolean().default(false),
   total: z.number().int(),
 });
 export type CheckoutTotals = z.infer<typeof checkoutTotalsSchema>;
@@ -88,6 +91,12 @@ export const checkoutInputSchema = z.strictObject({
   giftCardCode: giftCardCodeInputSchema.optional(),
   note: z.string().trim().max(500).optional(),
   paymentMethod: z.enum(['online', 'cod']).default('online'),
+  /** Business purchase in India: the buyer's GSTIN and registered name go on the tax invoice. */
+  buyerGstin: z.preprocess((v) => (v === '' ? undefined : v), gstinSchema.optional()),
+  buyerLegalName: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().trim().min(1).max(200).optional(),
+  ),
   /** Generated once per checkout page; retries with the same key never create a second order. */
   idempotencyKey: z.uuid(),
 });

@@ -98,6 +98,8 @@ export interface WebhookOrderPayload {
   discountTotal: number;
   shippingTotal: number;
   taxTotal: number;
+  /** Prices already include taxTotal. */
+  taxesIncluded: boolean;
   total: number;
   lines: {
     variantId: string | null;

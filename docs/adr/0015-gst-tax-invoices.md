@@ -50,12 +50,26 @@ never changes: later edits to the registration or products do not touch it.
   document from their order-status page (`GET /storefront/orders/:token/invoice`). Both use
   `packages/invoice-view`.
 
+**Tax-inclusive prices (added 2026-11-19).** `Store.pricesIncludeTax` (Settings → Taxes, "Prices
+and tax"). When on, product prices and shipping rates hold their tax: `priceCart` takes out
+`amount × r / (1 + r)` per rate group (rounded once per rate, like added tax) and the total is the
+price the shopper saw. Destinations with no tax rate pay the same price with no tax taken out. Orders
+and drafts record `taxesIncluded`, so a later switch never changes them; the order total check
+constraint allows `total = subtotal − discount + shipping` for those orders. Invoices print the
+taxable value as the line value less its tax, credit notes and the suggested return refund use the
+price paid (no tax on top). The storefront says "Tax included." on product pages and the cart, and
+checkout, order and invoice pages label the tax "(included)".
+
+**B2B buyers (added 2026-11-19).** Indian checkouts can add the buyer's GSTIN (validated like the
+store's, including the check digit) and registered name, stored on `Order.buyerGstin` /
+`buyerLegalName`. The invoice is issued to the business name and prints its GSTIN, so the buyer can
+claim input tax credit. Place of supply stays the delivery state.
+
 ## Not done
 
-- B2B: the buyer's GSTIN at checkout, and e-invoicing (IRN/QR from the IRP), which is mandatory
-  only above the turnover limit.
-- Tax-inclusive prices (MRP). Prices are still before tax, so merchants who quote GST-inclusive
-  prices must enter prices without GST.
+- E-invoicing (IRN/QR from the IRP), mandatory only above the turnover limit.
+- Checking a buyer's GSTIN against the GST portal (only its format and check digit are checked).
+- Draft orders take no buyer GSTIN yet.
 - Signature: the invoice has an "Authorised signatory" space, not a digital signature.
 - A refund that a provider reports as failed later (after it was accepted) keeps its credit
   note; cancel it by hand.

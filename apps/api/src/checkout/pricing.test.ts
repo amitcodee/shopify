@@ -36,6 +36,7 @@ describe('priceCart', () => {
       lineTaxRates: [0, 0],
       lineTaxes: [0, 0],
       shippingTax: 0,
+      taxesIncluded: false,
       total: 4498,
     });
   });
@@ -152,5 +153,48 @@ describe('priceCart', () => {
       taxShipping: false,
     });
     expect(fixed.discountTotal).toBe(0);
+  });
+
+  it('takes tax out of tax-inclusive prices instead of adding it', () => {
+    // ₹1,180 MRP at 18% GST holds ₹180 tax on a ₹1,000 taxable value.
+    const result = priceCart({
+      lines: [line(118_000), line(10_500, 1, { taxRateBps: 500 })],
+      shippingPrice: 5_900,
+      taxRateBps: 1800,
+      taxShipping: true,
+      taxesIncluded: true,
+    });
+    expect(result).toMatchObject({
+      subtotal: 128_500,
+      taxTotal: 18_000 + 500 + 900,
+      lineTaxes: [18_000, 500],
+      lineTaxRates: [1800, 500],
+      shippingTax: 900,
+      taxesIncluded: true,
+      total: 128_500 + 5_900,
+    });
+  });
+
+  it('keeps inclusive prices unchanged where the destination is untaxed', () => {
+    const result = priceCart({
+      lines: [line(118_000, 2, { taxRateBps: 1800 })],
+      shippingPrice: 0,
+      taxRateBps: 0,
+      taxShipping: false,
+      taxesIncluded: true,
+    });
+    expect(result).toMatchObject({ taxTotal: 0, total: 236_000 });
+  });
+
+  it('applies discounts before taking out inclusive tax', () => {
+    const result = priceCart({
+      lines: [line(236_000)],
+      discount: { type: 'PERCENTAGE', value: 50 },
+      shippingPrice: 0,
+      taxRateBps: 1800,
+      taxShipping: false,
+      taxesIncluded: true,
+    });
+    expect(result).toMatchObject({ discountTotal: 118_000, taxTotal: 18_000, total: 118_000 });
   });
 });

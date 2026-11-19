@@ -176,7 +176,9 @@ export default async function CartPage({
             </div>
           </dl>
           <p className="mt-2 text-xs text-zinc-500">
-            Shipping and taxes are calculated at checkout.
+            {shop.pricesIncludeTax
+              ? 'Tax included. Shipping is calculated at checkout.'
+              : 'Shipping and taxes are calculated at checkout.'}
           </p>
           <Link
             href="/checkout"

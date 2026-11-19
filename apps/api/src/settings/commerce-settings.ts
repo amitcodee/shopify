@@ -28,7 +28,9 @@ import {
   shippingRateInputSchema,
   shippingZoneInputSchema,
   type TaxRate,
+  type TaxSettings,
   taxRateInputSchema,
+  taxSettingsSchema,
   type Theme,
   themeInputSchema,
 } from '@repo/contracts';
@@ -365,6 +367,32 @@ export class CommerceSettingsService {
     return this.listTaxRates(storeId);
   }
 
+  getTaxSettings(storeId: string): Promise<TaxSettings> {
+    return this.tenantDb.run(storeId, (tx) =>
+      tx.store.findUniqueOrThrow({ where: { id: storeId }, select: { pricesIncludeTax: true } }),
+    );
+  }
+
+  async saveTaxSettings(
+    storeId: string,
+    input: TaxSettings,
+    actor: AuthUser,
+    meta: RequestMeta,
+  ): Promise<TaxSettings> {
+    await this.tenantDb.run(storeId, async (tx) => {
+      await tx.store.update({
+        where: { id: storeId },
+        data: { pricesIncludeTax: input.pricesIncludeTax },
+      });
+      await this.record(tx, storeId, actor, 'tax.settings_saved', storeId, meta, {
+        pricesIncludeTax: input.pricesIncludeTax,
+      });
+    });
+    // Checkout reads the setting from the cached storefront context.
+    this.resolver.invalidate();
+    return this.getTaxSettings(storeId);
+  }
+
   async deleteTaxRate(storeId: string, rateId: string, actor: AuthUser, meta: RequestMeta) {
     await this.tenantDb.run(storeId, async (tx) => {
       const result = await tx.taxRate.deleteMany({ where: { id: rateId, storeId } });
@@ -603,6 +631,24 @@ export class CommerceSettingsController {
     @ReqMeta() meta: RequestMeta,
   ) {
     return this.settings.upsertTaxRate(store.id, body, user, meta);
+  }
+
+  @Get('tax-settings')
+  @RequirePermission('settings:read')
+  taxSettings(@CurrentStore() store: StoreContext): Promise<TaxSettings> {
+    return this.settings.getTaxSettings(store.id);
+  }
+
+  @Put('tax-settings')
+  @RequirePermission('settings:write')
+  @ApiZodBody(taxSettingsSchema)
+  saveTaxSettings(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodPipe(taxSettingsSchema)) body: TaxSettings,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<TaxSettings> {
+    return this.settings.saveTaxSettings(store.id, body, user, meta);
   }
 
   @Delete('tax-rates/:rateId')

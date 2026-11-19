@@ -264,6 +264,37 @@ export function CheckoutForm({
             autoComplete="tel"
             required={preview.phoneRequired || cod}
           />
+          {country === 'IN' ? (
+            <details
+              className="rounded-[var(--field-radius)] border border-zinc-200 px-4 py-3 text-sm open:pb-4"
+              open={Boolean(err.buyerGstin || err.buyerLegalName)}
+            >
+              <summary className="cursor-pointer font-medium">
+                Buying for a business? Add your GSTIN
+              </summary>
+              <p className="mt-2 text-xs leading-5 text-zinc-500">
+                Your GSTIN and registered name go on the tax invoice so you can claim input tax
+                credit.
+              </p>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                <TextField
+                  label="GSTIN"
+                  name="buyerGstin"
+                  maxLength={15}
+                  autoCapitalize="characters"
+                  placeholder="29ABCDE1234F1Z5"
+                  error={err.buyerGstin}
+                />
+                <TextField
+                  label="Registered business name"
+                  name="buyerLegalName"
+                  autoComplete="organization"
+                  maxLength={200}
+                  error={err.buyerLegalName}
+                />
+              </div>
+            </details>
+          ) : null}
         </section>
 
         {preview.requiresShipping ? (
@@ -446,7 +477,10 @@ export function CheckoutForm({
                 : '—'
             }
           />
-          <Row label="Tax" value={money(preview.taxTotal)} />
+          <Row
+            label={preview.taxesIncluded ? 'Tax (included)' : 'Tax'}
+            value={money(preview.taxTotal)}
+          />
           <Row label="Total" value={money(preview.total)} strong />
           {preview.giftCard ? (
             <>

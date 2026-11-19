@@ -276,4 +276,94 @@ describe('GST tax invoices', () => {
     const kept = await ctx.http().get(`${admin}/orders/${localId}/invoice`).set(auth).expect(200);
     expect(kept.body.invoice.data.seller.legalName).toBe(registration.legalName);
   });
+
+  it('takes GST out of tax-inclusive (MRP) prices and invoices a business buyer', async () => {
+    const { auth, admin, sf, kurta, watch } = await setup();
+    await ctx.http().put(`${admin}/gst`).set(auth).send(registration).expect(200);
+    expect((await ctx.http().get(`${admin}/tax-settings`).set(auth).expect(200)).body).toEqual({
+      pricesIncludeTax: false,
+    });
+    await ctx
+      .http()
+      .put(`${admin}/tax-settings`)
+      .set(auth)
+      .send({ pricesIncludeTax: true })
+      .expect(200);
+    expect((await sf('get', '/shop').expect(200)).body.pricesIncludeTax).toBe(true);
+
+    const cart = (await sf('post', '/cart').expect(201)).body.token as string;
+    await sf('post', '/cart/lines', { cart }).send({ variantId: kurta, quantity: 1 }).expect(201);
+    await sf('post', '/cart/lines', { cart }).send({ variantId: watch, quantity: 1 }).expect(201);
+    const preview = await sf('post', '/checkout/preview', { cart })
+      .send({ country: 'IN', region: 'KA' })
+      .expect(200);
+    // 999.00 at 5% holds 47.57; 2,500.00 at 18% holds 381.36. The total stays the MRP.
+    expect(preview.body).toMatchObject({
+      subtotal: 349_900,
+      taxTotal: 4_757 + 38_136,
+      taxesIncluded: true,
+      total: 349_900,
+    });
+
+    // A bad GSTIN is refused; a valid one goes on the invoice.
+    await sf('post', '/checkout', { cart })
+      .send({
+        email: 'buyer@example.com',
+        shippingAddress: otherState,
+        buyerGstin: '29AAACB1234C1ZA',
+        idempotencyKey: randomUUID(),
+      })
+      .expect(400);
+    const placed = await sf('post', '/checkout', { cart })
+      .send({
+        email: 'buyer@example.com',
+        shippingAddress: otherState,
+        buyerGstin: '29aaacb1234c1zb',
+        buyerLegalName: 'Bengaluru Retail LLP',
+        idempotencyKey: randomUUID(),
+      })
+      .expect(201);
+    await payMock(sf, placed.body.paymentUrl);
+    const id = await orderId(admin, auth, placed.body.orderNumber);
+    const order = await ctx.http().get(`${admin}/orders/${id}`).set(auth).expect(200);
+    expect(order.body).toMatchObject({
+      total: 349_900,
+      taxTotal: 42_893,
+      taxesIncluded: true,
+      buyerGstin: '29AAACB1234C1ZB',
+      buyerLegalName: 'Bengaluru Retail LLP',
+    });
+
+    const { invoice } = (
+      await ctx.http().get(`${admin}/orders/${id}/invoice`).set(auth).expect(200)
+    ).body;
+    expect(invoice.data).toMatchObject({
+      supplyType: 'inter',
+      buyer: { name: 'Bengaluru Retail LLP', gstin: '29AAACB1234C1ZB' },
+      taxableTotal: 349_900 - 42_893,
+      igstTotal: 42_893,
+      total: 349_900,
+    });
+    expect(invoice.data.lines).toEqual([
+      expect.objectContaining({ taxableValue: 99_900 - 4_757, igst: 4_757, total: 99_900 }),
+      expect.objectContaining({ taxableValue: 250_000 - 38_136, igst: 38_136, total: 250_000 }),
+    ]);
+
+    // Returning the watch refunds its MRP and credits its tax at 18%.
+    const watchLine = (order.body.lines as { id: string; title: string }[]).find(
+      (l) => l.title === 'Steel watch',
+    )!;
+    await ctx
+      .http()
+      .post(`${admin}/orders/${id}/refunds`)
+      .set(auth)
+      .send({ amount: 250_000, restock: [{ lineId: watchLine.id, quantity: 1 }] })
+      .expect(201);
+    const after = await ctx.http().get(`${admin}/orders/${id}/invoice`).set(auth).expect(200);
+    const [note] = after.body.invoice.creditNotes;
+    expect(note.data.rows).toEqual([
+      expect.objectContaining({ rateBps: 500, taxableValue: 0, igst: 0 }),
+      expect.objectContaining({ rateBps: 1800, taxableValue: 250_000 - 38_136, igst: 38_136 }),
+    ]);
+  });
 });

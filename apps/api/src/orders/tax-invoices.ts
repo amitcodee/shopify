@@ -121,7 +121,9 @@ export function buildTaxInvoice({ store, registration, order }: InvoiceSource): 
   const supplyType = exported ? 'export' : intra ? 'intra' : 'inter';
 
   const lines = order.lines.filter((l) => l.quantity > 0);
+  // What each line sold for after its discount; with tax-inclusive prices this holds the tax.
   const bases = lines.map((l) => l.unitPrice * l.quantity - l.discountTotal);
+  const included = order.taxesIncluded;
   let lineTaxes = lines.map((l) => l.taxTotal);
   let lineRates = lines.map((l) => l.taxRateBps);
   let shippingTax = order.shippingTaxTotal;
@@ -136,14 +138,14 @@ export function buildTaxInvoice({ store, registration, order }: InvoiceSource): 
       shippingTax = order.taxTotal;
     }
     lineRates = lines.map((_, i) => {
-      const base = weights[i] ?? 0;
+      const base = (weights[i] ?? 0) - (included ? (lineTaxes[i] ?? 0) : 0);
       return base > 0 ? Math.round(((lineTaxes[i] ?? 0) * 10_000) / base) : 0;
     });
   }
 
   const invoiceLines: TaxInvoiceLine[] = lines.map((l, i) => {
     const tax = lineTaxes[i] ?? 0;
-    const taxableValue = bases[i] ?? 0;
+    const taxableValue = (bases[i] ?? 0) - (included ? tax : 0);
     return {
       description:
         l.variantTitle && l.variantTitle !== 'Default' ? `${l.title} (${l.variantTitle})` : l.title,
@@ -157,15 +159,16 @@ export function buildTaxInvoice({ store, registration, order }: InvoiceSource): 
       ...split(tax, lineRates[i] ?? 0, intra),
     };
   });
+  const shippingTaxable = order.shippingTotal - (included ? shippingTax : 0);
   const shippingRate =
-    order.shippingTotal > 0 && shippingTax > 0
-      ? Math.round((shippingTax * 10_000) / order.shippingTotal)
+    shippingTaxable > 0 && shippingTax > 0
+      ? Math.round((shippingTax * 10_000) / shippingTaxable)
       : 0;
   const shipping =
     order.shippingTotal > 0
       ? {
           description: order.shippingMethod ?? 'Shipping',
-          taxableValue: order.shippingTotal,
+          taxableValue: shippingTaxable,
           ...split(shippingTax, shippingRate, intra),
         }
       : null;
@@ -205,7 +208,10 @@ export function buildTaxInvoice({ store, registration, order }: InvoiceSource): 
       email: store.contactEmail,
     },
     buyer: {
-      name: a?.name ?? order.email,
+      // A registered business is invoiced under its legal name (B2B).
+      name: (order.buyerGstin && order.buyerLegalName) || (a?.name ?? order.email),
+      gstin: order.buyerGstin,
+      legalName: order.buyerLegalName,
       email: order.email,
       phone: a?.phone ?? null,
       address: a
@@ -435,10 +441,16 @@ export class TaxInvoiceIssuer {
       const lines = await tx.orderLine.findMany({
         where: { storeId, orderId, id: { in: refund.items.map((i) => i.lineId) } },
       });
+      const { taxesIncluded } = await tx.order.findUniqueOrThrow({
+        where: { id: orderId },
+        select: { taxesIncluded: true },
+      });
       for (const item of refund.items) {
         const line = lines.find((l) => l.id === item.lineId);
         if (!line || line.quantity <= 0) continue;
-        const value = line.unitPrice * line.quantity - line.discountTotal + line.taxTotal;
+        // What the buyer paid for the line: an inclusive price already holds its tax.
+        const value =
+          line.unitPrice * line.quantity - line.discountTotal + (taxesIncluded ? 0 : line.taxTotal);
         const key = rowKey(line.hsCode, line.taxRateBps);
         const share = Math.round((value * Math.min(item.quantity, line.quantity)) / line.quantity);
         itemValues.set(key, (itemValues.get(key) ?? 0) + share);

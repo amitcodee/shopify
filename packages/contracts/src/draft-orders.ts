@@ -79,6 +79,8 @@ export const draftOrderSchema = z.object({
   discountTotal: z.number().int(),
   shippingTotal: z.number().int(),
   taxTotal: z.number().int(),
+  /** Prices already include taxTotal (tax-inclusive pricing); it is not added to the total. */
+  taxesIncluded: z.boolean().default(false),
   total: z.number().int(),
   /** The order created from this draft (awaiting payment or completed). */
   order: z.object({ id: z.uuid(), number: z.number().int(), status: z.string() }).nullable(),
@@ -132,6 +134,8 @@ export const storefrontInvoiceSchema = z.object({
   discountTotal: z.number().int(),
   shippingTotal: z.number().int(),
   taxTotal: z.number().int(),
+  /** Prices already include taxTotal (tax-inclusive pricing); it is not added to the total. */
+  taxesIncluded: z.boolean().default(false),
   total: z.number().int(),
   message: z.string().nullable(),
 });

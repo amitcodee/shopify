@@ -106,6 +106,7 @@ export class StorefrontCatalogService {
           passwordMessage: shop.passwordMessage,
           baseCurrency: shop.baseCurrency,
           currencies: [],
+          pricesIncludeTax: shop.pricesIncludeTax,
         };
       }
       const collections = await tx.collection.findMany({
@@ -128,6 +129,7 @@ export class StorefrontCatalogService {
         passwordMessage: '',
         baseCurrency: shop.baseCurrency,
         currencies: [shop.baseCurrency, ...shop.presentmentCurrencies.map((c) => c.currency)],
+        pricesIncludeTax: shop.pricesIncludeTax,
       };
     });
   }

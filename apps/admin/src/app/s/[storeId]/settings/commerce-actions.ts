@@ -284,6 +284,28 @@ export async function saveGstAction(
   return { success: 'GST details saved. Paid orders now get a tax invoice.' };
 }
 
+export async function saveTaxSettingsAction(
+  storeId: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const pricesIncludeTax = formData.get('pricesIncludeTax') === 'on';
+  try {
+    await api(`/admin/stores/${storeId}/tax-settings`, {
+      method: 'PUT',
+      body: { pricesIncludeTax },
+    });
+  } catch (error) {
+    return toFormState(error, formData);
+  }
+  revalidatePath(settingsPath(storeId, 'taxes'));
+  return {
+    success: pricesIncludeTax
+      ? 'Saved. Checkout now takes tax out of your prices instead of adding it.'
+      : 'Saved. Checkout now adds tax on top of your prices.',
+  };
+}
+
 export async function removeGstAction(storeId: string): Promise<void> {
   await api(`/admin/stores/${storeId}/gst`, { method: 'DELETE' });
   revalidatePath(settingsPath(storeId, 'taxes'));

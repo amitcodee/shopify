@@ -55,6 +55,7 @@ export function orderPayload(order: OrderForPayload): WebhookOrderPayload {
     discountTotal: order.discountTotal,
     shippingTotal: order.shippingTotal,
     taxTotal: order.taxTotal,
+    taxesIncluded: order.taxesIncluded,
     total: order.total,
     lines: order.lines.map((l) => ({
       variantId: l.variantId,

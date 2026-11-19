@@ -182,7 +182,7 @@ export default async function OrderPage({
                 <dd>{money(order.shippingTotal)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt>Tax</dt>
+                <dt>{order.taxesIncluded ? 'Tax (included in prices)' : 'Tax'}</dt>
                 <dd>{money(order.taxTotal)}</dd>
               </div>
               <div className="mt-2 flex justify-between border-t border-slate-200 pt-2.5 text-[15px] font-semibold text-slate-900">
@@ -355,6 +355,13 @@ export default async function OrderPage({
                 <p className="truncate text-sm text-slate-500">{order.email}</p>
               </div>
             </div>
+            {order.buyerGstin ? (
+              <div className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                <p className="text-xs font-medium text-slate-500">Business buyer (GST)</p>
+                <p className="mt-0.5 text-slate-900">{order.buyerLegalName}</p>
+                <p className="font-mono text-xs text-slate-700">{order.buyerGstin}</p>
+              </div>
+            ) : null}
             <h3 className="mt-5 text-xs font-medium text-slate-500">Shipping address</h3>
             <address className="mt-1 text-sm leading-6 text-slate-700 not-italic">
               {a.name}

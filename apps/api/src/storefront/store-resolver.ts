@@ -29,6 +29,8 @@ export interface ShopContext {
   presentment: PresentmentCurrency | null;
   /** Extra currencies the store sells in. */
   presentmentCurrencies: PresentmentCurrency[];
+  /** Prices and shipping rates already include tax (GST-inclusive / MRP). */
+  pricesIncludeTax: boolean;
 }
 
 const storedCurrencies = z.array(presentmentCurrencySchema).catch([]);
@@ -131,6 +133,7 @@ export class StoreResolver {
     passwordMessage: string;
     presentmentCurrencies: unknown;
     apps: unknown;
+    pricesIncludeTax: boolean;
   }): ShopContext {
     return {
       id: store.id,
@@ -150,6 +153,7 @@ export class StoreResolver {
       presentmentCurrencies: storedCurrencies
         .parse(store.presentmentCurrencies)
         .filter((c) => c.currency !== store.currency),
+      pricesIncludeTax: store.pricesIncludeTax,
     };
   }
 }

@@ -218,7 +218,7 @@ export function DraftSummary({ draft }: { draft: DraftOrder }) {
     ['Subtotal', draft.subtotal],
     ...(draft.discountTotal ? ([['Discount', -draft.discountTotal]] as [string, number][]) : []),
     ['Shipping', draft.shippingTotal],
-    ['Tax', draft.taxTotal],
+    [draft.taxesIncluded ? 'Tax (included)' : 'Tax', draft.taxTotal],
   ];
   return (
     <dl className="space-y-1 text-sm">

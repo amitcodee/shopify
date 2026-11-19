@@ -30,6 +30,11 @@ export interface PricingInput {
   /** Tax rate in basis points (825 = 8.25%). */
   taxRateBps: number;
   taxShipping: boolean;
+  /**
+   * Prices (lines and shipping) already include tax, as with GST-inclusive (MRP) pricing: tax is
+   * taken out of them instead of added. Where the destination has no tax, prices stay as they are.
+   */
+  taxesIncluded?: boolean;
 }
 
 export interface PricingResult {
@@ -44,6 +49,8 @@ export interface PricingResult {
   lineTaxes: number[];
   /** Part of taxTotal charged on shipping. */
   shippingTax: number;
+  /** True when taxTotal is already inside the prices (not added on top). */
+  taxesIncluded: boolean;
   total: number;
 }
 
@@ -98,7 +105,9 @@ export function priceCart(input: PricingInput): PricingResult {
       : Math.max(0, input.shippingPrice);
 
   // Tax is rounded once per rate (as a tax invoice shows it), then split across the lines (and
-  // shipping) at that rate in proportion to their taxable value.
+  // shipping) at that rate in proportion to their value. Inclusive prices hold the tax already:
+  // the tax part of an amount at rate r is amount * r / (1 + r).
+  const included = input.taxesIncluded === true;
   const destinationRate = Math.max(0, input.taxRateBps);
   const lineTaxRates = input.lines.map((line) =>
     line.taxable && destinationRate > 0 ? Math.max(0, line.taxRateBps ?? destinationRate) : 0,
@@ -115,7 +124,10 @@ export function priceCart(input: PricingInput): PricingResult {
     const indexes = members.flatMap((m, i) => (m.rate === rate ? [i] : []));
     const weights = indexes.map((i) => members[i]?.base ?? 0);
     const groupBase = weights.reduce((s, w) => s + w, 0);
-    const parts = allocate(divRoundHalfUp(groupBase * rate, 10_000), weights);
+    const groupTax = included
+      ? divRoundHalfUp(groupBase * rate, 10_000 + rate)
+      : divRoundHalfUp(groupBase * rate, 10_000);
+    const parts = allocate(groupTax, weights);
     indexes.forEach((memberIndex, k) => (taxes[memberIndex] = parts[k] ?? 0));
   }
   const lineTaxes = taxes.slice(0, input.lines.length);
@@ -131,6 +143,7 @@ export function priceCart(input: PricingInput): PricingResult {
     lineTaxRates,
     lineTaxes,
     shippingTax,
-    total: subtotal - discountTotal + shippingTotal + taxTotal,
+    taxesIncluded: included,
+    total: subtotal - discountTotal + shippingTotal + (included ? 0 : taxTotal),
   };
 }

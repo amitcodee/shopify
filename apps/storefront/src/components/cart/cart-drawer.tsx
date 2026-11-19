@@ -22,10 +22,13 @@ export function CartDrawer({
   cart,
   freeShipping,
   baseCurrency,
+  taxesIncluded = false,
 }: {
   cart: Cart | null;
   freeShipping: StoreApps['freeShippingBar'];
   baseCurrency: string;
+  /** Prices already include tax (the store prices tax-inclusive). */
+  taxesIncluded?: boolean;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const { state, open, close } = useDrawer(panel);
@@ -206,7 +209,9 @@ export function CartDrawer({
                 <dd className="tabular-nums">{formatMoney(subtotal, currency)}</dd>
               </dl>
               <p className="mt-1 text-xs text-zinc-500">
-                Shipping and taxes are calculated at checkout.
+                {taxesIncluded
+                  ? 'Tax included. Shipping is calculated at checkout.'
+                  : 'Shipping and taxes are calculated at checkout.'}
               </p>
               <Link
                 href="/checkout"

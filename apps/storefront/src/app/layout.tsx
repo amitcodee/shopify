@@ -143,6 +143,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             cart={cart}
             freeShipping={shop.apps.freeShippingBar}
             baseCurrency={shop.baseCurrency}
+            taxesIncluded={shop.pricesIncludeTax}
           />
         ) : null}
         <StoreApps apps={shop.apps} />

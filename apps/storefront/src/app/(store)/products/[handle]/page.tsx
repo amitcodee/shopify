@@ -198,7 +198,11 @@ export default async function ProductPage({
             </p>
           ) : null}
           <div className="mt-5">
-            <VariantPicker product={product} currency={shop.currency}>
+            <VariantPicker
+              product={product}
+              currency={shop.currency}
+              taxesIncluded={shop.pricesIncludeTax}
+            >
               <ul className="mt-6 grid grid-cols-2 gap-3 border-b border-zinc-200 pb-6 text-xs text-zinc-600 sm:text-sm">
                 {trust.map((item) => (
                   <li key={item.icon} className="flex items-center gap-2">

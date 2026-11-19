@@ -30,10 +30,10 @@ export function returnWindowOpen(
 
 /**
  * Refund for returned units: their price net of the order discount they carried, plus the
- * matching share of the order's tax. Shipping is not refunded automatically.
+ * matching share of the order's tax (already inside the price when the order was tax-inclusive). Shipping is not refunded automatically.
  */
 export function suggestedRefund(
-  order: { subtotal: number; discountTotal: number; taxTotal: number },
+  order: { subtotal: number; discountTotal: number; taxTotal: number; taxesIncluded?: boolean },
   lines: OrderLine[],
   returned: { orderLineId: string; quantity: number }[],
 ): number {
@@ -45,6 +45,8 @@ export function suggestedRefund(
     const lineNet = line.unitPrice * line.quantity - line.discountTotal;
     net += Math.round((lineNet * r.quantity) / line.quantity);
   }
+  // Tax-inclusive prices already hold the tax.
+  if (order.taxesIncluded) return net;
   const base = order.subtotal - order.discountTotal;
   const tax = base > 0 ? Math.round((order.taxTotal * net) / base) : 0;
   return net + tax;
@@ -59,6 +61,7 @@ export function toReturnDto(
     subtotal: number;
     discountTotal: number;
     taxTotal: number;
+    taxesIncluded?: boolean;
     lines: OrderLine[];
   },
 ): ReturnDto {

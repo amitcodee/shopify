@@ -168,6 +168,9 @@ export const taxInvoiceDataSchema = z.object({
     email: z.string(),
     phone: z.string().nullable(),
     address: z.array(z.string()),
+    /** Registered business buyer (B2B invoice); null for consumers. */
+    gstin: z.string().nullable().default(null),
+    legalName: z.string().nullable().default(null),
   }),
   /** Where the goods are delivered; null code when the region is not an Indian state. */
   placeOfSupply: z.object({ code: z.string().nullable(), name: z.string() }),

@@ -293,6 +293,7 @@ export class DraftOrdersService {
         discountTotal: draft.discountTotal,
         shippingTotal: draft.shippingTotal,
         taxTotal: draft.taxTotal,
+        taxesIncluded: draft.taxesIncluded,
         total: draft.total,
         message: null,
       };
@@ -379,12 +380,17 @@ export class DraftOrdersService {
       ? await this.tax.rateFor(tx, storeId, { country: address.country, region: address.region })
       : { rateBps: 0, taxShipping: false };
     const shippingPrice = input.shipping?.price ?? 0;
+    const { pricesIncludeTax } = await tx.store.findUniqueOrThrow({
+      where: { id: storeId },
+      select: { pricesIncludeTax: true },
+    });
     const pricing = priceCart({
       lines,
       discount: input.discount ?? null,
       shippingPrice,
       taxRateBps: tax.rateBps,
       taxShipping: tax.taxShipping,
+      taxesIncluded: pricesIncludeTax,
     });
     const customer = input.email
       ? await tx.customer.findUnique({
@@ -406,6 +412,7 @@ export class DraftOrdersService {
       discountTotal: pricing.discountTotal,
       shippingTotal: pricing.shippingTotal,
       taxTotal: pricing.taxTotal,
+      taxesIncluded: pricing.taxesIncluded,
       total: pricing.total,
     } satisfies Partial<Prisma.DraftOrderUncheckedCreateInput>;
   }
@@ -443,6 +450,7 @@ export class DraftOrdersService {
       shippingPrice: draft.shippingPrice,
       taxRateBps: tax.rateBps,
       taxShipping: tax.taxShipping,
+      taxesIncluded: draft.taxesIncluded,
     });
     if (repriced.taxTotal === draft.taxTotal) return repriced;
     const weights = lines.map((l, i) =>
@@ -460,7 +468,9 @@ export class DraftOrdersService {
       lineTaxes,
       lineTaxRates: lines.map((l, i) => {
         const base = weights[i] ?? 0;
-        return base > 0 ? Math.round(((lineTaxes[i] ?? 0) * 10_000) / base) : 0;
+        // An inclusive price holds its tax: the rate is tax over the value without it.
+        const taxable = draft.taxesIncluded ? base - (lineTaxes[i] ?? 0) : base;
+        return taxable > 0 ? Math.round(((lineTaxes[i] ?? 0) * 10_000) / taxable) : 0;
       }),
       shippingTax: 0,
     };
@@ -523,6 +533,7 @@ export class DraftOrdersService {
         shippingTotal: draft.shippingTotal,
         taxTotal: draft.taxTotal,
         shippingTaxTotal: taxes.shippingTax,
+        taxesIncluded: draft.taxesIncluded,
         total: draft.total,
         shippingMethod: draft.shippingTitle,
         shippingAddress: address,
@@ -629,6 +640,7 @@ export class DraftOrdersService {
       discountTotal: draft.discountTotal,
       shippingTotal: draft.shippingTotal,
       taxTotal: draft.taxTotal,
+      taxesIncluded: draft.taxesIncluded,
       total: draft.total,
       order: draft.order,
       invoiceSentAt: draft.invoiceSentAt?.toISOString() ?? null,

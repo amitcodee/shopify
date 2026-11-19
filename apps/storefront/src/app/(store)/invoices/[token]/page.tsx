@@ -31,7 +31,7 @@ export default async function InvoicePage({
       ? ([['Discount', -invoice.discountTotal]] as [string, number][])
       : []),
     ['Shipping', invoice.shippingTotal],
-    ['Tax', invoice.taxTotal],
+    [invoice.taxesIncluded ? 'Tax (included)' : 'Tax', invoice.taxTotal],
   ];
 
   return (

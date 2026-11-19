@@ -1,4 +1,10 @@
-import { financialYearOf, invoiceNumber, type GstSettings, type TaxRate } from '@repo/contracts';
+import {
+  financialYearOf,
+  invoiceNumber,
+  type GstSettings,
+  type TaxRate,
+  type TaxSettings,
+} from '@repo/contracts';
 import { ActionForm, CheckboxField, Field, SubmitButton, TextAreaField } from '@/components/form';
 import { Card, EmptyState, Table, Td } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -8,20 +14,68 @@ import {
   removeGstAction,
   saveGstAction,
   saveTaxRateAction,
+  saveTaxSettingsAction,
 } from '../commerce-actions';
 
 export default async function TaxesPage({ params }: { params: Promise<{ storeId: string }> }) {
   const { storeId } = await params;
-  const [store, rates, gst] = await Promise.all([
+  const [store, rates, gst, taxSettings] = await Promise.all([
     getStore(storeId),
     api<TaxRate[]>(`/admin/stores/${storeId}/tax-rates`),
     api<GstSettings>(`/admin/stores/${storeId}/gst`),
+    api<TaxSettings>(`/admin/stores/${storeId}/tax-settings`),
   ]);
+  const inclusive = taxSettings.pricesIncludeTax;
   const canEdit = store.permissions.includes('settings:write');
   const reg = gst.registration;
 
   return (
     <div className="space-y-6">
+      <Card
+        title="Prices and tax"
+        description="Choose how the prices on your products and shipping rates relate to tax."
+      >
+        <div className="mb-5 grid gap-3 sm:grid-cols-2">
+          {[
+            {
+              on: inclusive,
+              title: 'Prices include tax',
+              body: 'Usual in India (MRP). A ₹1,180 price at 18% GST is ₹1,000 + ₹180 tax, and the shopper pays ₹1,180.',
+            },
+            {
+              on: !inclusive,
+              title: 'Tax added at checkout',
+              body: 'Usual for wholesale price lists and in the US. A ₹1,000 price at 18% becomes ₹1,180 at checkout.',
+            },
+          ].map((o) => (
+            <div
+              key={o.title}
+              className={`rounded-lg border p-4 text-sm ${o.on ? 'border-indigo-300 bg-indigo-50/60' : 'border-slate-200'}`}
+            >
+              <p className="font-medium text-slate-900">
+                {o.title}
+                {o.on ? (
+                  <span className="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                    Current
+                  </span>
+                ) : null}
+              </p>
+              <p className="mt-1 leading-6 text-slate-600">{o.body}</p>
+            </div>
+          ))}
+        </div>
+        {canEdit ? (
+          <ActionForm action={saveTaxSettingsAction.bind(null, storeId)} className="space-y-3">
+            <CheckboxField
+              name="pricesIncludeTax"
+              label="My prices include tax (GST-inclusive / MRP)"
+              defaultChecked={inclusive}
+              hint="Applies to new checkouts and draft orders. Orders already placed keep the way they were priced. Where a destination has no tax rate, prices stay as they are."
+            />
+            <SubmitButton>Save</SubmitButton>
+          </ActionForm>
+        ) : null}
+      </Card>
       <Card
         title="GST invoices"
         description="Selling in India with a GSTIN? Add it here and every paid order gets a numbered tax invoice, with CGST and SGST inside your state and IGST for other states."

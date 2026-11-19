@@ -129,7 +129,7 @@ export function OrderView({ order }: { order: PublicOrder }) {
             <dd>{money(order.shippingTotal)}</dd>
           </div>
           <div className="flex justify-between">
-            <dt>Tax</dt>
+            <dt>{order.taxesIncluded ? 'Tax (included)' : 'Tax'}</dt>
             <dd>{money(order.taxTotal)}</dd>
           </div>
           <div className="flex justify-between pt-1 text-lg font-semibold">
