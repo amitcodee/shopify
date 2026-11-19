@@ -93,6 +93,8 @@ function draftBody(formData: FormData, rows: number, currency: string): DraftOrd
             }
           : null,
     note: optionalString(formData, 'note') ?? null,
+    buyerGstin: optionalString(formData, 'buyerGstin') ?? null,
+    buyerLegalName: optionalString(formData, 'buyerLegalName') ?? null,
   };
 }
 

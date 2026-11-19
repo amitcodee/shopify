@@ -408,6 +408,12 @@ export class DraftOrdersService {
       discountType: input.discount?.type ?? null,
       discountValue: input.discount?.value ?? null,
       note: input.note ?? null,
+      // A buyer GSTIN only applies to a delivery in India.
+      buyerGstin: address?.country === 'IN' ? (input.buyerGstin ?? null) : null,
+      buyerLegalName:
+        address?.country === 'IN' && input.buyerGstin
+          ? (input.buyerLegalName ?? address.name)
+          : null,
       subtotal: pricing.subtotal,
       discountTotal: pricing.discountTotal,
       shippingTotal: pricing.shippingTotal,
@@ -542,6 +548,8 @@ export class DraftOrdersService {
         paymentProvider:
           destination?.provider ?? (actorUserId && draft.total > 0 ? MANUAL_PAYMENT : 'none'),
         note: draft.note,
+        buyerGstin: draft.buyerGstin,
+        buyerLegalName: draft.buyerLegalName,
         // Paying online holds stock for the usual window; a manual completion is paid at once.
         expiresAt:
           actorUserId === null
@@ -635,6 +643,8 @@ export class DraftOrdersService {
         : null,
       discount: this.discountOf(draft),
       note: draft.note,
+      buyerGstin: draft.buyerGstin,
+      buyerLegalName: draft.buyerLegalName,
       currency: draft.currency,
       subtotal: draft.subtotal,
       discountTotal: draft.discountTotal,

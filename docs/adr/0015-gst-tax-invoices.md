@@ -63,13 +63,13 @@ checkout, order and invoice pages label the tax "(included)".
 **B2B buyers (added 2026-11-19).** Indian checkouts can add the buyer's GSTIN (validated like the
 store's, including the check digit) and registered name, stored on `Order.buyerGstin` /
 `buyerLegalName`. The invoice is issued to the business name and prints its GSTIN, so the buyer can
-claim input tax credit. Place of supply stays the delivery state.
+claim input tax credit. Place of supply stays the delivery state. Draft orders take the same two
+fields (Customer card) and pass them to the order they create; outside India they are dropped.
 
 ## Not done
 
 - E-invoicing (IRN/QR from the IRP), mandatory only above the turnover limit.
 - Checking a buyer's GSTIN against the GST portal (only its format and check digit are checked).
-- Draft orders take no buyer GSTIN yet.
 - Signature: the invoice has an "Authorised signatory" space, not a digital signature.
 - A refund that a provider reports as failed later (after it was accepted) keeps its credit
   note; cancel it by hand.

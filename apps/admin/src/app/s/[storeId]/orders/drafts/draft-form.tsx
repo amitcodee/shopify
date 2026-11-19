@@ -159,6 +159,23 @@ export function DraftForm({
                   maxLength={2}
                 />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field
+                  name="buyerGstin"
+                  label="Buyer GSTIN (optional)"
+                  defaultValue={draft?.buyerGstin ?? ''}
+                  maxLength={15}
+                  autoCapitalize="characters"
+                  placeholder="29ABCDE1234F1Z5"
+                  hint="For a business in India: printed on the tax invoice."
+                />
+                <Field
+                  name="buyerLegalName"
+                  label="Registered business name"
+                  defaultValue={draft?.buyerLegalName ?? ''}
+                  hint="Defaults to the shipping name."
+                />
+              </div>
             </div>
           </Card>
           <Card title="Shipping, discount and notes">

@@ -184,6 +184,77 @@ describe('Draft orders', () => {
     expect(list.body.items.map((d: { number: number }) => d.number)).toEqual([2]);
   });
 
+  it('carries tax-inclusive pricing and a business buyer GSTIN to the order', async () => {
+    const { merchant, admin, variantId } = await setup();
+    await ctx
+      .http()
+      .put(`${admin}/tax-rates`)
+      .set(merchant.auth)
+      .send({ country: 'IN', name: 'GST', rateBps: 1800 })
+      .expect(200);
+    await ctx
+      .http()
+      .put(`${admin}/tax-settings`)
+      .set(merchant.auth)
+      .send({ pricesIncludeTax: true })
+      .expect(200);
+    const india = { ...address, city: 'Pune', region: 'MH', postalCode: '411001', country: 'IN' };
+    const body = {
+      email: 'buyer@example.com',
+      lines: [{ variantId, quantity: 2, unitPrice: 11800 }],
+      shippingAddress: india,
+      buyerGstin: '29aaacb1234c1zb',
+      buyerLegalName: 'Bengaluru Retail LLP',
+    };
+    await ctx
+      .http()
+      .post(`${admin}/draft-orders`)
+      .set(merchant.auth)
+      .send({ ...body, buyerGstin: '29AAACB1234C1ZA' })
+      .expect(400);
+    const draft = await ctx
+      .http()
+      .post(`${admin}/draft-orders`)
+      .set(merchant.auth)
+      .send(body)
+      .expect(201);
+    // 2 × 118.00 includes 18% GST: 36.00 tax, total unchanged.
+    expect(draft.body).toMatchObject({
+      subtotal: 23600,
+      taxTotal: 3600,
+      taxesIncluded: true,
+      total: 23600,
+      buyerGstin: '29AAACB1234C1ZB',
+      buyerLegalName: 'Bengaluru Retail LLP',
+    });
+    const done = await ctx
+      .http()
+      .post(`${admin}/draft-orders/${draft.body.id}/complete`)
+      .set(merchant.auth)
+      .expect(200);
+    const order = await ctx.platform.order.findUniqueOrThrow({
+      where: { id: done.body.order.id },
+      include: { lines: true },
+    });
+    expect(order).toMatchObject({
+      total: 23600,
+      taxTotal: 3600,
+      taxesIncluded: true,
+      buyerGstin: '29AAACB1234C1ZB',
+      buyerLegalName: 'Bengaluru Retail LLP',
+    });
+    expect(order.lines[0]).toMatchObject({ taxRateBps: 1800, taxTotal: 3600 });
+
+    // Outside India a GSTIN means nothing and is dropped.
+    const abroad = await ctx
+      .http()
+      .post(`${admin}/draft-orders`)
+      .set(merchant.auth)
+      .send({ ...body, shippingAddress: address })
+      .expect(201);
+    expect(abroad.body).toMatchObject({ buyerGstin: null, buyerLegalName: null });
+  });
+
   it('invoices a draft that the customer pays on the storefront', async () => {
     const { merchant, admin, sf, variantId } = await setup();
     const draft = await ctx

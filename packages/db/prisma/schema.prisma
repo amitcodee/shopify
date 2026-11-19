@@ -716,6 +716,9 @@ model DraftOrder {
   taxTotal        Int              @default(0)
   /// Prices on the draft already include taxTotal (the store priced tax-inclusive when saved).
   taxesIncluded   Boolean          @default(false)
+  /// Buyer's GSTIN and registered name for a B2B tax invoice (India), copied to the order.
+  buyerGstin      String?
+  buyerLegalName  String?
   total           Int              @default(0)
   /// Latest order created from this draft (awaiting payment, or the completed order).
   orderId         String?          @db.Uuid

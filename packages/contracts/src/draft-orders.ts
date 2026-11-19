@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { addressSchema } from './checkout.js';
 import { emailSchema, paginated } from './common.js';
+import { gstinSchema } from './gst.js';
 
 const quantitySchema = z.number().int().min(1).max(999);
 const priceSchema = z.number().int().min(0).max(100_000_000);
@@ -39,6 +40,9 @@ export const draftOrderInputSchema = z.strictObject({
     .optional(),
   discount: draftDiscountSchema.nullable().optional(),
   note: z.string().trim().max(1000).nullable().optional(),
+  /** Business buyer in India: their GSTIN and registered name go on the tax invoice. */
+  buyerGstin: gstinSchema.nullable().optional(),
+  buyerLegalName: z.string().trim().min(1).max(200).nullable().optional(),
 });
 export type DraftOrderInput = z.input<typeof draftOrderInputSchema>;
 
@@ -73,6 +77,8 @@ export const draftOrderSchema = z.object({
   shippingAddress: addressSchema.nullable(),
   shipping: z.object({ title: z.string(), price: z.number().int() }).nullable(),
   discount: draftDiscountSchema.nullable(),
+  buyerGstin: z.string().nullable().default(null),
+  buyerLegalName: z.string().nullable().default(null),
   note: z.string().nullable(),
   currency: z.string(),
   subtotal: z.number().int(),
