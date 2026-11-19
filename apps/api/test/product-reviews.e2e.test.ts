@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
+import type { INestApplication } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { ReviewRequestsService } from '../src/catalog/review-requests.service.js';
+import { EMAIL_SENDER, type MemoryEmailSender } from '../src/email/email.js';
+import { OutboxProcessor } from '../src/outbox/outbox.service.js';
 import {
   createStore,
   createTestApp,
@@ -182,5 +186,95 @@ describe('Product reviews', () => {
       .expect(404);
     await ctx.http().delete(`${admin}/reviews/${adaReview}`).set(auth).expect(204);
     expect((await sf('get', '/products/linen-shirt').expect(200)).body.rating).toBeNull();
+  });
+
+  it('emails buyers once, after the order ships and the delay passes, for unreviewed products', async () => {
+    const app = ctx.app as INestApplication;
+    const mailbox = app.get<MemoryEmailSender>(EMAIL_SENDER);
+    const outbox = app.get(OutboxProcessor);
+    const requests = app.get(ReviewRequestsService);
+    const session = await signup(ctx);
+    const store = await createStore(ctx, session.token);
+    const auth = { Authorization: `Bearer ${session.token}` };
+    const admin = `/api/v1/admin/stores/${store.id}`;
+    const sf = storefrontClient(ctx, `${store.subdomain}.localhost:3200`);
+    const variant = async (title: string, handle: string) =>
+      (
+        await ctx
+          .http()
+          .post(`${admin}/products`)
+          .set(auth)
+          .send({
+            title,
+            handle,
+            status: 'ACTIVE',
+            variants: [{ price: 2500, inventoryQuantity: 10 }],
+          })
+          .expect(201)
+      ).body.variants[0].id as string;
+    const mug = await variant('Clay mug', 'clay-mug');
+    const bowl = await variant('Clay bowl', 'clay-bowl');
+    const apps = (await ctx.http().get(`${admin}/apps`).set(auth).expect(200)).body;
+    await ctx
+      .http()
+      .put(`${admin}/apps`)
+      .set(auth)
+      .send({ ...apps, productReviews: { enabled: true, autoPublish: true, requestAfterDays: 5 } })
+      .expect(200);
+
+    const email = `lin-${randomUUID().slice(0, 6)}@example.com`;
+    const customer = (
+      await sf('post', '/customers/register')
+        .send({ name: 'Lin Wu', email, password: 'review-password-123' })
+        .expect(201)
+    ).body.session.token as string;
+    const cart = (await sf('post', '/cart').expect(201)).body.token as string;
+    await sf('post', '/cart/lines', { cart }).send({ variantId: mug, quantity: 1 }).expect(201);
+    await sf('post', '/cart/lines', { cart }).send({ variantId: bowl, quantity: 2 }).expect(201);
+    const placed = await sf('post', '/checkout', { cart, customer })
+      .send({ email, shippingAddress: address, idempotencyKey: randomUUID() })
+      .expect(201);
+    await payMock(sf, placed.body.paymentUrl);
+    const order = await ctx.platform.order.findFirstOrThrow({
+      where: { storeId: store.id, number: placed.body.orderNumber },
+    });
+    // Already reviewed the mug: the email only asks about the bowl.
+    await sf('put', '/products/clay-mug/reviews/mine', { customer })
+      .send({ rating: 5, body: 'Holds heat well, lovely glaze.', authorName: 'Lin W.' })
+      .expect(200);
+
+    const sendAndRead = async () => {
+      while ((await outbox.processBatch()) > 0);
+      mailbox.sent.length = 0;
+      await requests.sendDue();
+      while ((await outbox.processBatch()) > 0);
+      return mailbox.sent.filter((m) => m.to === email && /How was your order/.test(m.subject));
+    };
+
+    // Not shipped yet: nothing.
+    expect(await sendAndRead()).toEqual([]);
+    await ctx
+      .http()
+      .post(`${admin}/orders/${order.id}/fulfillments`)
+      .set(auth)
+      .send({})
+      .expect(201);
+    // Shipped today: the 5-day delay has not passed.
+    expect(await sendAndRead()).toEqual([]);
+
+    // Shipped 6 days ago: one email, about the bowl only.
+    await ctx.platform.fulfillment.updateMany({
+      where: { orderId: order.id },
+      data: { createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) },
+    });
+    const [message, ...rest] = await sendAndRead();
+    expect(rest).toEqual([]);
+    expect(message?.text).toContain(`#${placed.body.orderNumber}`);
+    expect(message?.text).toContain('/products/clay-bowl#reviews');
+    expect(message?.text).not.toContain('clay-mug');
+    // Never twice.
+    expect(await sendAndRead()).toEqual([]);
+    const timeline = await ctx.platform.orderEvent.findMany({ where: { orderId: order.id } });
+    expect(timeline.map((e) => e.type)).toContain('review_request_sent');
   });
 });

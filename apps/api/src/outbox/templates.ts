@@ -305,3 +305,34 @@ export function returnUpdateEmail(
     html: layout(data.storeName, `<p>${escapeHtml(data.message)}</p>`),
   };
 }
+
+export function reviewRequestEmail(
+  to: string,
+  data: {
+    storeName: string;
+    orderNumber: number;
+    products: { title: string; url: string }[];
+  },
+): EmailMessage {
+  const list = data.products.map((p) => `- ${p.title}: ${p.url}`).join('\n');
+  return {
+    to,
+    subject: `How was your order from ${data.storeName}?`,
+    text: `Thanks again for your order #${data.orderNumber}. If you have a minute, tell other shoppers what you think:
+
+${list}
+
+Sign in with this email address to write a review. You can say what you liked and what you didn't: honest reviews help everyone.`,
+    html: layout(
+      data.storeName,
+      `<p>Thanks again for your order <strong>#${data.orderNumber}</strong>. If you have a minute, tell other shoppers what you think:</p><ul>${data.products
+        .map(
+          (p) =>
+            `<li style="margin:6px 0"><a href="${escapeHtml(p.url)}">${escapeHtml(p.title)}</a> &middot; <a href="${escapeHtml(p.url)}">Write a review</a></li>`,
+        )
+        .join(
+          '',
+        )}</ul><p style="color:#666;font-size:13px">Sign in with this email address to write a review. You can say what you liked and what you didn't: honest reviews help everyone.</p>`,
+    ),
+  };
+}

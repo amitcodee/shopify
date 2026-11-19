@@ -5,6 +5,7 @@ import {
   type OnApplicationBootstrap,
   type OnModuleDestroy,
 } from '@nestjs/common';
+import { ReviewRequestsService } from '../catalog/review-requests.service.js';
 import { CheckoutRecoveryService } from '../checkout/checkout-recovery.service.js';
 import { reportError } from '../common/error-reporting.js';
 import { ENV, type Env, shouldRunJobs } from '../config/env.js';
@@ -34,6 +35,7 @@ export class JobsService implements OnApplicationBootstrap, OnModuleDestroy {
     private readonly recovery: CheckoutRecoveryService,
     private readonly webhooks: WebhooksService,
     private readonly closures: StoreClosureService,
+    private readonly reviewRequests: ReviewRequestsService,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -42,12 +44,13 @@ export class JobsService implements OnApplicationBootstrap, OnModuleDestroy {
     this.every('webhooks', 5_000, () => this.webhooks.deliverDue());
     this.every('expire-orders', 60_000, () => this.lifecycle.expireStaleOrders());
     this.every('checkout-recovery', 5 * 60_000, () => this.recovery.sendDue());
+    this.every('review-requests', 60 * 60_000, () => this.reviewRequests.sendDue());
     // Trials end, renewals land and grace periods run out on their own schedule: check often.
     this.every('billing', 10 * 60_000, () => this.billing.renewDue());
     this.every('cleanup', 24 * 60 * 60_000, () => this.maintenance.cleanup());
     this.every('erase-closed-stores', 6 * 60 * 60_000, () => this.closures.purgeDue());
     this.logger.log(
-      'Background jobs started (outbox, webhooks, unpaid order expiry, checkout recovery, billing, closed-store erasure)',
+      'Background jobs started (outbox, webhooks, unpaid order expiry, checkout recovery, review requests, billing, closed-store erasure)',
     );
   }
 

@@ -148,7 +148,7 @@ export async function merchantWithStore(ctx: TestContext) {
   return { session, store, auth, token: session.token };
 }
 
-type Method = 'get' | 'post' | 'patch' | 'delete';
+type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
 /** Storefront API client that signs requests for `host` like the storefront server does. */
 export function storefrontClient(ctx: TestContext, host: string) {

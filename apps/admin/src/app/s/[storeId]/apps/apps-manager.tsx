@@ -304,20 +304,42 @@ function AppSettings({
   }
   if (id === 'productReviews') {
     return (
-      <label className="flex items-start gap-3 text-sm text-slate-700">
-        <input
-          type="checkbox"
-          className="mt-0.5 h-4 w-4 rounded border-slate-300"
-          checked={apps.productReviews.autoPublish}
-          onChange={(e) => update('productReviews', { autoPublish: e.target.checked })}
-        />
-        <span>
-          <span className="font-medium text-slate-900">Publish reviews automatically</span>
-          <span className="mt-0.5 block text-xs text-slate-500">
-            Off: each new or edited review waits under Reviews until you approve it.
+      <>
+        <Field
+          label="Ask buyers for a review (days after the order ships)"
+          help="One email per order, only for products they have not reviewed yet. 0 turns these emails off."
+        >
+          {(fid) => (
+            <input
+              id={fid}
+              type="number"
+              min={0}
+              max={60}
+              className={input}
+              value={apps.productReviews.requestAfterDays}
+              onChange={(e) =>
+                update('productReviews', {
+                  requestAfterDays: Math.min(60, Math.max(0, Number(e.target.value) || 0)),
+                })
+              }
+            />
+          )}
+        </Field>
+        <label className="flex items-start gap-3 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-slate-300"
+            checked={apps.productReviews.autoPublish}
+            onChange={(e) => update('productReviews', { autoPublish: e.target.checked })}
+          />
+          <span>
+            <span className="font-medium text-slate-900">Publish reviews automatically</span>
+            <span className="mt-0.5 block text-xs text-slate-500">
+              Off: each new or edited review waits under Reviews until you approve it.
+            </span>
           </span>
-        </span>
-      </label>
+        </label>
+      </>
     );
   }
   if (id === 'cookieNotice') {

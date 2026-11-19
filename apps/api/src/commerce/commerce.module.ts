@@ -27,6 +27,7 @@ import {
   ReviewsController,
   StorefrontReviewsController,
 } from '../catalog/product-reviews.js';
+import { ReviewRequestsService } from '../catalog/review-requests.service.js';
 import { GstReturnsController, GstReturnsService } from '../orders/gst-returns.js';
 import {
   StorefrontInvoicesController,
@@ -76,6 +77,7 @@ import { DeveloperModule } from '../webhooks/developer.js';
     TaxInvoicesService,
     GstReturnsService,
     ProductReviewsService,
+    ReviewRequestsService,
     ReturnsService,
     DraftOrdersService,
     AdminCustomersService,

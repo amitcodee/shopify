@@ -26,10 +26,17 @@ post them as customers.
   `aggregateRating` in its JSON-LD. Product cards show stars and the count.
 - Signing in from the review section returns the shopper to it (`/account/login?next=`; only
   same-store paths are followed).
+- Review requests: an hourly job emails the buyer once per order (`Order.reviewRequestSentAt`,
+  claimed before sending) when the order is fulfilled, paid, not cancelled or fully refunded, and
+  its last shipment is `requestAfterDays` old (app setting, default 7, 0 = off). Only orders that
+  shipped within 14 days past that delay are emailed, so turning the app on does not mail old
+  customers. The email lists live products the customer has not reviewed yet (none: no email) and
+  asks for honest reviews; the order timeline records it. Guest buyers sign up with the same email
+  to claim their orders, then review.
 - Demo data has no reviews: seeding them would be exactly the fake content this avoids.
 
 ## Not done
 
 - Photos in reviews, "helpful" votes, sorting and filtering by stars.
-- Emailing buyers to ask for a review after delivery.
+- An unsubscribe link for review requests (they are one per order and can be turned off per store).
 - Importing reviews from another platform (they could not be verified against orders here).

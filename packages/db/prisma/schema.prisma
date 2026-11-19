@@ -790,6 +790,8 @@ model Order {
   /// Abandoned-checkout recovery for orders that expired unpaid (null = not handled yet).
   recoveryStatus      RecoveryStatus?
   recoveryEmailSentAt DateTime?
+  /// When the Product reviews app emailed the buyer asking for reviews (once per order).
+  reviewRequestSentAt DateTime?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 

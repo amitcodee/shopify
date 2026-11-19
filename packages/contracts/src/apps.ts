@@ -48,8 +48,10 @@ export const storeAppsSchema = z.strictObject({
       enabled: z.boolean().default(false),
       /** Publish new and edited reviews at once instead of waiting for approval. */
       autoPublish: z.boolean().default(false),
+      /** Email buyers this many days after their order ships, asking for reviews; 0 = never. */
+      requestAfterDays: z.number().int().min(0).max(60).default(7),
     })
-    .default({ enabled: false, autoPublish: false }),
+    .default({ enabled: false, autoPublish: false, requestAfterDays: 7 }),
   cookieNotice: z
     .strictObject({
       enabled: z.boolean().default(false),
