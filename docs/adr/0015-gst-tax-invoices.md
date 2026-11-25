@@ -103,7 +103,10 @@ A refund the provider accepts as pending is settled by its refund webhook (Razor
 `refund.processed` / `refund.failed`, Stripe `refund.updated` / `refund.failed`). A failed one no
 longer counts toward the order's refunded amount, and its credit note gets `cancelledAt`: the
 document is marked cancelled, left out of the GSTR-1 tables and counted as cancelled in table 13
-(its number stays used). Restocked items stay in stock.
+(its number stays used). Restocked items stay in stock. For merchants' own gateways a
+`refund-status` job (every 15 minutes) also asks the gateway about refunds still pending after 10
+minutes, for up to 30 days: PayU `check_action_status`, Cashfree order refunds, PhonePe and Paytm
+refund status by the id we derive from the refund, PayPal and Razorpay/Stripe by refund id.
 
 ## Not done
 
@@ -112,8 +115,6 @@ document is marked cancelled, left out of the GSTR-1 tables and counted as cance
 - Filing GSTR-1 or GSTR-3B through a GSP.
 - Checking a buyer's GSTIN against the GST portal (only its format and check digit are checked).
 - Signature: the invoice has an "Authorised signatory" space, not a digital signature.
-- Refunds that settle later are only followed for Razorpay and Stripe (their refund webhooks);
-  for other gateways a refund the provider accepted as pending stays pending here.
 - Invoices are erased with the store's data when a closed store is deleted; merchants must keep
   their own copies for the retention period GST law requires (the month print above makes that one
   step per month).

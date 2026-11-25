@@ -11,6 +11,7 @@ import { reportError } from '../common/error-reporting.js';
 import { ENV, type Env, shouldRunJobs } from '../config/env.js';
 import { OrderLifecycle } from '../orders/order-lifecycle.service.js';
 import { OutboxProcessor } from '../outbox/outbox.service.js';
+import { RefundSyncService } from '../payments/refund-sync.service.js';
 import { BillingService } from '../platform/billing.service.js';
 import { StoreClosureService } from '../stores/store-closure.service.js';
 import { WebhooksService } from '../webhooks/webhooks.service.js';
@@ -36,6 +37,7 @@ export class JobsService implements OnApplicationBootstrap, OnModuleDestroy {
     private readonly webhooks: WebhooksService,
     private readonly closures: StoreClosureService,
     private readonly reviewRequests: ReviewRequestsService,
+    private readonly refunds: RefundSyncService,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -45,12 +47,13 @@ export class JobsService implements OnApplicationBootstrap, OnModuleDestroy {
     this.every('expire-orders', 60_000, () => this.lifecycle.expireStaleOrders());
     this.every('checkout-recovery', 5 * 60_000, () => this.recovery.sendDue());
     this.every('review-requests', 60 * 60_000, () => this.reviewRequests.sendDue());
+    this.every('refund-status', 15 * 60_000, () => this.refunds.syncDue());
     // Trials end, renewals land and grace periods run out on their own schedule: check often.
     this.every('billing', 10 * 60_000, () => this.billing.renewDue());
     this.every('cleanup', 24 * 60 * 60_000, () => this.maintenance.cleanup());
     this.every('erase-closed-stores', 6 * 60 * 60_000, () => this.closures.purgeDue());
     this.logger.log(
-      'Background jobs started (outbox, webhooks, unpaid order expiry, checkout recovery, review requests, billing, closed-store erasure)',
+      'Background jobs started (outbox, webhooks, unpaid order expiry, checkout recovery, review requests, refund status, billing, closed-store erasure)',
     );
   }
 

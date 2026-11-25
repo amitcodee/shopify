@@ -39,6 +39,7 @@ import {
 } from '../orders/tax-invoices.js';
 import { CustomerReturnsController, ReturnsController, ReturnsService } from '../orders/returns.js';
 import { PaymentsModule } from '../payments/payments.module.js';
+import { RefundSyncService } from '../payments/refund-sync.service.js';
 import { StorefrontModule } from '../storefront/storefront.module.js';
 import { StoresModule } from '../stores/stores.module.js';
 import { DeveloperModule } from '../webhooks/developer.js';
@@ -88,6 +89,7 @@ import { DeveloperModule } from '../webhooks/developer.js';
     SegmentsService,
     AnalyticsService,
     JobsService,
+    RefundSyncService,
     CustomerPrivacyService,
     MaintenanceService,
   ],

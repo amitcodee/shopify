@@ -69,6 +69,25 @@ export interface StoreGatewayAdapter extends PaymentProvider {
   payForm?(input: PayFormInput): PayForm | Promise<PayForm>;
   /** Gateways that report the result on the shopper's return handle it here. */
   completeReturn?(input: GatewayReturn): Promise<WebhookOutcome>;
+  /** Asks the gateway where a refund it accepted as pending stands now. */
+  refundStatus?(refund: RefundLookup): Promise<RefundState>;
+}
+
+export type RefundState = 'SUCCEEDED' | 'FAILED' | 'PENDING';
+
+export interface RefundLookup {
+  /** What refund() returned as providerRef (the gateway's refund id where it has one). */
+  refundRef: string;
+  /** The key refund() was called with ("refund-<id>"); some gateways name refunds by it. */
+  idempotencyKey: string;
+  /** The payment's providerRef and providerPaymentId. */
+  providerRef: string;
+  providerPaymentId: string | null;
+}
+
+/** The refund id we derive from the idempotency key for gateways that take our own id. */
+export function ownRefundId(idempotencyKey: string, length: number): string {
+  return createHash('sha256').update(idempotencyKey).digest('hex').slice(0, length);
 }
 
 export interface AdapterContext {
@@ -140,6 +159,18 @@ class OwnRazorpay implements StoreGatewayAdapter {
   refund(request_: RefundRequest): Promise<RefundResult> {
     return this.inner.refund({ ...request_, reverseTransfer: false });
   }
+
+  async refundStatus(refund: RefundLookup): Promise<RefundState> {
+    const found = await this.client.request<{ status?: string }>(
+      'GET',
+      `/v1/refunds/${encodeURIComponent(refund.refundRef)}`,
+    );
+    return found.status === 'processed'
+      ? 'SUCCEEDED'
+      : found.status === 'failed'
+        ? 'FAILED'
+        : 'PENDING';
+  }
 }
 
 class OwnStripe implements StoreGatewayAdapter {
@@ -174,6 +205,15 @@ class OwnStripe implements StoreGatewayAdapter {
 
   refund(request_: RefundRequest): Promise<RefundResult> {
     return this.inner.refund({ ...request_, reverseTransfer: false });
+  }
+
+  async refundStatus(refund: RefundLookup): Promise<RefundState> {
+    const found = await this.stripe.refunds.retrieve(refund.refundRef);
+    return found.status === 'succeeded'
+      ? 'SUCCEEDED'
+      : found.status === 'failed' || found.status === 'canceled'
+        ? 'FAILED'
+        : 'PENDING';
   }
 }
 
@@ -354,6 +394,25 @@ export class PayuAdapter implements StoreGatewayAdapter {
     if (Number(body.status) !== 1) throw new Error(`PayU refused the refund: ${body.msg ?? ''}`);
     return { providerRef: body.request_id ?? token, status: 'PENDING' };
   }
+
+  /** check_action_status by the request id PayU gave the refund. */
+  async refundStatus(refund: RefundLookup): Promise<RefundState> {
+    const response = await this.command('check_action_status', refund.refundRef);
+    if (!response.ok) throw new Error(`PayU answered ${response.status}`);
+    const body = (await response.json()) as { transaction_details?: Record<string, unknown> };
+    // The entry is either { status } or keyed once more by PayU's transaction id.
+    const entry = body.transaction_details?.[refund.refundRef];
+    const pick = (value: unknown): string =>
+      value && typeof value === 'object' && 'status' in value
+        ? String((value).status)
+        : '';
+    const status = (
+      pick(entry) || (entry && typeof entry === 'object' ? pick(Object.values(entry)[0]) : '')
+    ).toLowerCase();
+    if (status === 'success') return 'SUCCEEDED';
+    if (status === 'failure' || status === 'failed' || status === 'cancelled') return 'FAILED';
+    return 'PENDING';
+  }
 }
 
 // ── Cashfree: payment links, signed webhooks ─────────────────────────────────────
@@ -476,6 +535,21 @@ export class CashfreeAdapter implements StoreGatewayAdapter {
           ? 'FAILED'
           : 'PENDING';
     return { providerRef: refundId, status };
+  }
+
+  async refundStatus(refund: RefundLookup): Promise<RefundState> {
+    if (!refund.providerPaymentId) return 'PENDING';
+    const response = await this.call(
+      'GET',
+      `/orders/${encodeURIComponent(refund.providerPaymentId)}/refunds/${encodeURIComponent(refund.refundRef)}`,
+    );
+    if (!response.ok) throw new Error(`Cashfree answered ${response.status}`);
+    const body = (await response.json()) as { refund_status?: string };
+    return body.refund_status === 'SUCCESS'
+      ? 'SUCCEEDED'
+      : body.refund_status === 'CANCELLED'
+        ? 'FAILED'
+        : 'PENDING';
   }
 }
 
@@ -628,6 +702,18 @@ export class PaypalAdapter implements StoreGatewayAdapter {
           ? 'FAILED'
           : 'PENDING';
     return { providerRef: result.id, status };
+  }
+
+  async refundStatus(refund: RefundLookup): Promise<RefundState> {
+    const found = await this.call<{ status: string }>(
+      'GET',
+      `/v2/payments/refunds/${encodeURIComponent(refund.refundRef)}`,
+    );
+    return found.status === 'COMPLETED'
+      ? 'SUCCEEDED'
+      : found.status === 'FAILED' || found.status === 'CANCELLED'
+        ? 'FAILED'
+        : 'PENDING';
   }
 }
 
@@ -791,6 +877,19 @@ export class PhonepeAdapter implements StoreGatewayAdapter {
     const status =
       result.state === 'COMPLETED' ? 'SUCCEEDED' : result.state === 'FAILED' ? 'FAILED' : 'PENDING';
     return { providerRef: result.refundId ?? merchantRefundId, status };
+  }
+
+  /** Looked up by our merchantRefundId (derived from the same idempotency key). */
+  async refundStatus(refund: RefundLookup): Promise<RefundState> {
+    const found = await this.call<{ state?: string }>(
+      'GET',
+      `/payments/v2/refund/${encodeURIComponent(ownRefundId(refund.idempotencyKey, 40))}/status`,
+    );
+    return found.state === 'COMPLETED'
+      ? 'SUCCEEDED'
+      : found.state === 'FAILED'
+        ? 'FAILED'
+        : 'PENDING';
   }
 }
 
@@ -1005,6 +1104,16 @@ export class PaytmAdapter implements StoreGatewayAdapter {
       providerRef: result.refundId ?? refId,
       status: state === 'TXN_SUCCESS' ? 'SUCCEEDED' : 'PENDING',
     };
+  }
+
+  async refundStatus(refund: RefundLookup): Promise<RefundState> {
+    const result = await this.call('/v2/refund/status', {
+      mid: this.mid,
+      orderId: refund.providerRef,
+      refId: ownRefundId(refund.idempotencyKey, 40),
+    });
+    const state = result.resultInfo?.resultStatus;
+    return state === 'TXN_SUCCESS' ? 'SUCCEEDED' : state === 'TXN_FAILURE' ? 'FAILED' : 'PENDING';
   }
 }
 

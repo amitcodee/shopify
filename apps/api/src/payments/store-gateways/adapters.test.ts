@@ -7,6 +7,7 @@ import {
   decimalAmount,
   GatewayKeysRejectedError,
   minorAmount,
+  ownRefundId,
   ownProviderName,
   parseOwnProviderName,
   PaypalAdapter,
@@ -442,5 +443,65 @@ describe('PayPal', () => {
     );
     const outcome = await adapter.completeReturn({ query: { token: 'O1' }, rawBody: undefined });
     expect(outcome.kind).toBe('ignored');
+  });
+});
+
+describe('refund status lookups', () => {
+  const lookup = {
+    refundRef: 'REF1',
+    idempotencyKey: 'refund-abc',
+    providerRef: 'ORDER1',
+    providerPaymentId: 'PAY1',
+  };
+  const recording = (reply: (url: string) => unknown) => {
+    const urls: string[] = [];
+    const fetch: AdapterContext['fetch'] = (url) => {
+      urls.push(url);
+      return Promise.resolve(json(reply(url)));
+    };
+    return { urls, fetch };
+  };
+
+  it('Cashfree reads the refund under the order', async () => {
+    const { urls, fetch } = recording(() => ({ refund_status: 'SUCCESS' }));
+    const adapter = new CashfreeAdapter(context({ appId: 'A', secretKey: 'S' }, fetch));
+    await expect(adapter.refundStatus(lookup)).resolves.toBe('SUCCEEDED');
+    expect(urls[0]).toBe('https://sandbox.cashfree.com/pg/orders/PAY1/refunds/REF1');
+  });
+
+  it('PayPal reads the refund by its id', async () => {
+    const { urls, fetch } = recording((url) =>
+      url.endsWith('/oauth2/token') ? { access_token: 'T' } : { status: 'FAILED' },
+    );
+    const adapter = new PaypalAdapter(context({ clientId: 'I', clientSecret: 'S' }, fetch));
+    await expect(adapter.refundStatus(lookup)).resolves.toBe('FAILED');
+    expect(urls.at(-1)).toBe('https://api-m.sandbox.paypal.com/v2/payments/refunds/REF1');
+  });
+
+  it('PhonePe and Paytm look refunds up by the id derived from the idempotency key', async () => {
+    const id = ownRefundId('refund-abc', 40);
+    const phonepe = recording((url) =>
+      url.endsWith('/oauth/token') ? { access_token: 'T' } : { state: 'PENDING' },
+    );
+    await expect(
+      new PhonepeAdapter(
+        context({ clientId: 'I', clientVersion: '1', clientSecret: 'S' }, phonepe.fetch),
+      ).refundStatus(lookup),
+    ).resolves.toBe('PENDING');
+    expect(phonepe.urls.at(-1)).toContain(`/payments/v2/refund/${id}/status`);
+
+    const calls: RequestInit[] = [];
+    const paytm = new PaytmAdapter(
+      context({ mid: 'MID1', merchantKey: 'abcdefgh12345678' }, (_url, init) => {
+        calls.push(init);
+        return Promise.resolve(json({ body: { resultInfo: { resultStatus: 'TXN_SUCCESS' } } }));
+      }),
+    );
+    await expect(paytm.refundStatus(lookup)).resolves.toBe('SUCCEEDED');
+    expect(JSON.parse(calls[0]?.body as string).body).toEqual({
+      mid: 'MID1',
+      orderId: 'ORDER1',
+      refId: id,
+    });
   });
 });

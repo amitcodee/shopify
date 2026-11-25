@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { OrderLifecycle } from '../src/orders/order-lifecycle.service.js';
 import { StoreUrls } from '../src/orders/store-urls.js';
+import { RefundSyncService } from '../src/payments/refund-sync.service.js';
 import { STORE_GATEWAY_FETCH } from '../src/payments/store-gateways/store-gateways.service.js';
 import {
   createStore,
@@ -252,6 +253,25 @@ describe('Store gateways (merchant-owned keys)', () => {
       .set(auth)
       .send({ amount: 1000, reason: 'Test', restock: [] })
       .expect((res) => expect(res.status, JSON.stringify(res.body)).toBeLessThan(300));
+
+    // PayU has no refund webhook here: the status job asks PayU once the refund is 10 minutes old.
+    const refund = await ctx.platform.refund.findFirstOrThrow({
+      where: { orderId: payment.orderId },
+    });
+    expect(refund).toMatchObject({ status: 'PENDING', providerRef: 'R1' });
+    const sync = ctx.app.get(RefundSyncService);
+    answer = () =>
+      new Response(JSON.stringify({ transaction_details: { R1: { status: 'queued' } } }));
+    expect(await sync.syncDue()).toBe(0);
+    const later = new Date(Date.now() + 11 * 60_000);
+    expect(await sync.syncDue(later)).toBe(0);
+    answer = () =>
+      new Response(JSON.stringify({ transaction_details: { R1: { status: 'success' } } }));
+    expect(await sync.syncDue(later)).toBe(1);
+    expect((await ctx.platform.refund.findUniqueOrThrow({ where: { id: refund.id } })).status).toBe(
+      'SUCCEEDED',
+    );
+    expect(await sync.syncDue(later)).toBe(0);
   });
 
   it('sells on cash on delivery: confirmed at once when the merchant allows it, a sale only when the cash is in', async () => {
