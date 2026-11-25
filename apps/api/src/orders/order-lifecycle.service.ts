@@ -393,7 +393,12 @@ export class OrderLifecycle {
       const refund = await tx.refund.findFirst({
         where: { storeId, paymentId, providerRef: refundRef },
       });
-      if (!refund || refund.status !== 'PENDING') return;
+      // Pending refunds settle either way; a settled one can still fail later (Stripe), never
+      // the reverse.
+      if (!refund || refund.status === status) return;
+      if (refund.status === 'FAILED' || (refund.status === 'SUCCEEDED' && status !== 'FAILED')) {
+        return;
+      }
       await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${refund.orderId}::uuid AND "storeId" = ${storeId}::uuid FOR UPDATE`;
       await tx.refund.update({ where: { id: refund.id }, data: { status } });
       const order = await tx.order.findUniqueOrThrow({

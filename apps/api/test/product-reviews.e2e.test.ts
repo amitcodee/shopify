@@ -173,6 +173,11 @@ describe('Product reviews', () => {
     await sf('put', `/products/linen-shirt/reviews/${adaId}/helpful`, { customer: ada })
       .send({ helpful: true })
       .expect(403);
+    // Fresh accounts that never ordered cannot mark reviews (marks would be free to farm).
+    const stranger = await register('Sam Stranger');
+    await sf('put', `/products/linen-shirt/reviews/${adaId}/helpful`, { customer: stranger })
+      .send({ helpful: true })
+      .expect(403);
     for (let i = 0; i < 2; i++) {
       const marked = await sf('put', `/products/linen-shirt/reviews/${graceId}/helpful`, {
         customer: ada,

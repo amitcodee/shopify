@@ -14,7 +14,7 @@
     "@repo/contracts": "workspace:*",
     "@repo/invoice-view": "workspace:*",
     "@repo/template-preview": "workspace:*",
-    "next": "16.4.4",
+    "next": "16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "server-only": "0.0.1",

@@ -495,6 +495,7 @@ export class ProductsService {
         include: {
           images: { select: { storageKey: true, renditionWidths: true } },
           variants: { select: { id: true } },
+          reviews: { select: { photos: { select: { storageKey: true, renditionWidths: true } } } },
         },
       });
       if (!product) throw new NotFoundException('Product not found.');
@@ -519,7 +520,8 @@ export class ProductsService {
         id: product.id,
         handle: product.handle,
       }));
-      return product.images.flatMap(imageKeys);
+      // Review photos go with the product's reviews (rows cascade; the files are ours to delete).
+      return [...product.images, ...product.reviews.flatMap((r) => r.photos)].flatMap(imageKeys);
     });
     await this.deleteFiles(keys);
   }
@@ -540,6 +542,7 @@ export class ProductsService {
         include: {
           images: { select: { storageKey: true, renditionWidths: true } },
           variants: { select: { id: true } },
+          reviews: { select: { photos: { select: { storageKey: true, renditionWidths: true } } } },
         },
       });
       const affectedBundles =
@@ -573,7 +576,9 @@ export class ProductsService {
             id: product.id,
             handle: product.handle,
           }));
-          removed.push(...product.images.flatMap(imageKeys));
+          removed.push(
+            ...[...product.images, ...product.reviews.flatMap((r) => r.photos)].flatMap(imageKeys),
+          );
           continue;
         }
 

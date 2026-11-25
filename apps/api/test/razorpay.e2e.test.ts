@@ -314,8 +314,8 @@ describe('Razorpay gateway (Route + Payment Links) through the API', () => {
     expect(notes.map((n) => n.cancelledAt === null)).toEqual([true, false]);
     expect(order.events.map((e: { type: string }) => e.type)).toContain('refund_failed');
 
-    // A failure after settling, or a repeat, changes nothing.
-    await refundEvent('refund.failed', first.providerRef!).expect(200);
+    // A repeated settlement changes nothing.
+    await refundEvent('refund.processed', first.providerRef!).expect(200);
     expect((await ctx.platform.refund.findUniqueOrThrow({ where: { id: first.id } })).status).toBe(
       'SUCCEEDED',
     );
@@ -326,6 +326,14 @@ describe('Razorpay gateway (Route + Payment Links) through the API', () => {
     expect(report.documents).toContainEqual(
       expect.objectContaining({ nature: 'credit_note', total: 2, cancelled: 1 }),
     );
+
+    // A settled refund can still fail later (card networks): it stops counting too.
+    await refundEvent('refund.failed', first.providerRef!).expect(200);
+    expect((await ctx.platform.refund.findUniqueOrThrow({ where: { id: first.id } })).status).toBe(
+      'FAILED',
+    );
+    order = (await ctx.http().get(`${admin}/orders/${orderId}`).set(auth).expect(200)).body;
+    expect(order.financialStatus).toBe('PAID');
     fake.refundStatus = 'processed';
   });
 

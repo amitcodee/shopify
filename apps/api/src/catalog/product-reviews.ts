@@ -21,6 +21,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import {
   type AdminReview,
@@ -303,8 +304,23 @@ export class ProductReviewsService {
     this.requireApp(shop);
     const customer = await this.customers.requireCurrent(shop, token);
     if (files.length === 0) throw new BadRequestException('Attach photos in the "files" field.');
+    // Cheap checks before any image work: a review to attach to, with room left.
+    await this.tenantDb.run(shop.id, async (tx) => {
+      const product = await this.liveProduct(tx, shop, handle);
+      const review = await tx.productReview.findUnique({
+        where: {
+          storeId_productId_customerId: {
+            storeId: shop.id,
+            productId: product.id,
+            customerId: customer.id,
+          },
+        },
+        select: { status: true, _count: { select: { photos: true } } },
+      });
+      this.assertPhotoRoom(review, files.length);
+    });
     const processed: ProcessedImage[] = [];
-    for (const file of files) processed.push(await this.images.process(file));
+    for (const file of files) processed.push(await this.images.process(file, PHOTO_WIDTHS));
     const stored = processed.map((image) => ({
       image,
       key: `stores/${shop.id}/reviews/${randomUUID()}.webp`,
@@ -341,15 +357,18 @@ export class ProductReviewsService {
           },
           include: { photos: true },
         });
-        if (!review) throw new ConflictException('Write your review first, then add photos.');
-        if (review.status === 'REJECTED') {
-          throw new ConflictException('This review was not approved by the store.');
+        if (review) {
+          // Serialise uploads to one review so parallel requests cannot pass the limit together.
+          await tx.$queryRaw`SELECT id FROM "ProductReview" WHERE id = ${review.id}::uuid FOR UPDATE`;
         }
-        if (review.photos.length + objects.length > MAX_REVIEW_PHOTOS) {
-          throw new BadRequestException(
-            `A review can have at most ${MAX_REVIEW_PHOTOS} photos (it has ${review.photos.length}).`,
-          );
-        }
+        const count = review
+          ? await tx.productReviewPhoto.count({ where: { reviewId: review.id } })
+          : 0;
+        this.assertPhotoRoom(
+          review && { status: review.status, _count: { photos: count } },
+          objects.length,
+        );
+        if (!review) return;
         await tx.productReviewPhoto.createMany({
           data: objects.map((o, i) => ({
             storeId: shop.id,
@@ -358,7 +377,7 @@ export class ProductReviewsService {
             width: o.width,
             height: o.height,
             renditionWidths: o.renditions.map((r) => r.width),
-            position: review.photos.length + i,
+            position: count + i,
           })),
         });
         if (!shop.apps.productReviews.autoPublish && review.status === 'PUBLISHED') {
@@ -379,6 +398,21 @@ export class ProductReviewsService {
       throw error;
     }
     return this.mine(shop, token, handle);
+  }
+
+  private assertPhotoRoom(
+    review: { status: string; _count: { photos: number } } | null,
+    adding: number,
+  ) {
+    if (!review) throw new ConflictException('Write your review first, then add photos.');
+    if (review.status === 'REJECTED') {
+      throw new ConflictException('This review was not approved by the store.');
+    }
+    if (review._count.photos + adding > MAX_REVIEW_PHOTOS) {
+      throw new BadRequestException(
+        `A review can have at most ${MAX_REVIEW_PHOTOS} photos (it has ${review._count.photos}).`,
+      );
+    }
   }
 
   /** Removes one photo from the shopper's own review. */
@@ -438,6 +472,16 @@ export class ProductReviewsService {
       if (!review) throw new NotFoundException('Review not found.');
       if (review.customerId === customer.id) {
         throw new ForbiddenException('You cannot mark your own review as helpful.');
+      }
+      // Accounts are free to make; marks count only from customers who have bought here.
+      const buyer = await tx.order.findFirst({
+        where: { storeId: shop.id, customerId: customer.id, paidAt: { not: null } },
+        select: { id: true },
+      });
+      if (!buyer) {
+        throw new ForbiddenException(
+          'Only customers who have ordered from this store can mark reviews.',
+        );
       }
       const key = { storeId: shop.id, reviewId: review.id, customerId: customer.id };
       const changed = helpful
@@ -657,6 +701,7 @@ export class StorefrontReviewsController {
   }
 
   @Post('mine/photos')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FilesInterceptor('files', MAX_REVIEW_PHOTOS, {
@@ -695,6 +740,7 @@ export class StorefrontReviewsController {
   }
 
   @Put(':reviewId/helpful')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiZodBody(reviewHelpfulInputSchema)
   helpful(
     @CurrentShop() shop: ShopContext,

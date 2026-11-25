@@ -30,7 +30,11 @@ export interface ProcessedImage {
  */
 @Injectable()
 export class ImageProcessor {
-  async process(input: Buffer): Promise<ProcessedImage> {
+  /** `widths`: which resized copies to make (default: all RENDITION_WIDTHS). */
+  async process(
+    input: Buffer,
+    widths: readonly number[] = RENDITION_WIDTHS,
+  ): Promise<ProcessedImage> {
     if (input.length > MAX_IMAGE_BYTES)
       throw new PayloadTooLargeException('Images must be 20 MB or smaller.');
 
@@ -63,7 +67,7 @@ export class ImageProcessor {
 
       const renditions: ProcessedImage['renditions'] = [];
       // One at a time: large images are memory hungry.
-      for (const width of RENDITION_WIDTHS.filter((w) => w < info.width)) {
+      for (const width of widths.filter((w) => w < info.width)) {
         renditions.push({
           width,
           data: await sharp(data).resize({ width }).webp({ quality: 82 }).toBuffer(),
