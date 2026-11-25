@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
+import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ReviewRequestsService } from '../src/catalog/review-requests.service.js';
 import { EMAIL_SENDER, type MemoryEmailSender } from '../src/email/email.js';
@@ -229,6 +230,110 @@ describe('Product reviews', () => {
       .expect(404);
     await ctx.http().delete(`${admin}/reviews/${adaReview}`).set(auth).expect(204);
     expect((await sf('get', '/products/linen-shirt').expect(200)).body.rating).toBeNull();
+  });
+
+  it('takes up to three photos per review, re-checks them, and erases reviews with the customer', async () => {
+    const session = await signup(ctx);
+    const store = await createStore(ctx, session.token);
+    const auth = { Authorization: `Bearer ${session.token}` };
+    const admin = `/api/v1/admin/stores/${store.id}`;
+    const sf = storefrontClient(ctx, `${store.subdomain}.localhost:3200`);
+    const variantId = (
+      await ctx
+        .http()
+        .post(`${admin}/products`)
+        .set(auth)
+        .send({
+          title: 'Cane chair',
+          handle: 'cane-chair',
+          status: 'ACTIVE',
+          variants: [{ price: 9000, inventoryQuantity: 10 }],
+        })
+        .expect(201)
+    ).body.variants[0].id as string;
+    const apps = (await ctx.http().get(`${admin}/apps`).set(auth).expect(200)).body;
+    await ctx
+      .http()
+      .put(`${admin}/apps`)
+      .set(auth)
+      .send({ ...apps, productReviews: { enabled: true, autoPublish: false } })
+      .expect(200);
+    const email = `meera-${randomUUID().slice(0, 6)}@example.com`;
+    const customer = (
+      await sf('post', '/customers/register')
+        .send({ name: 'Meera Nair', email, password: 'review-password-123' })
+        .expect(201)
+    ).body.session.token as string;
+    const cart = (await sf('post', '/cart').expect(201)).body.token as string;
+    await sf('post', '/cart/lines', { cart }).send({ variantId, quantity: 1 }).expect(201);
+    const placed = await sf('post', '/checkout', { cart, customer })
+      .send({ email, shippingAddress: address, idempotencyKey: randomUUID() })
+      .expect(201);
+    await payMock(sf, placed.body.paymentUrl);
+
+    const photo = (color: string) =>
+      sharp({ create: { width: 1600, height: 1200, channels: 3, background: color } })
+        .jpeg()
+        .toBuffer();
+    const upload = (files: Buffer[]) => {
+      const req = sf('post', '/products/cane-chair/reviews/mine/photos', { customer });
+      for (const [i, f] of files.entries()) req.attach('files', f, `p${i}.jpg`);
+      return req;
+    };
+
+    // Photos need a review first.
+    await upload([await photo('#c00')]).expect(409);
+    await sf('put', '/products/cane-chair/reviews/mine', { customer })
+      .send({ rating: 5, body: 'Sturdy and light, great finish.', authorName: 'Meera N.' })
+      .expect(200);
+    const queue = await ctx.http().get(`${admin}/reviews`).set(auth).expect(200);
+    const reviewId = queue.body.items[0].id as string;
+    await ctx.http().post(`${admin}/reviews/${reviewId}/publish`).set(auth).expect(200);
+
+    const added = await upload([await photo('#c00'), await photo('#0c0')]).expect(201);
+    expect(added.body.review.photos).toHaveLength(2);
+    expect(added.body.review.photos[0]).toMatchObject({ width: 1200, height: 900 });
+    expect(added.body.review.photos[0].thumbUrl).toMatch(/_w600\.webp$/);
+    // New photos go back to the store before they are shown.
+    expect(added.body.review.status).toBe('PENDING');
+    await upload([await photo('#00c'), await photo('#ccc')]).expect(400);
+    await upload([Buffer.from('not an image')]).expect(415);
+
+    const mine = added.body.review.photos as { id: string; url: string }[];
+    const media = await ctx.http().get(new URL(mine[0]!.url).pathname).expect(200);
+    expect(media.headers['content-type']).toMatch(/image\/webp/);
+    const afterRemove = await sf(
+      'delete',
+      `/products/cane-chair/reviews/mine/photos/${mine[0]!.id}`,
+      { customer },
+    ).expect(200);
+    expect(afterRemove.body.review.photos.map((p: { id: string }) => p.id)).toEqual([mine[1]!.id]);
+    await ctx.http().get(new URL(mine[0]!.url).pathname).expect(404);
+
+    await ctx.http().post(`${admin}/reviews/${reviewId}/publish`).set(auth).expect(200);
+    const listed = await sf('get', '/products/cane-chair/reviews').expect(200);
+    expect(listed.body.items[0].photos).toHaveLength(1);
+    const moderated = await ctx
+      .http()
+      .delete(`${admin}/reviews/${reviewId}/photos/${mine[1]!.id}`)
+      .set(auth)
+      .expect(200);
+    expect(moderated.body.photos).toEqual([]);
+
+    // Erasing the customer's data removes their review and the product's rating with it.
+    await upload([await photo('#0cc')]).expect(201);
+    const customerId = (await ctx.platform.customer.findFirstOrThrow({ where: { email } })).id;
+    const order = await ctx.platform.order.findFirstOrThrow({ where: { customerId } });
+    await ctx
+      .http()
+      .post(`${admin}/orders/${order.id}/fulfillments`)
+      .set(auth)
+      .send({})
+      .expect(201);
+    await ctx.http().post(`${admin}/customers/${customerId}/redact`).set(auth).expect(204);
+    expect(await ctx.platform.productReview.count({ where: { customerId } })).toBe(0);
+    expect(await ctx.platform.productReviewPhoto.count({ where: { storeId: store.id } })).toBe(0);
+    expect((await sf('get', '/products/cane-chair').expect(200)).body.rating).toBeNull();
   });
 
   it('emails buyers once, after the order ships and the delay passes, for unreviewed products', async () => {

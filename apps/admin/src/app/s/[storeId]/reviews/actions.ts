@@ -58,6 +58,20 @@ export async function replyReviewAction(
   );
 }
 
+/** Takes one photo off a review (the review itself stays). */
+export async function removeReviewPhotoAction(
+  storeId: string,
+  id: string,
+  photoId: string,
+  _?: FormState,
+): Promise<FormState> {
+  return run(
+    storeId,
+    () => api(`/admin/stores/${storeId}/reviews/${id}/photos/${photoId}`, { method: 'DELETE' }),
+    'Photo removed.',
+  );
+}
+
 export async function deleteReviewAction(storeId: string, id: string): Promise<void> {
   await api(`/admin/stores/${storeId}/reviews/${id}`, { method: 'DELETE' });
   revalidatePath(path(storeId));

@@ -26,6 +26,7 @@ import {
   deleteReviewAction,
   publishReviewAction,
   rejectReviewAction,
+  removeReviewPhotoAction,
   replyReviewAction,
 } from './actions';
 
@@ -89,6 +90,31 @@ function ReviewCard({
         </p>
       </div>
       <p className="mt-2 text-sm leading-6 whitespace-pre-line text-slate-700">{r.body}</p>
+      {r.photos.length > 0 ? (
+        <ul className="mt-3 flex flex-wrap gap-3" aria-label="Photos from the customer">
+          {r.photos.map((p, i) => (
+            <li key={p.id} className="space-y-1.5">
+              <a href={p.url} target="_blank" rel="noreferrer" className="block">
+                {/* eslint-disable-next-line @next/next/no-img-element -- API media, sized here */}
+                <img
+                  src={p.thumbUrl}
+                  alt={`Photo ${i + 1} on this review`}
+                  width={96}
+                  height={96}
+                  className="size-24 rounded-lg object-cover ring-1 ring-slate-200"
+                />
+              </a>
+              {canEdit ? (
+                <ActionForm action={removeReviewPhotoAction.bind(null, storeId, r.id, p.id)}>
+                  <SubmitButton size="sm" variant="secondary">
+                    Remove
+                  </SubmitButton>
+                </ActionForm>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
         <div>
           <dt className="inline">Product: </dt>

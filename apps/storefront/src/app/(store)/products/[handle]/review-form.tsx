@@ -4,6 +4,7 @@ import type { MyReview } from '@repo/contracts';
 import { useActionState, useId, useState } from 'react';
 import { type FormResult, Notice, Submit, TextField } from '@/components/form';
 import { saveReviewAction } from './review-actions';
+import { ReviewPhotos } from './review-photos';
 
 const WORDS = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
 
@@ -44,6 +45,9 @@ export function ReviewForm({ handle, mine }: { handle: string; mine: MyReview })
         >
           {existing ? 'Edit your review' : 'Write a review'}
         </button>
+        {existing && existing.status !== 'REJECTED' ? (
+          <ReviewPhotos handle={handle} initial={existing.photos} />
+        ) : null}
       </div>
     );
   }

@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Shipped as TypeScript source, not a build (see packages/template-preview).
   transpilePackages: ['@repo/template-preview', '@repo/invoice-view'],
+  // Review photos are shrunk in the browser (about 0.5 MB each, 3 at most) before upload.
+  experimental: { serverActions: { bodySizeLimit: '4mb' } },
   // Photos in public/media keep their names, so cache for a week rather than forever.
   async headers() {
     return [

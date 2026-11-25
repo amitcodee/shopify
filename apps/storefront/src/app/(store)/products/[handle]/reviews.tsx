@@ -186,6 +186,33 @@ export async function ProductReviewsSection({
                     <p className="mt-3 text-[0.9375rem] leading-7 whitespace-pre-line text-zinc-700">
                       {r.body}
                     </p>
+                    {r.photos.length > 0 ? (
+                      <ul
+                        className="mt-3 flex flex-wrap gap-2"
+                        aria-label="Photos from the reviewer"
+                      >
+                        {r.photos.map((p, i) => (
+                          <li key={p.id}>
+                            <a
+                              href={p.url}
+                              target="_blank"
+                              rel="noopener"
+                              className="block overflow-hidden rounded-lg ring-1 ring-zinc-200 hover:ring-zinc-400"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element -- API media, sized here */}
+                              <img
+                                src={p.thumbUrl}
+                                alt={`Photo ${i + 1} from ${r.authorName}`}
+                                width={96}
+                                height={96}
+                                loading="lazy"
+                                className="size-24 object-cover"
+                              />
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                     {r.reply ? (
                       <div className="mt-4 rounded-lg bg-surface px-4 py-3 text-sm">
                         <p className="font-medium text-zinc-900">Reply from the store</p>

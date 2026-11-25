@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import {
+  BadRequestException,
   Body,
   ConflictException,
   Controller,
@@ -6,6 +8,7 @@ import {
   ForbiddenException,
   Get,
   HttpCode,
+  Inject,
   Injectable,
   NotFoundException,
   Param,
@@ -13,12 +16,17 @@ import {
   Put,
   Query,
   Req,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import {
   type AdminReview,
   adminReviewQuerySchema,
+  MAX_REVIEW_PHOTO_BYTES,
+  MAX_REVIEW_PHOTOS,
   type MyReview,
   type Paginated,
   type ProductReviews,
@@ -27,6 +35,7 @@ import {
   ratingOf,
   type ReviewHelpful,
   reviewHelpfulInputSchema,
+  type ReviewPhoto,
   reviewerName,
   reviewInputSchema,
   reviewReplyInputSchema,
@@ -44,6 +53,9 @@ import { UuidParam } from '../common/uuid-param.pipe.js';
 import { ApiZodBody, ZodPipe } from '../common/zod.js';
 import { CustomerAuthService } from '../customers/customer-auth.service.js';
 import { TenantDb } from '../database/database.module.js';
+import { ImageProcessor, type ProcessedImage } from '../storage/image-processor.js';
+import { MediaUrls } from '../storage/storage.module.js';
+import { imageKeys, OBJECT_STORAGE, type ObjectStorage, renditionKey } from '../storage/storage.js';
 import { liveProductWhere } from './product-visibility.js';
 import { CurrentShop, StorefrontGuard } from '../storefront/storefront.guard.js';
 import type { ShopContext } from '../storefront/store-resolver.js';
@@ -54,16 +66,41 @@ type AdminQuery = z.output<typeof adminReviewQuerySchema>;
 
 const ADMIN_PAGE_SIZE = 25;
 
+/** Review photos keep only renditions up to this width (the list shows 600 px). */
+const PHOTO_WIDTHS = [600, 1200];
+
+const photosInclude = { orderBy: { position: 'asc' as const } };
+
 const adminInclude = {
   product: { select: { id: true, title: true, handle: true } },
   customer: { select: { id: true, email: true } },
   order: { select: { id: true, number: true } },
+  photos: photosInclude,
 } satisfies Prisma.ProductReviewInclude;
 
 type AdminRow = Prisma.ProductReviewGetPayload<{ include: typeof adminInclude }>;
+type PhotoRow = AdminRow['photos'][number];
 
-function toAdmin(r: AdminRow): AdminReview {
+/** The largest stored copy at or below `max` px wide (the original when it is narrower). */
+function photoUrl(media: MediaUrls, p: PhotoRow, max: number): string {
+  if (p.width <= max) return media.url(p.storageKey);
+  const fit = [...p.renditionWidths].filter((w) => w <= max).sort((a, b) => b - a)[0];
+  return media.url(fit ? renditionKey(p.storageKey, fit) : p.storageKey);
+}
+
+function toPhoto(media: MediaUrls, p: PhotoRow): ReviewPhoto {
   return {
+    id: p.id,
+    url: photoUrl(media, p, 1200),
+    thumbUrl: photoUrl(media, p, 600),
+    width: p.width,
+    height: p.height,
+  };
+}
+
+function toAdmin(r: AdminRow, media: MediaUrls): AdminReview {
+  return {
+    photos: r.photos.map((p) => toPhoto(media, p)),
     id: r.id,
     status: r.status,
     rating: r.rating,
@@ -100,7 +137,16 @@ export class ProductReviewsService {
     private readonly tenantDb: TenantDb,
     private readonly customers: CustomerAuthService,
     private readonly audit: AuditService,
+    private readonly images: ImageProcessor,
+    private readonly media: MediaUrls,
+    @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
   ) {}
+
+  private async deleteObjects(photos: { storageKey: string; renditionWidths: number[] }[]) {
+    for (const key of photos.flatMap(imageKeys)) {
+      await this.storage.delete(key).catch(() => undefined);
+    }
+  }
 
   private async liveProduct(tx: TenantTx, shop: ShopContext, handle: string) {
     const product = await tx.product.findFirst({
@@ -157,6 +203,7 @@ export class ProductReviewsService {
           orderBy,
           skip: (page - 1) * REVIEWS_PAGE_SIZE,
           take: REVIEWS_PAGE_SIZE,
+          include: { photos: photosInclude },
         }),
       ]);
       const distribution = [5, 4, 3, 2, 1].map(
@@ -177,6 +224,7 @@ export class ProductReviewsService {
           date: (r.publishedAt ?? r.createdAt).toISOString(),
           reply: r.reply,
           helpfulCount: r.helpfulCount,
+          photos: r.photos.map((p) => toPhoto(this.media, p)),
         })),
         page,
         pageCount: Math.max(1, Math.ceil(total / REVIEWS_PAGE_SIZE)),
@@ -215,6 +263,7 @@ export class ProductReviewsService {
               customerId: customer.id,
             },
           },
+          include: { photos: photosInclude },
         }),
         this.purchase(tx, shop.id, customer.id, product.id),
         tx.productReviewVote.findMany({
@@ -234,10 +283,140 @@ export class ProductReviewsService {
           body: review.body,
           authorName: review.authorName,
           status: review.status,
+          photos: review.photos.map((p) => toPhoto(this.media, p)),
         },
         helpfulReviewIds: votes.map((v) => v.reviewId),
       };
     });
+  }
+
+  /**
+   * Adds photos to the shopper's own review (at most MAX_REVIEW_PHOTOS in all). Like an edit, it
+   * goes back to the store for checking unless the store publishes automatically.
+   */
+  async addPhotos(
+    shop: ShopContext,
+    token: string | null,
+    handle: string,
+    files: Buffer[],
+  ): Promise<MyReview> {
+    this.requireApp(shop);
+    const customer = await this.customers.requireCurrent(shop, token);
+    if (files.length === 0) throw new BadRequestException('Attach photos in the "files" field.');
+    const processed: ProcessedImage[] = [];
+    for (const file of files) processed.push(await this.images.process(file));
+    const stored = processed.map((image) => ({
+      image,
+      key: `stores/${shop.id}/reviews/${randomUUID()}.webp`,
+      renditions: image.renditions.filter((r) => PHOTO_WIDTHS.includes(r.width)),
+    }));
+    // The original is kept only when it is small; otherwise the 1200 px copy stands in for it.
+    const objects = stored.map(({ image, key, renditions }) => {
+      const big = image.width > 1200 ? renditions.find((r) => r.width === 1200) : undefined;
+      const main = big ?? { width: image.width, data: image.data };
+      return {
+        key,
+        width: main.width,
+        height: Math.round((image.height * main.width) / image.width),
+        data: main.data,
+        renditions: renditions.filter((r) => r.width < main.width),
+      };
+    });
+    try {
+      for (const o of objects) {
+        await this.storage.put(o.key, o.data, 'image/webp');
+        for (const r of o.renditions) {
+          await this.storage.put(renditionKey(o.key, r.width), r.data, 'image/webp');
+        }
+      }
+      await this.tenantDb.run(shop.id, async (tx) => {
+        const product = await this.liveProduct(tx, shop, handle);
+        const review = await tx.productReview.findUnique({
+          where: {
+            storeId_productId_customerId: {
+              storeId: shop.id,
+              productId: product.id,
+              customerId: customer.id,
+            },
+          },
+          include: { photos: true },
+        });
+        if (!review) throw new ConflictException('Write your review first, then add photos.');
+        if (review.status === 'REJECTED') {
+          throw new ConflictException('This review was not approved by the store.');
+        }
+        if (review.photos.length + objects.length > MAX_REVIEW_PHOTOS) {
+          throw new BadRequestException(
+            `A review can have at most ${MAX_REVIEW_PHOTOS} photos (it has ${review.photos.length}).`,
+          );
+        }
+        await tx.productReviewPhoto.createMany({
+          data: objects.map((o, i) => ({
+            storeId: shop.id,
+            reviewId: review.id,
+            storageKey: o.key,
+            width: o.width,
+            height: o.height,
+            renditionWidths: o.renditions.map((r) => r.width),
+            position: review.photos.length + i,
+          })),
+        });
+        if (!shop.apps.productReviews.autoPublish && review.status === 'PUBLISHED') {
+          await tx.productReview.update({
+            where: { id: review.id },
+            data: { status: 'PENDING', publishedAt: null },
+          });
+          await refreshProductRating(tx, shop.id, product.id);
+        }
+      });
+    } catch (error) {
+      await this.deleteObjects(
+        objects.map((o) => ({
+          storageKey: o.key,
+          renditionWidths: o.renditions.map((r) => r.width),
+        })),
+      );
+      throw error;
+    }
+    return this.mine(shop, token, handle);
+  }
+
+  /** Removes one photo from the shopper's own review. */
+  async removePhoto(
+    shop: ShopContext,
+    token: string | null,
+    handle: string,
+    photoId: string,
+  ): Promise<MyReview> {
+    this.requireApp(shop);
+    const customer = await this.customers.requireCurrent(shop, token);
+    const photo = await this.tenantDb.run(shop.id, async (tx) => {
+      const product = await this.liveProduct(tx, shop, handle);
+      const found = await tx.productReviewPhoto.findFirst({
+        where: {
+          id: photoId,
+          storeId: shop.id,
+          review: { productId: product.id, customerId: customer.id },
+        },
+      });
+      if (!found) throw new NotFoundException('Photo not found.');
+      await tx.productReviewPhoto.delete({ where: { id: found.id } });
+      await this.renumber(tx, found.reviewId);
+      return found;
+    });
+    await this.deleteObjects([photo]);
+    return this.mine(shop, token, handle);
+  }
+
+  private async renumber(tx: TenantTx, reviewId: string) {
+    const rest = await tx.productReviewPhoto.findMany({
+      where: { reviewId },
+      orderBy: { position: 'asc' },
+      select: { id: true },
+    });
+    for (const [position, p] of rest.entries()) {
+      await tx.productReviewPhoto.update({ where: { id: p.id }, data: { position } });
+    }
   }
 
   /** Marks or unmarks a published review as helpful: one mark per customer, not on their own. */
@@ -328,7 +507,12 @@ export class ProductReviewsService {
         }),
         tx.productReview.count({ where }),
       ]);
-      return { items: items.map(toAdmin), page: query.page, pageSize: ADMIN_PAGE_SIZE, total };
+      return {
+        items: items.map((r) => toAdmin(r, this.media)),
+        page: query.page,
+        pageSize: ADMIN_PAGE_SIZE,
+        total,
+      };
     });
   }
 
@@ -340,13 +524,15 @@ export class ProductReviewsService {
     action: string,
     data: (r: AdminRow) => Prisma.ProductReviewUpdateInput | null,
   ): Promise<AdminReview | null> {
-    return this.tenantDb.run(store.id, async (tx) => {
+    const removed: PhotoRow[] = [];
+    const result = await this.tenantDb.run(store.id, async (tx) => {
       const review = await tx.productReview.findFirst({
         where: { id, storeId: store.id },
         include: adminInclude,
       });
       if (!review) throw new NotFoundException('Review not found.');
       const update = data(review);
+      if (!update) removed.push(...review.photos);
       const result = update
         ? await tx.productReview.update({ where: { id }, data: update, include: adminInclude })
         : (await tx.productReview.delete({ where: { id } }), null);
@@ -360,8 +546,45 @@ export class ProductReviewsService {
         data: { reviewId: id },
         meta,
       });
-      return result && toAdmin(result);
+      return result && toAdmin(result, this.media);
     });
+    await this.deleteObjects(removed);
+    return result;
+  }
+
+  /** Takes one photo off a review (the rest of the review stays). */
+  async adminRemovePhoto(
+    store: StoreContext,
+    reviewId: string,
+    photoId: string,
+    actor: AuthUser,
+    meta: RequestMeta,
+  ): Promise<AdminReview> {
+    let photo: PhotoRow | null = null;
+    const result = await this.tenantDb.run(store.id, async (tx) => {
+      photo = await tx.productReviewPhoto.findFirst({
+        where: { id: photoId, reviewId, storeId: store.id },
+      });
+      if (!photo) throw new NotFoundException('Photo not found.');
+      await tx.productReviewPhoto.delete({ where: { id: photoId } });
+      await this.renumber(tx, reviewId);
+      const review = await tx.productReview.findUniqueOrThrow({
+        where: { id: reviewId },
+        include: adminInclude,
+      });
+      await this.audit.record(tx, {
+        storeId: store.id,
+        actorUserId: actor.id,
+        action: 'review.photo_removed',
+        entityType: 'product',
+        entityId: review.productId,
+        data: { reviewId, photoId },
+        meta,
+      });
+      return toAdmin(review, this.media);
+    });
+    if (photo) await this.deleteObjects([photo]);
+    return result;
   }
 
   publish(store: StoreContext, id: string, actor: AuthUser, meta: RequestMeta) {
@@ -430,6 +653,44 @@ export class StorefrontReviewsController {
       typeof token === 'string' ? token : null,
       handle.slice(0, 200),
       body,
+    );
+  }
+
+  @Post('mine/photos')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FilesInterceptor('files', MAX_REVIEW_PHOTOS, {
+      limits: { fileSize: MAX_REVIEW_PHOTO_BYTES, files: MAX_REVIEW_PHOTOS, fields: 0 },
+    }),
+  )
+  addPhotos(
+    @CurrentShop() shop: ShopContext,
+    @Req() req: Request,
+    @Param('handle') handle: string,
+    @UploadedFiles() files: Express.Multer.File[] | undefined,
+  ): Promise<MyReview> {
+    const token = req.headers[STOREFRONT_HEADERS.customer];
+    return this.reviews.addPhotos(
+      shop,
+      typeof token === 'string' ? token : null,
+      handle.slice(0, 200),
+      (files ?? []).map((f) => f.buffer),
+    );
+  }
+
+  @Delete('mine/photos/:photoId')
+  removePhoto(
+    @CurrentShop() shop: ShopContext,
+    @Req() req: Request,
+    @Param('handle') handle: string,
+    @Param('photoId', UuidParam) photoId: string,
+  ): Promise<MyReview> {
+    const token = req.headers[STOREFRONT_HEADERS.customer];
+    return this.reviews.removePhoto(
+      shop,
+      typeof token === 'string' ? token : null,
+      handle.slice(0, 200),
+      photoId,
     );
   }
 
@@ -504,6 +765,18 @@ export class ReviewsController {
     @ReqMeta() meta: RequestMeta,
   ) {
     return this.reviews.reply(store, id, body.reply, user, meta);
+  }
+
+  @Delete(':reviewId/photos/:photoId')
+  @RequirePermission('products:write')
+  removePhoto(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @Param('reviewId', UuidParam) id: string,
+    @Param('photoId', UuidParam) photoId: string,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<AdminReview> {
+    return this.reviews.adminRemovePhoto(store, id, photoId, user, meta);
   }
 
   @Delete(':reviewId')

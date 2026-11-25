@@ -46,7 +46,15 @@ each (`ProductReviewVote`, count cached in `ProductReview.helpfulCount`). The me
 customer's review-email choice on the customer page; only the customer can turn the emails back on,
 from their account page (`PUT /storefront/customers/me/review-emails`).
 
-## Not done
+## Photos
 
-- Photos in reviews.
+A reviewer adds up to 3 photos to their own review (`POST …/reviews/mine/photos`, multipart). The
+browser shrinks them to 1600 px JPEG first; the API decodes and re-encodes them to WebP (which drops
+EXIF/GPS) and keeps a copy of at most 1200 px plus a 600 px one under
+`stores/<id>/reviews/`. New photos send a published review back to the queue unless the store
+publishes automatically. The merchant can remove single photos. Deleting a review, or erasing the
+customer's data, deletes the photo files too; erasure now also removes the customer's reviews and
+helpful marks (it used to leave them).
+
+## Not done
 - Importing reviews from another platform (they could not be verified against orders here).

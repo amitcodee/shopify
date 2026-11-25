@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Inject,
   Injectable,
   NotFoundException,
   Param,
@@ -14,7 +15,9 @@ import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser, RequestMeta, StoreContext } from '../common/request.js';
 import { CurrentStore, CurrentUser, ReqMeta } from '../common/request.js';
 import { UuidParam } from '../common/uuid-param.pipe.js';
+import { refreshProductRating } from '../catalog/product-reviews.js';
 import { TenantDb } from '../database/database.module.js';
+import { imageKeys, OBJECT_STORAGE, type ObjectStorage } from '../storage/storage.js';
 import {
   AllowBillingLocked,
   AllowClosedStore,
@@ -33,13 +36,28 @@ export class CustomerPrivacyService {
   constructor(
     private readonly tenantDb: TenantDb,
     private readonly audit: AuditService,
+    @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
   ) {}
 
   async export(store: StoreContext, customerId: string, actor: AuthUser, meta: RequestMeta) {
     return this.tenantDb.run(store.id, async (tx) => {
       const customer = await tx.customer.findFirst({
         where: { id: customerId, storeId: store.id },
-        include: { orders: { include: { lines: true, fulfillments: true, refunds: true } } },
+        include: {
+          orders: { include: { lines: true, fulfillments: true, refunds: true } },
+          reviews: {
+            select: {
+              productId: true,
+              rating: true,
+              title: true,
+              body: true,
+              authorName: true,
+              status: true,
+              createdAt: true,
+              photos: { select: { storageKey: true } },
+            },
+          },
+        },
       });
       if (!customer) throw new NotFoundException('Customer not found.');
       await this.audit.record(tx, {
@@ -64,6 +82,7 @@ export class CustomerPrivacyService {
     actor: AuthUser,
     meta: RequestMeta,
   ): Promise<void> {
+    const photos: { storageKey: string; renditionWidths: number[] }[] = [];
     await this.tenantDb.run(store.id, async (tx) => {
       const customer = await tx.customer.findFirst({
         where: { id: customerId, storeId: store.id },
@@ -102,6 +121,30 @@ export class CustomerPrivacyService {
         where: { storeId: store.id, customerId, recoveryStatus: null },
         data: { recoveryStatus: 'SKIPPED' },
       });
+      // Reviews carry the customer's words and name: they go, with their photos and marks.
+      const reviews = await tx.productReview.findMany({
+        where: { storeId: store.id, customerId },
+        select: {
+          productId: true,
+          photos: { select: { storageKey: true, renditionWidths: true } },
+        },
+      });
+      photos.push(...reviews.flatMap((r) => r.photos));
+      await tx.productReview.deleteMany({ where: { storeId: store.id, customerId } });
+      for (const productId of new Set(reviews.map((r) => r.productId))) {
+        await refreshProductRating(tx, store.id, productId);
+      }
+      const votes = await tx.productReviewVote.findMany({
+        where: { storeId: store.id, customerId },
+        select: { reviewId: true },
+      });
+      await tx.productReviewVote.deleteMany({ where: { storeId: store.id, customerId } });
+      for (const { reviewId } of votes) {
+        await tx.productReview.update({
+          where: { id: reviewId },
+          data: { helpfulCount: { decrement: 1 } },
+        });
+      }
       await tx.customerSession.deleteMany({ where: { customerId, storeId: store.id } });
       await tx.customerToken.deleteMany({ where: { customerId, storeId: store.id } });
       await tx.customer.update({
@@ -120,10 +163,13 @@ export class CustomerPrivacyService {
         action: 'customer.redacted',
         entityType: 'customer',
         entityId: customerId,
-        data: { orders: orders.length },
+        data: { orders: orders.length, reviews: reviews.length },
         meta,
       });
     });
+    for (const key of photos.flatMap(imageKeys)) {
+      await this.storage.delete(key).catch(() => undefined);
+    }
   }
 }
 

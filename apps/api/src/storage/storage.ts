@@ -14,7 +14,7 @@ export const OBJECT_STORAGE = Symbol('OBJECT_STORAGE');
 
 /** Keys are generated server-side only; this pattern also blocks path traversal on reads. */
 export const MEDIA_KEY =
-  /^stores\/[0-9a-f-]{36}\/(products|branding)\/[0-9a-f-]{36}(?:_w\d{2,4})?\.webp$/;
+  /^stores\/[0-9a-f-]{36}\/(products|branding|reviews)\/[0-9a-f-]{36}(?:_w\d{2,4})?\.webp$/;
 
 /** Key of an image's resized copy: `…/<id>.webp` -> `…/<id>_w600.webp`. */
 export function renditionKey(key: string, width: number): string {

@@ -61,7 +61,11 @@ export async function sf<T>(path: string, options: SfOptions = {}): Promise<T> {
     [STOREFRONT_HEADERS.timestamp]: timestamp,
     [STOREFRONT_HEADERS.signature]: signature,
   });
-  if (options.body !== undefined) requestHeaders.set('content-type', 'application/json');
+  // FormData (file uploads) sets its own multipart content type with the boundary.
+  const multipart = options.body instanceof FormData;
+  if (options.body !== undefined && !multipart) {
+    requestHeaders.set('content-type', 'application/json');
+  }
   if (options.cartToken) requestHeaders.set(STOREFRONT_HEADERS.cart, options.cartToken);
   if (options.customerToken) requestHeaders.set(STOREFRONT_HEADERS.customer, options.customerToken);
   // Password-protected stores: the access token from the password page (HttpOnly cookie).
@@ -87,7 +91,12 @@ export async function sf<T>(path: string, options: SfOptions = {}): Promise<T> {
   const res = await fetch(url, {
     method: options.method ?? 'GET',
     headers: requestHeaders,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body:
+      options.body === undefined
+        ? undefined
+        : multipart
+          ? (options.body as FormData)
+          : JSON.stringify(options.body),
     cache: 'no-store',
   });
   if (!res.ok) {

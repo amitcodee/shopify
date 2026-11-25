@@ -36,6 +36,21 @@ export function ratingOf(count: number, sum: number): Rating | null {
   return count > 0 ? { average: Math.round((sum / count) * 10) / 10, count } : null;
 }
 
+/** Photos a reviewer can add; uploads larger than this are refused. */
+export const MAX_REVIEW_PHOTOS = 3;
+export const MAX_REVIEW_PHOTO_BYTES = 5 * 1024 * 1024;
+
+export const reviewPhotoSchema = z.object({
+  id: z.uuid(),
+  /** Full size (at most 1200 px wide). */
+  url: z.string(),
+  /** About 600 px wide, for the list. */
+  thumbUrl: z.string(),
+  width: z.number().int(),
+  height: z.number().int(),
+});
+export type ReviewPhoto = z.infer<typeof reviewPhotoSchema>;
+
 export const publicReviewSchema = z.object({
   id: z.uuid(),
   rating: z.number().int(),
@@ -47,6 +62,7 @@ export const publicReviewSchema = z.object({
   reply: z.string().nullable(),
   /** Signed-in customers who found it helpful. */
   helpfulCount: z.number().int(),
+  photos: z.array(reviewPhotoSchema),
 });
 export type PublicReview = z.infer<typeof publicReviewSchema>;
 
@@ -108,6 +124,7 @@ export const myReviewSchema = z.object({
       body: z.string(),
       authorName: z.string(),
       status: reviewStatusSchema,
+      photos: z.array(reviewPhotoSchema),
     })
     .nullable(),
   /** This product's reviews the customer marked helpful. */
@@ -124,6 +141,7 @@ export const adminReviewSchema = z.object({
   authorName: z.string(),
   reply: z.string().nullable(),
   helpfulCount: z.number().int(),
+  photos: z.array(reviewPhotoSchema),
   product: z.object({ id: z.uuid(), title: z.string(), handle: z.string() }),
   customer: z.object({ id: z.uuid(), email: z.string() }),
   order: z.object({ id: z.uuid(), number: z.number().int() }),

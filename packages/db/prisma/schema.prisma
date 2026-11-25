@@ -1764,11 +1764,12 @@ model ProductReview {
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
-  store    Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product  Product             @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
-  customer Customer            @relation(fields: [storeId, customerId], references: [storeId, id], onDelete: Cascade)
-  order    Order               @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+  store    Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product  Product              @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
+  customer Customer             @relation(fields: [storeId, customerId], references: [storeId, id], onDelete: Cascade)
+  order    Order                @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
   votes    ProductReviewVote[]
+  photos   ProductReviewPhoto[]
 
   @@unique([storeId, id])
   @@unique([storeId, productId, customerId])
@@ -1791,4 +1792,23 @@ model ProductReviewVote {
   @@id([reviewId, customerId])
   @@index([storeId])
   @@index([customerId])
+}
+
+/// Photos a customer adds to their review (at most 3), moderated with it.
+model ProductReviewPhoto {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  storeId         String   @db.Uuid
+  reviewId        String   @db.Uuid
+  /// stores/<storeId>/reviews/<uuid>.webp, re-encoded (metadata stripped).
+  storageKey      String
+  width           Int
+  height          Int
+  renditionWidths Int[]
+  position        Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  review ProductReview @relation(fields: [storeId, reviewId], references: [storeId, id], onDelete: Cascade)
+
+  @@index([reviewId, position])
+  @@index([storeId])
 }
