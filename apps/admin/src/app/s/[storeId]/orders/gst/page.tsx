@@ -3,6 +3,7 @@ import {
   type GstSettings,
   type Gstr1Report,
   type Gstr1Section,
+  gstDate,
   gstPlace,
 } from '@repo/contracts';
 import Link from 'next/link';
@@ -255,7 +256,7 @@ export default async function GstReturnsPage({
         {t.invoices + t.creditNotes > 0 ? (
           <Card
             title="GSTR-3B · Outward supplies"
-            description="What goes into tables 3.1 and 3.2 of your monthly GSTR-3B, after credit notes. Input tax credit (table 4) comes from your purchases, which this store does not track."
+            description="What goes into tables 3.1 and 3.2 of your monthly GSTR-3B, after credit notes."
             flush
           >
             <Table
@@ -320,6 +321,86 @@ export default async function GstReturnsPage({
                 </ul>
               )}
             </div>
+          </Card>
+        ) : null}
+
+        {report.gstin ? (
+          <Card
+            title="GSTR-3B · Input tax credit"
+            description="Table 4(A)(5), all other ITC: GST on stock received from registered suppliers, by the date on their invoice. Claim only what also shows in your GSTR-2B, and leave out blocked credit (section 17(5)) and goods for personal use."
+            flush
+          >
+            <Table
+              bare
+              head={['Table', 'Details', 'IGST', 'CGST', 'SGST / UTGST']}
+              numeric={[2, 3, 4]}
+            >
+              <tr>
+                <Td className="font-mono text-xs">4(A)(5)</Td>
+                <Td>All other ITC</Td>
+                <Td numeric>{money(report.gstr3b.itc.igst)}</Td>
+                <Td numeric>{money(report.gstr3b.itc.cgst)}</Td>
+                <Td numeric>{money(report.gstr3b.itc.sgst)}</Td>
+              </tr>
+            </Table>
+            <div className="border-t border-slate-100 px-5 py-4">
+              <p className="text-[13px] font-medium text-slate-900">
+                Supplier invoices · match these with GSTR-2B
+              </p>
+              {report.gstr3b.itc.purchases.length === 0 ? (
+                <p className="mt-1 text-[13px] text-slate-500">
+                  No received purchase orders with a supplier invoice dated this month. Add the
+                  supplier&apos;s GSTIN, GST rates and invoice date on your{' '}
+                  <Link
+                    href={`/s/${storeId}/purchase-orders`}
+                    className="font-medium text-indigo-600 hover:text-indigo-500"
+                  >
+                    purchase orders
+                  </Link>
+                  .
+                </p>
+              ) : null}
+            </div>
+            {report.gstr3b.itc.purchases.length > 0 ? (
+              <Table
+                bare
+                head={[
+                  'Purchase order',
+                  'Supplier',
+                  'Invoice',
+                  'Taxable value',
+                  'IGST',
+                  'CGST',
+                  'SGST',
+                ]}
+                numeric={[3, 4, 5, 6]}
+              >
+                {report.gstr3b.itc.purchases.map((p) => (
+                  <tr key={p.purchaseOrderId}>
+                    <Td>
+                      <Link
+                        href={`/s/${storeId}/purchase-orders/${p.purchaseOrderId}`}
+                        className="font-medium text-indigo-600 hover:text-indigo-500"
+                      >
+                        {p.purchaseOrder}
+                      </Link>
+                    </Td>
+                    <Td>
+                      <p className="text-slate-900">{p.supplierName}</p>
+                      <p className="font-mono text-xs text-slate-500">{p.supplierGstin}</p>
+                    </Td>
+                    <Td>
+                      <p className="text-slate-900">{p.invoiceNumber || '—'}</p>
+                      <p className="text-xs text-slate-500">{gstDate(p.invoiceDate)}</p>
+                    </Td>
+                    <Td numeric>{money(p.taxableValue)}</Td>
+                    <Td numeric>{money(p.igst)}</Td>
+                    <Td numeric>{money(p.cgst)}</Td>
+                    <Td numeric>{money(p.sgst)}</Td>
+                  </tr>
+                ))}
+              </Table>
+            ) : null}
           </Card>
         ) : null}
 

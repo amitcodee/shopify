@@ -2,6 +2,7 @@
 
 import {
   formatMoney,
+  gstOn,
   type Location,
   MAX_PURCHASE_ORDER_LINES,
   minorToDecimalString,
@@ -25,7 +26,13 @@ interface LineRow {
   quantity: string;
   unitCost: string;
   supplierSku: string;
+  /** Basis points as a string, for the select. */
+  taxRateBps: string;
 }
+
+/** GST slabs (percent → basis points); 0.25% and 3% cover stones and precious metals. */
+const GST_RATES = [0, 25, 300, 500, 1200, 1800, 2800, 4000];
+const percent = (bps: number) => `${bps / 100}%`;
 
 const input = `${inputClass} w-full py-2`;
 const cellInput = `${inputClass} h-8`;
@@ -84,6 +91,10 @@ export function PurchaseOrderForm({
   const [shippingCost, setShippingCost] = useState(
     order?.shippingCost ? minorToDecimalString(order.shippingCost, currency) : '',
   );
+  const [shippingTaxRateBps, setShippingTaxRateBps] = useState(
+    String(order?.shippingTaxRateBps ?? 0),
+  );
+  const [supplierInvoiceDate, setSupplierInvoiceDate] = useState(order?.supplierInvoiceDate ?? '');
   const [notes, setNotes] = useState(order?.notes ?? '');
   const [lines, setLines] = useState<LineRow[]>(
     order?.lines.flatMap((l) =>
@@ -97,6 +108,7 @@ export function PurchaseOrderForm({
               quantity: String(l.quantity),
               unitCost: minorToDecimalString(l.unitCost, currency),
               supplierSku: l.supplierSku,
+              taxRateBps: String(l.taxRateBps),
             },
           ]
         : [],
@@ -107,18 +119,24 @@ export function PurchaseOrderForm({
 
   const supplier = suppliers.find((s) => s.id === supplierId);
   const totals = useMemo(() => {
-    const subtotal = lines.reduce((sum, l) => {
+    let subtotal = 0;
+    let tax = 0;
+    for (const l of lines) {
       const cost = parseMoney(l.unitCost || '0', currency) ?? 0;
-      return sum + cost * (Number.parseInt(l.quantity || '0', 10) || 0);
-    }, 0);
+      const amount = cost * (Number.parseInt(l.quantity || '0', 10) || 0);
+      subtotal += amount;
+      tax += gstOn(amount, Number(l.taxRateBps));
+    }
     const shipping = parseMoney(shippingCost || '0', currency) ?? 0;
+    tax += gstOn(shipping, Number(shippingTaxRateBps));
     return {
       subtotal,
       shipping,
-      total: subtotal + shipping,
+      tax,
+      total: subtotal + shipping + tax,
       units: lines.reduce((s, l) => s + (Number.parseInt(l.quantity || '0', 10) || 0), 0),
     };
-  }, [lines, shippingCost, currency]);
+  }, [lines, shippingCost, shippingTaxRateBps, currency]);
 
   const payload = {
     supplierId,
@@ -126,12 +144,15 @@ export function PurchaseOrderForm({
     expectedAt: expectedAt || null,
     supplierReference,
     shippingCost: parseMoney(shippingCost || '0', currency),
+    shippingTaxRateBps: Number(shippingTaxRateBps),
+    supplierInvoiceDate: supplierInvoiceDate || null,
     notes,
     lines: lines.map((l) => ({
       variantId: l.variantId,
       quantity: Number.parseInt(l.quantity || '0', 10),
       unitCost: parseMoney(l.unitCost || '0', currency),
       supplierSku: l.supplierSku,
+      taxRateBps: Number(l.taxRateBps),
     })),
   };
 
@@ -173,6 +194,7 @@ export function PurchaseOrderForm({
               quantity: String(s.suggestedQuantity),
               unitCost: s.costPerItem == null ? '' : minorToDecimalString(s.costPerItem, currency),
               supplierSku: '',
+              taxRateBps: '0',
             })),
           ].slice(0, MAX_PURCHASE_ORDER_LINES),
         );
@@ -309,7 +331,8 @@ export function PurchaseOrderForm({
                       <th>Item</th>
                       <th>Supplier SKU</th>
                       <th>Quantity</th>
-                      <th>Unit cost</th>
+                      <th>Unit cost (excl. GST)</th>
+                      <th>GST</th>
                       <th className="text-right">Total</th>
                       <th>
                         <span className="sr-only">Remove</span>
@@ -357,6 +380,20 @@ export function PurchaseOrderForm({
                               value={l.unitCost}
                               onChange={(e) => patch(l.variantId, { unitCost: e.target.value })}
                             />
+                          </td>
+                          <td>
+                            <select
+                              aria-label={`GST rate on ${name}`}
+                              className={`${cellInput} w-20`}
+                              value={l.taxRateBps}
+                              onChange={(e) => patch(l.variantId, { taxRateBps: e.target.value })}
+                            >
+                              {GST_RATES.map((bps) => (
+                                <option key={bps} value={bps}>
+                                  {percent(bps)}
+                                </option>
+                              ))}
+                            </select>
                           </td>
                           <td className="text-right whitespace-nowrap text-slate-900 tabular-nums">
                             {cost === null ? '—' : formatMoney(cost * qty, currency)}
@@ -433,6 +470,22 @@ export function PurchaseOrderForm({
                 />
               </div>
               <div className="space-y-1.5">
+                <label htmlFor="po-invoice-date" className={label}>
+                  Supplier invoice date
+                </label>
+                <input
+                  id="po-invoice-date"
+                  type="date"
+                  className={input}
+                  value={supplierInvoiceDate}
+                  onChange={(e) => setSupplierInvoiceDate(e.target.value)}
+                />
+                <p className={hint}>
+                  Input tax credit is counted in this month. You can add it later, when the invoice
+                  arrives.
+                </p>
+              </div>
+              <div className="space-y-1.5">
                 <label htmlFor="po-shipping" className={label}>
                   Shipping cost ({currency})
                 </label>
@@ -444,6 +497,23 @@ export function PurchaseOrderForm({
                   value={shippingCost}
                   onChange={(e) => setShippingCost(e.target.value)}
                 />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="po-shipping-gst" className={label}>
+                  GST on shipping
+                </label>
+                <select
+                  id="po-shipping-gst"
+                  className={input}
+                  value={shippingTaxRateBps}
+                  onChange={(e) => setShippingTaxRateBps(e.target.value)}
+                >
+                  {GST_RATES.map((bps) => (
+                    <option key={bps} value={bps}>
+                      {percent(bps)}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </Card>
@@ -462,6 +532,10 @@ export function PurchaseOrderForm({
               <div className="flex justify-between">
                 <dt className="text-slate-500">Shipping</dt>
                 <dd className="tabular-nums">{formatMoney(totals.shipping, currency)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-slate-500">GST</dt>
+                <dd className="tabular-nums">{formatMoney(totals.tax, currency)}</dd>
               </div>
               <div className="flex justify-between border-t border-slate-100 pt-2 font-semibold text-slate-900">
                 <dt>Total</dt>
@@ -500,6 +574,7 @@ export function PurchaseOrderForm({
                 unitCost:
                   pick.costPerItem == null ? '' : minorToDecimalString(pick.costPerItem, currency),
                 supplierSku: '',
+                taxRateBps: '0',
               },
             ]);
             setPicking(false);

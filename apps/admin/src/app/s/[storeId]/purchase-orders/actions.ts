@@ -21,6 +21,7 @@ function supplierBody(formData: FormData) {
     leadTimeDays: lead === '' ? null : Number.parseInt(lead, 10),
     notes: text('notes'),
     active: formData.get('active') === 'on',
+    gstin: text('gstin').toUpperCase(),
   };
 }
 
@@ -123,6 +124,29 @@ export async function deletePurchaseOrderAction(
   }
   revalidatePath(`/s/${storeId}/purchase-orders`);
   redirect(`/s/${storeId}/purchase-orders`);
+}
+
+/** Records the supplier's invoice number and date on an ordered or received purchase order. */
+export async function recordSupplierInvoiceAction(
+  storeId: string,
+  purchaseOrderId: string,
+  _: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const date = String(formData.get('supplierInvoiceDate') ?? '').trim();
+  try {
+    await api(`${base(storeId)}/purchase-orders/${purchaseOrderId}/invoice`, {
+      method: 'PUT',
+      body: {
+        supplierReference: String(formData.get('supplierReference') ?? '').trim(),
+        supplierInvoiceDate: date === '' ? null : date,
+      },
+    });
+  } catch (error) {
+    return toFormState(error, formData);
+  }
+  revalidatePath(`/s/${storeId}/purchase-orders/${purchaseOrderId}`);
+  return { success: 'Supplier invoice saved.' };
 }
 
 /** Receives the quantities typed per line (fields `receive-<lineId>`). */

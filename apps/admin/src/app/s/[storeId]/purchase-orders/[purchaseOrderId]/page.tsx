@@ -1,7 +1,7 @@
 import { formatMoney, type PurchaseOrder } from '@repo/contracts';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ActionForm, CheckboxField, InlineInput, SubmitButton } from '@/components/form';
+import { ActionForm, CheckboxField, Field, InlineInput, SubmitButton } from '@/components/form';
 import {
   Alert,
   ButtonLink,
@@ -19,6 +19,7 @@ import {
   deletePurchaseOrderAction,
   purchaseOrderAction,
   receivePurchaseOrderAction,
+  recordSupplierInvoiceAction,
 } from '../actions';
 import { ActionButton } from '../action-button';
 import { formatDay, PurchaseOrderStatusBadge } from '../shared';
@@ -157,8 +158,8 @@ export default async function PurchaseOrderPage({
           <Card title="Items" flush>
             <Table
               bare
-              head={['Item', 'Supplier SKU', 'Received', 'Unit cost', 'Total']}
-              numeric={[2, 3, 4]}
+              head={['Item', 'Supplier SKU', 'Received', 'Unit cost', 'GST', 'Total']}
+              numeric={[2, 3, 4, 5]}
             >
               {order.lines.map((l) => (
                 <tr key={l.id}>
@@ -193,6 +194,9 @@ export default async function PurchaseOrderPage({
                     </span>
                   </Td>
                   <Td numeric>{money(l.unitCost)}</Td>
+                  <Td numeric className="text-slate-500">
+                    {l.taxRateBps / 100}%
+                  </Td>
                   <Td numeric className="font-medium text-slate-900">
                     {money(l.total)}
                   </Td>
@@ -205,8 +209,15 @@ export default async function PurchaseOrderPage({
                 <dd className="tabular-nums">{money(order.subtotal)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-slate-500">Shipping</dt>
+                <dt className="text-slate-500">
+                  Shipping
+                  {order.shippingTaxRateBps > 0 ? ` (${order.shippingTaxRateBps / 100}% GST)` : ''}
+                </dt>
                 <dd className="tabular-nums">{money(order.shippingCost)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-slate-500">GST</dt>
+                <dd className="tabular-nums">{money(order.taxTotal)}</dd>
               </div>
               <div className="flex justify-between font-semibold text-slate-900">
                 <dt>Total</dt>
@@ -214,6 +225,35 @@ export default async function PurchaseOrderPage({
               </div>
             </dl>
           </Card>
+
+          {canWrite && order.status !== 'DRAFT' && order.status !== 'CANCELLED' ? (
+            <Card
+              title="Supplier invoice"
+              description={
+                order.supplier.gstin
+                  ? 'GST on the units received counts as input tax credit in the month of this invoice date (Orders → GST returns, GSTR-3B table 4).'
+                  : `${order.supplier.name} has no GSTIN saved, so this order gives no input tax credit. Add their GSTIN on the supplier page if they are registered.`
+              }
+            >
+              <ActionForm action={recordSupplierInvoiceAction.bind(null, storeId, order.id)}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field
+                    name="supplierReference"
+                    label="Invoice number"
+                    defaultValue={order.supplierReference}
+                    maxLength={100}
+                  />
+                  <Field
+                    name="supplierInvoiceDate"
+                    label="Invoice date"
+                    type="date"
+                    defaultValue={order.supplierInvoiceDate ?? ''}
+                  />
+                </div>
+                <SubmitButton>Save invoice</SubmitButton>
+              </ActionForm>
+            </Card>
+          ) : null}
 
           {order.notes ? (
             <Card title="Notes">
@@ -243,6 +283,11 @@ export default async function PurchaseOrderPage({
                   detail: order.expectedAt ? formatDay(order.expectedAt) : '—',
                 },
                 { term: 'Reference', detail: order.supplierReference || '—' },
+                {
+                  term: 'Invoice date',
+                  detail: order.supplierInvoiceDate ? formatDay(order.supplierInvoiceDate) : '—',
+                },
+                { term: 'Supplier GSTIN', detail: order.supplier.gstin || 'Not registered' },
                 {
                   term: 'Progress',
                   detail: `${order.unitsReceived} of ${order.unitsOrdered} units received`,

@@ -18,6 +18,7 @@ import {
   purchaseOrderInputSchema,
   type PurchaseOrderListItem,
   purchaseOrderListQuerySchema,
+  purchaseOrderInvoiceInputSchema,
   purchaseOrderReceiveInputSchema,
   type ReorderSuggestion,
   type Supplier,
@@ -177,6 +178,20 @@ export class PurchaseOrdersController {
     @ReqMeta() meta: RequestMeta,
   ): Promise<PurchaseOrder> {
     return this.orders.action(store.id, id, body, user, meta);
+  }
+
+  @Put(':purchaseOrderId/invoice')
+  @RequirePermission('products:write')
+  @ApiZodBody(purchaseOrderInvoiceInputSchema)
+  recordInvoice(
+    @CurrentStore() store: StoreContext,
+    @CurrentUser() user: AuthUser,
+    @Param('purchaseOrderId', UuidParam) id: string,
+    @Body(new ZodPipe(purchaseOrderInvoiceInputSchema))
+    body: z.output<typeof purchaseOrderInvoiceInputSchema>,
+    @ReqMeta() meta: RequestMeta,
+  ): Promise<PurchaseOrder> {
+    return this.orders.recordInvoice(store.id, id, body, user, meta);
   }
 
   @Post(':purchaseOrderId/receive')

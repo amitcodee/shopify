@@ -86,10 +86,21 @@ data. It prepares figures only; nothing is filed. "All invoices (PDF)" opens
 `/tax-invoice/:store/month/:month`: every invoice then credit note of the month, one per printed
 page, 100 per part (`GET …/gst-returns/documents?month=&page=`), to print or save as PDF for records.
 
+## Input tax credit (GSTR-3B table 4)
+
+Suppliers carry a GSTIN; purchase-order lines and shipping carry a GST rate (unit cost is before
+GST); a purchase order carries the supplier invoice date, which can be recorded after ordering
+(`PUT …/purchase-orders/:id/invoice`). Table 4(A)(5) counts GST on **received** units of received
+or partially received orders whose invoice date falls in the month, only from suppliers with a
+GSTIN: CGST + SGST when the GSTIN state code matches the store's, IGST otherwise. Each supplier
+invoice is listed to match against GSTR-2B; the page warns about GST-bearing orders without an
+invoice date or from unregistered suppliers. Blocked credit (section 17(5)) and ITC reversals are
+left to the merchant.
+
 ## Not done
 
 - E-invoicing (IRN/QR from the IRP), mandatory only above the turnover limit.
-- GSTR-3B input tax credit (table 4) and RCM inward supplies (3.1(d)).
+- RCM inward supplies (3.1(d)), ITC reversals (4(B)) and imports (4(A)(1)).
 - Filing GSTR-1 or GSTR-3B through a GSP.
 - Checking a buyer's GSTIN against the GST portal (only its format and check digit are checked).
 - Signature: the invoice has an "Authorised signatory" space, not a digital signature.

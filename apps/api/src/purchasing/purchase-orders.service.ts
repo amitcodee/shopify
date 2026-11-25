@@ -9,11 +9,13 @@ import {
   type PurchaseOrder as PurchaseOrderDto,
   type purchaseOrderActionSchema,
   type purchaseOrderInputSchema,
+  type purchaseOrderInvoiceInputSchema,
   type PurchaseOrderListItem,
   type PurchaseOrderListQuery,
   purchaseOrderName,
   type purchaseOrderReceiveInputSchema,
   type PurchaseOrderStatus,
+  purchaseOrderTax,
 } from '@repo/contracts';
 import type { Prisma, TenantTx } from '@repo/db';
 import type { z } from 'zod';
@@ -27,9 +29,10 @@ import { MediaUrls } from '../storage/storage.module.js';
 type OrderInput = z.output<typeof purchaseOrderInputSchema>;
 type ActionInput = z.output<typeof purchaseOrderActionSchema>;
 type ReceiveInput = z.output<typeof purchaseOrderReceiveInputSchema>;
+type InvoiceInput = z.output<typeof purchaseOrderInvoiceInputSchema>;
 
 const detailInclude = {
-  supplier: { select: { id: true, name: true, email: true } },
+  supplier: { select: { id: true, name: true, email: true, gstin: true } },
   location: { select: { id: true, name: true } },
   lines: {
     orderBy: { position: 'asc' },
@@ -65,6 +68,22 @@ function isOverdue(
   return dateOnly(expectedAt)! < now.toISOString().slice(0, 10);
 }
 
+const toDate = (day: string | null) => (day ? new Date(`${day}T00:00:00Z`) : null);
+
+/** Items before GST, GST on items and shipping as ordered, and the amount owed. */
+function orderTotals(o: {
+  shippingCost: number;
+  shippingTaxRateBps: number;
+  lines: { quantity: number; unitCost: number; taxRateBps: number }[];
+}) {
+  const subtotal = o.lines.reduce((s, l) => s + l.quantity * l.unitCost, 0);
+  const { tax } = purchaseOrderTax(
+    o.lines.map((l) => ({ units: l.quantity, unitCost: l.unitCost, taxRateBps: l.taxRateBps })),
+    { cost: o.shippingCost, taxRateBps: o.shippingTaxRateBps },
+  );
+  return { subtotal, taxTotal: tax, total: subtotal + o.shippingCost + tax };
+}
+
 /**
  * Purchase orders: stock ordered from a supplier. DRAFT orders can be edited freely; once
  * ordered, items are fixed and stock is received (in one go or in parts) into the order's
@@ -93,7 +112,9 @@ export class PurchaseOrdersService {
           include: {
             supplier: { select: { name: true } },
             location: { select: { name: true } },
-            lines: { select: { quantity: true, receivedQuantity: true, unitCost: true } },
+            lines: {
+              select: { quantity: true, receivedQuantity: true, unitCost: true, taxRateBps: true },
+            },
           },
           orderBy: { number: 'desc' },
           skip: (query.page - 1) * query.pageSize,
@@ -112,7 +133,7 @@ export class PurchaseOrdersService {
         supplierName: o.supplier.name,
         locationName: o.location.name,
         expectedAt: dateOnly(o.expectedAt),
-        total: o.lines.reduce((s, l) => s + l.quantity * l.unitCost, 0) + o.shippingCost,
+        total: orderTotals(o).total,
         unitsOrdered: o.lines.reduce((s, l) => s + l.quantity, 0),
         unitsReceived: o.lines.reduce((s, l) => s + l.receivedQuantity, 0),
         overdue: isOverdue(o.status, o.expectedAt),
@@ -358,6 +379,39 @@ export class PurchaseOrdersService {
     });
   }
 
+  /** Records the supplier's invoice number and date; allowed until the order is cancelled. */
+  async recordInvoice(
+    storeId: string,
+    id: string,
+    input: InvoiceInput,
+    actor: AuthUser,
+    meta: RequestMeta,
+  ): Promise<PurchaseOrderDto> {
+    return this.tenantDb.run(storeId, async (tx) => {
+      const order = await this.lock(tx, storeId, id);
+      if (order.status === 'CANCELLED') {
+        throw new ConflictException('This purchase order is cancelled.');
+      }
+      await tx.purchaseOrder.update({
+        where: { id },
+        data: {
+          supplierReference: input.supplierReference,
+          supplierInvoiceDate: toDate(input.supplierInvoiceDate),
+        },
+      });
+      await this.audit.record(tx, {
+        storeId,
+        actorUserId: actor.id,
+        action: 'purchase_order.invoice_recorded',
+        entityType: 'purchase_order',
+        entityId: id,
+        data: { number: order.number, invoiceDate: input.supplierInvoiceDate },
+        meta,
+      });
+      return this.toDto(await this.load(tx, storeId, id));
+    });
+  }
+
   /** Deletes a draft or cancelled order (received stock stays in the ledger otherwise). */
   async remove(storeId: string, id: string, actor: AuthUser, meta: RequestMeta): Promise<void> {
     await this.tenantDb.run(storeId, async (tx) => {
@@ -383,8 +437,10 @@ export class PurchaseOrdersService {
       supplierId: input.supplierId,
       locationId: input.locationId,
       supplierReference: input.supplierReference,
-      expectedAt: input.expectedAt ? new Date(`${input.expectedAt}T00:00:00Z`) : null,
+      expectedAt: toDate(input.expectedAt),
       shippingCost: input.shippingCost,
+      shippingTaxRateBps: input.shippingTaxRateBps,
+      supplierInvoiceDate: toDate(input.supplierInvoiceDate),
       notes: input.notes,
     };
   }
@@ -422,6 +478,7 @@ export class PurchaseOrdersService {
         supplierSku: l.supplierSku,
         quantity: l.quantity,
         unitCost: l.unitCost,
+        taxRateBps: l.taxRateBps,
         position,
       };
     });
@@ -457,11 +514,12 @@ export class PurchaseOrdersService {
         quantity: l.quantity,
         receivedQuantity: l.receivedQuantity,
         unitCost: l.unitCost,
+        taxRateBps: l.taxRateBps,
         total: l.quantity * l.unitCost,
         imageUrl: image ? this.media.url(image.storageKey) : null,
       };
     });
-    const subtotal = lines.reduce((s, l) => s + l.total, 0);
+    const totals = orderTotals(o);
     return {
       id: o.id,
       number: o.number,
@@ -471,11 +529,12 @@ export class PurchaseOrdersService {
       location: o.location,
       supplierReference: o.supplierReference,
       expectedAt: dateOnly(o.expectedAt),
+      supplierInvoiceDate: dateOnly(o.supplierInvoiceDate),
       shippingCost: o.shippingCost,
+      shippingTaxRateBps: o.shippingTaxRateBps,
       notes: o.notes,
       lines,
-      subtotal,
-      total: subtotal + o.shippingCost,
+      ...totals,
       unitsOrdered: lines.reduce((s, l) => s + l.quantity, 0),
       unitsReceived: lines.reduce((s, l) => s + l.receivedQuantity, 0),
       overdue: isOverdue(o.status, o.expectedAt),

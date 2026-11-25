@@ -250,6 +250,7 @@ describe('GST returns (GSTR-1)', () => {
           igst: 2_435_000,
         },
       ],
+      itc: { igst: 0, cgst: 0, sgst: 0, purchases: [] },
     });
     // Sandbox payments are flagged.
     expect(report.warnings.join(' ')).toMatch(/test-mode payments/);

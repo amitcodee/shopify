@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   creditNoteDataSchema,
   financialYearOf,
+  gstOn,
   GST_DOCUMENTS_PAGE_SIZE,
   type GstDocuments,
   gstMonthSchema,
@@ -96,6 +97,7 @@ export function buildGstr1(input: {
       zeroRated: { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 },
       nilRated: { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 },
       interStateUnregistered: [],
+      itc: { igst: 0, cgst: 0, sgst: 0, purchases: [] },
     },
     warnings: [],
   };
@@ -384,6 +386,84 @@ export function buildGstr1(input: {
   return report;
 }
 
+export interface PurchaseForItc {
+  id: string;
+  number: number;
+  supplierName: string;
+  supplierGstin: string;
+  supplierReference: string;
+  /** YYYY-MM-DD from the supplier's tax invoice. */
+  invoiceDate: string;
+  shippingCost: number;
+  shippingTaxRateBps: number;
+  lines: { receivedQuantity: number; unitCost: number; taxRateBps: number }[];
+}
+
+/**
+ * GSTR-3B table 4: GST on stock received from registered suppliers, one row per supplier
+ * invoice. Same-state suppliers (first two GSTIN digits) charge CGST + SGST, others IGST. Units
+ * not yet received are left out: credit needs the goods as well as the invoice.
+ */
+export function buildItc(
+  storeGstin: string | null,
+  purchases: readonly PurchaseForItc[],
+): { itc: Gstr1Report['gstr3b']['itc']; warnings: string[] } {
+  const itc: Gstr1Report['gstr3b']['itc'] = { igst: 0, cgst: 0, sgst: 0, purchases: [] };
+  const warnings: string[] = [];
+  if (!storeGstin) return { itc, warnings };
+  let unregistered = 0;
+  const sorted = [...purchases].sort(
+    (a, b) => a.invoiceDate.localeCompare(b.invoiceDate) || a.number - b.number,
+  );
+  for (const p of sorted) {
+    const received = p.lines.filter((l) => l.receivedQuantity > 0);
+    if (received.length === 0) continue;
+    const parts = [
+      ...received.map((l) => ({ amount: l.receivedQuantity * l.unitCost, rateBps: l.taxRateBps })),
+      { amount: p.shippingCost, rateBps: p.shippingTaxRateBps },
+    ];
+    if (parts.every((x) => x.rateBps === 0 || x.amount === 0)) continue;
+    if (!p.supplierGstin) {
+      unregistered++;
+      continue;
+    }
+    const intra = p.supplierGstin.slice(0, 2) === storeGstin.slice(0, 2);
+    const row = { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 };
+    for (const x of parts) {
+      row.taxableValue += x.amount;
+      if (intra) {
+        row.cgst += gstOn(x.amount, x.rateBps / 2);
+        row.sgst += gstOn(x.amount, x.rateBps / 2);
+      } else {
+        row.igst += gstOn(x.amount, x.rateBps);
+      }
+    }
+    itc.igst += row.igst;
+    itc.cgst += row.cgst;
+    itc.sgst += row.sgst;
+    itc.purchases.push({
+      purchaseOrderId: p.id,
+      purchaseOrder: `#PO${p.number}`,
+      supplierName: p.supplierName,
+      supplierGstin: p.supplierGstin,
+      invoiceNumber: p.supplierReference,
+      invoiceDate: p.invoiceDate,
+      ...row,
+    });
+  }
+  if (unregistered > 0) {
+    warnings.push(
+      `${unregistered} purchase order${unregistered === 1 ? ' carries' : 's carry'} GST from a supplier with no GSTIN, so no input tax credit is counted. Add the supplier's GSTIN if they are registered.`,
+    );
+  }
+  if (itc.purchases.some((r) => !r.invoiceNumber)) {
+    warnings.push(
+      'Some purchases in the input tax credit have no supplier invoice number. Add it on the purchase order so you can match it with GSTR-2B.',
+    );
+  }
+  return { itc, warnings };
+}
+
 /** Number ranges per series ("INV/26-27/"), in issue order. Invoices are never cancelled here. */
 function series(docs: IssuedDocument[], nature: 'invoice' | 'credit_note') {
   const groups = new Map<string, string[]>();
@@ -470,12 +550,68 @@ export class GstReturnsService {
           },
         }),
       ]);
-      return buildGstr1({
+      const report = buildGstr1({
         ...p,
         invoices,
         creditNotes: creditNotes.map(({ order, ...n }) => ({ ...n, invoice: order.invoice })),
       });
+      await this.addItc(tx, storeId, p.month, report);
+      return report;
     });
+  }
+
+  /** Fills GSTR-3B table 4 from purchase orders whose supplier invoice is dated in the month. */
+  private async addItc(tx: TenantTx, storeId: string, month: string, report: Gstr1Report) {
+    const from = new Date(`${month}-01T00:00:00Z`);
+    const to = new Date(from);
+    to.setUTCMonth(to.getUTCMonth() + 1);
+    const rows = await tx.purchaseOrder.findMany({
+      where: {
+        storeId,
+        status: { in: ['PARTIALLY_RECEIVED', 'RECEIVED'] },
+        supplierInvoiceDate: { gte: from, lt: to },
+      },
+      select: {
+        id: true,
+        number: true,
+        supplierReference: true,
+        supplierInvoiceDate: true,
+        shippingCost: true,
+        shippingTaxRateBps: true,
+        supplier: { select: { name: true, gstin: true } },
+        lines: { select: { receivedQuantity: true, unitCost: true, taxRateBps: true } },
+      },
+    });
+    const { itc, warnings } = buildItc(
+      report.gstin,
+      rows.map((r) => ({
+        id: r.id,
+        number: r.number,
+        supplierName: r.supplier.name,
+        supplierGstin: r.supplier.gstin,
+        supplierReference: r.supplierReference,
+        invoiceDate: r.supplierInvoiceDate?.toISOString().slice(0, 10) ?? '',
+        shippingCost: r.shippingCost,
+        shippingTaxRateBps: r.shippingTaxRateBps,
+        lines: r.lines,
+      })),
+    );
+    // Received with GST but no invoice date: easy to miss, so say so.
+    const undated = await tx.purchaseOrder.count({
+      where: {
+        storeId,
+        status: { in: ['PARTIALLY_RECEIVED', 'RECEIVED'] },
+        supplierInvoiceDate: null,
+        OR: [{ shippingTaxRateBps: { gt: 0 } }, { lines: { some: { taxRateBps: { gt: 0 } } } }],
+      },
+    });
+    if (report.gstin && undated > 0) {
+      warnings.push(
+        `${undated} received purchase order${undated === 1 ? ' with GST has' : 's with GST have'} no supplier invoice date, so ${undated === 1 ? 'it is' : 'they are'} not in any month's input tax credit. Add the date on the purchase order.`,
+      );
+    }
+    report.gstr3b.itc = itc;
+    report.warnings.push(...warnings);
   }
 
   /**

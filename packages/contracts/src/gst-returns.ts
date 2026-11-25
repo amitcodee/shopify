@@ -129,8 +129,28 @@ export const gstr1Schema = z.object({
     taxableValue: z.number().int(),
     ...taxSchema,
   }),
-  /** GSTR-3B outward supplies, net of credit notes (input tax credit is not tracked here). */
+  /** GSTR-3B: outward supplies net of credit notes, and input tax credit from purchase orders. */
   gstr3b: z.object({
+    /**
+     * 4(A)(5) "All other ITC": GST on stock received from registered suppliers whose tax invoice
+     * is dated this month. Only credit that also appears in GSTR-2B can be claimed.
+     */
+    itc: z.object({
+      ...taxSchema,
+      /** One row per supplier invoice, to match against GSTR-2B. */
+      purchases: z.array(
+        z.object({
+          purchaseOrderId: z.uuid(),
+          purchaseOrder: z.string(),
+          supplierName: z.string(),
+          supplierGstin: z.string(),
+          invoiceNumber: z.string(),
+          invoiceDate: z.string(),
+          taxableValue: z.number().int(),
+          ...taxSchema,
+        }),
+      ),
+    }),
     /** 3.1(a): taxable supplies other than zero-rated and nil-rated. */
     outwardTaxable: z.object({ taxableValue: z.number().int(), ...taxSchema }),
     /** 3.1(b): zero-rated (exports). */

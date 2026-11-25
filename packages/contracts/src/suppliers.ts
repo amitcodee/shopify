@@ -1,10 +1,13 @@
 import { z } from 'zod';
 import { paginated } from './common.js';
+import { gstinSchema } from './gst.js';
 import { LOW_STOCK_THRESHOLD } from './inventory.js';
 
 const moneyMinor = z.number().int().min(0).max(100_000_000);
 const text = (max: number) => z.string().trim().max(max).default('');
 const blankToUndefined = (v: unknown) => (v === '' ? undefined : v);
+/** A GST rate in basis points (1800 = 18%). */
+const taxRateBps = z.number().int().min(0).max(10_000);
 
 // ───────────────────────────── Suppliers ─────────────────────────────
 
@@ -32,6 +35,12 @@ export const supplierInputSchema = z.strictObject({
   leadTimeDays: z.number().int().min(0).max(365).nullable().default(null),
   notes: text(2000),
   active: z.boolean().default(true),
+  /** GSTIN on the supplier's tax invoices; blank when the supplier is not registered. */
+  gstin: z
+    .string()
+    .trim()
+    .pipe(z.union([z.literal(''), gstinSchema]))
+    .default(''),
 });
 export type SupplierInput = z.input<typeof supplierInputSchema>;
 
@@ -46,6 +55,7 @@ export const supplierSchema = z.object({
   leadTimeDays: z.number().int().nullable(),
   notes: z.string(),
   active: z.boolean(),
+  gstin: z.string(),
   /** Products that name this supplier. */
   productCount: z.number().int(),
   /** Purchase orders still expecting stock (ordered or partially received). */
@@ -99,6 +109,8 @@ export const purchaseOrderLineInputSchema = z.strictObject({
   /** Cost per unit (minor units, store currency). */
   unitCost: moneyMinor,
   supplierSku: text(64),
+  /** GST the supplier charges on this item (unit cost is before GST). */
+  taxRateBps: taxRateBps.default(0),
 });
 
 export const purchaseOrderInputSchema = z.strictObject({
@@ -109,6 +121,9 @@ export const purchaseOrderInputSchema = z.strictObject({
   /** Expected delivery date (YYYY-MM-DD), or null. */
   expectedAt: dateOnly.nullable().default(null),
   shippingCost: moneyMinor.default(0),
+  shippingTaxRateBps: taxRateBps.default(0),
+  /** Date on the supplier's tax invoice (YYYY-MM-DD); input tax credit falls in that month. */
+  supplierInvoiceDate: dateOnly.nullable().default(null),
   notes: text(2000),
   lines: z
     .array(purchaseOrderLineInputSchema)
@@ -119,6 +134,32 @@ export const purchaseOrderInputSchema = z.strictObject({
     }),
 });
 export type PurchaseOrderInput = z.input<typeof purchaseOrderInputSchema>;
+
+/** The supplier's tax invoice, recorded at any time (it often arrives with the goods). */
+export const purchaseOrderInvoiceInputSchema = z.strictObject({
+  supplierReference: text(100),
+  supplierInvoiceDate: dateOnly.nullable(),
+});
+export type PurchaseOrderInvoiceInput = z.input<typeof purchaseOrderInvoiceInputSchema>;
+
+/** GST on an amount at a rate, rounded to the nearest minor unit. */
+export function gstOn(amount: number, rateBps: number): number {
+  return Math.round((amount * rateBps) / 10_000);
+}
+
+/** Taxable value and GST of a purchase order's lines (ordered or received units) and shipping. */
+export function purchaseOrderTax(
+  lines: readonly { units: number; unitCost: number; taxRateBps: number }[],
+  shipping: { cost: number; taxRateBps: number },
+): { taxableValue: number; tax: number } {
+  let taxableValue = shipping.cost;
+  let tax = gstOn(shipping.cost, shipping.taxRateBps);
+  for (const l of lines) {
+    taxableValue += l.units * l.unitCost;
+    tax += gstOn(l.units * l.unitCost, l.taxRateBps);
+  }
+  return { taxableValue, tax };
+}
 
 export const purchaseOrderActionSchema = z.strictObject({
   /**
@@ -154,7 +195,8 @@ export const purchaseOrderLineSchema = z.object({
   quantity: z.number().int(),
   receivedQuantity: z.number().int(),
   unitCost: z.number().int(),
-  /** quantity × unitCost. */
+  taxRateBps: z.number().int(),
+  /** quantity × unitCost, before GST. */
   total: z.number().int(),
   imageUrl: z.string().nullable(),
 });
@@ -166,14 +208,20 @@ export const purchaseOrderSchema = z.object({
   /** "#PO12". */
   name: z.string(),
   status: purchaseOrderStatusSchema,
-  supplier: z.object({ id: z.uuid(), name: z.string(), email: z.string() }),
+  supplier: z.object({ id: z.uuid(), name: z.string(), email: z.string(), gstin: z.string() }),
   location: z.object({ id: z.uuid(), name: z.string() }),
   supplierReference: z.string(),
   expectedAt: z.string().nullable(),
+  supplierInvoiceDate: z.string().nullable(),
   shippingCost: z.number().int(),
+  shippingTaxRateBps: z.number().int(),
   notes: z.string(),
   lines: z.array(purchaseOrderLineSchema),
+  /** Items before GST. */
   subtotal: z.number().int(),
+  /** GST on the items and shipping as ordered. */
+  taxTotal: z.number().int(),
+  /** Subtotal + shipping + GST: what the supplier is owed. */
   total: z.number().int(),
   unitsOrdered: z.number().int(),
   unitsReceived: z.number().int(),

@@ -1627,6 +1627,8 @@ model Supplier {
   /// Typical days between ordering and receiving (prefills a purchase order's expected date).
   leadTimeDays Int?
   notes        String   @default("")
+  /// GSTIN on the supplier's tax invoices ("" = unregistered); decides input tax credit.
+  gstin        String   @default("")
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -1650,25 +1652,29 @@ enum PurchaseOrderStatus {
 
 /// Stock ordered from a supplier, received into one location.
 model PurchaseOrder {
-  id                String              @id @default(uuid(7)) @db.Uuid
-  storeId           String              @db.Uuid
+  id                  String              @id @default(uuid(7)) @db.Uuid
+  storeId             String              @db.Uuid
   /// Shown as #PO<number>; sequential per store.
-  number            Int
-  supplierId        String              @db.Uuid
+  number              Int
+  supplierId          String              @db.Uuid
   /// Where received stock goes.
-  locationId        String              @db.Uuid
-  status            PurchaseOrderStatus @default(DRAFT)
+  locationId          String              @db.Uuid
+  status              PurchaseOrderStatus @default(DRAFT)
   /// The supplier's own reference (invoice or order number).
-  supplierReference String              @default("")
-  expectedAt        DateTime?
-  /// Minor units in the store currency.
-  shippingCost      Int                 @default(0)
-  notes             String              @default("")
-  orderedAt         DateTime?
-  receivedAt        DateTime?
-  cancelledAt       DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  supplierReference   String              @default("")
+  expectedAt          DateTime?
+  /// Minor units in the store currency, before GST.
+  shippingCost        Int                 @default(0)
+  /// GST rate on the shipping charge, in basis points (1800 = 18%).
+  shippingTaxRateBps  Int                 @default(0)
+  /// Date on the supplier's tax invoice; input tax credit is reported in that month.
+  supplierInvoiceDate DateTime?           @db.Date
+  notes               String              @default("")
+  orderedAt           DateTime?
+  receivedAt          DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
   store    Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
   supplier Supplier            @relation(fields: [storeId, supplierId], references: [storeId, id], onDelete: Restrict)
@@ -1694,8 +1700,10 @@ model PurchaseOrderLine {
   supplierSku      String  @default("")
   quantity         Int
   receivedQuantity Int     @default(0)
-  /// Minor units per unit in the store currency.
+  /// Minor units per unit in the store currency, before GST.
   unitCost         Int
+  /// GST rate the supplier charges, in basis points (1800 = 18%).
+  taxRateBps       Int     @default(0)
   position         Int     @default(0)
 
   purchaseOrder PurchaseOrder   @relation(fields: [storeId, purchaseOrderId], references: [storeId, id], onDelete: Cascade)

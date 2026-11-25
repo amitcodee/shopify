@@ -59,6 +59,15 @@ export function SupplierForm({
             defaultValue={supplier?.leadTimeDays ?? ''}
             hint="Typical days from ordering to delivery. Fills in the expected date."
           />
+          <Field
+            name="gstin"
+            label="GSTIN"
+            defaultValue={supplier?.gstin}
+            maxLength={15}
+            placeholder="27ABCDE1234F1Z5"
+            autoCapitalize="characters"
+            hint="From the supplier's tax invoices. Needed to count input tax credit; leave blank if they are not registered."
+          />
         </div>
         <TextAreaField
           name="address"

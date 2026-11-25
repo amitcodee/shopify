@@ -199,6 +199,7 @@ export class SuppliersService {
       leadTimeDays: s.leadTimeDays,
       notes: s.notes,
       active: s.active,
+      gstin: s.gstin,
       productCount: productCount.get(s.id) ?? 0,
       openPurchaseOrders: openCount.get(s.id) ?? 0,
       createdAt: s.createdAt.toISOString(),
