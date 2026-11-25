@@ -111,7 +111,7 @@ export const GUIDES: Guide[] = [
       },
       {
         title: 'Connect your own gateway',
-        body: 'Under “Ways to get paid”, pick Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal, paste the API keys from that gateway’s dashboard and click “Verify and connect”. Start in “Test (no real money)”, then switch to “Live”. Click “Use for checkout” on the gateway shoppers should pay with.',
+        body: 'Under “Ways to get paid”, pick Razorpay, PayU, Cashfree, PhonePe, Paytm, Stripe or PayPal, paste the API keys from that gateway’s dashboard and click “Verify and connect”. Start in “Test (no real money)”, then switch to “Live”. Click “Use for checkout” on the gateway shoppers should pay with.',
       },
       {
         title: 'Offer cash on delivery',

@@ -11,7 +11,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'How do I get paid?',
-    a: 'Paste the API keys of your own Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal account and money settles straight to it. You can also offer cash on delivery. Every gateway has a test mode, so you can place test orders before going live.',
+    a: 'Paste the API keys of your own Razorpay, PayU, Cashfree, PhonePe, Paytm, Stripe or PayPal account and money settles straight to it. You can also offer cash on delivery. Every gateway has a test mode, so you can place test orders before going live.',
   },
   {
     q: 'Do I need to know how to code?',
@@ -35,7 +35,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'Which payment methods can my customers use?',
-    a: 'Connect your own Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal account so money settles straight to your bank, and offer cash on delivery. Each phone number can hold only a few open cash orders, and you can require shoppers to confirm cash orders from their email, which cuts fake orders.',
+    a: 'Connect your own Razorpay, PayU, Cashfree, PhonePe, Paytm, Stripe or PayPal account so money settles straight to your bank, and offer cash on delivery. Each phone number can hold only a few open cash orders, and you can require shoppers to confirm cash orders from their email, which cuts fake orders.',
   },
   {
     q: 'What happens when my trial ends?',

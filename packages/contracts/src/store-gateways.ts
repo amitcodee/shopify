@@ -7,6 +7,7 @@ import { z } from 'zod';
 export const STORE_GATEWAY_IDS = [
   'razorpay',
   'phonepe',
+  'paytm',
   'payu',
   'stripe',
   'cashfree',
@@ -99,6 +100,36 @@ export const STORE_GATEWAYS: readonly StoreGatewayInfo[] = [
     keysUrl: 'https://business.phonepe.com/developer-settings',
     webhookSteps:
       'Optional but recommended: in the PhonePe dashboard, add the URL below as a webhook for checkout.order.completed and checkout.order.failed. It confirms payments even if the shopper closes the page early.',
+  },
+  {
+    id: 'paytm',
+    label: 'Paytm',
+    description: 'India: UPI, Paytm wallet, cards and netbanking on the Paytm payment page.',
+    methods: ['UPI', 'Paytm wallet', 'Visa', 'Mastercard', 'RuPay', 'Netbanking'],
+    currencies: ['INR'],
+    fields: [
+      { key: 'mid', label: 'Merchant ID (MID)', secret: false },
+      {
+        key: 'merchantKey',
+        label: 'Merchant key',
+        secret: true,
+        hint: '16 characters, from the same API Keys page.',
+      },
+      {
+        key: 'websiteName',
+        label: 'Website name',
+        secret: false,
+        optional: true,
+        placeholder: 'WEBSTAGING or DEFAULT',
+        hint: 'Leave blank for WEBSTAGING in test mode and DEFAULT in live mode.',
+      },
+    ],
+    hintField: 'mid',
+    modeFromKey: null,
+    requiresPhone: false,
+    keysUrl: 'https://dashboard.paytm.com/next/apikeys',
+    webhookSteps:
+      'Optional but recommended: in the Paytm dashboard, open Developer Settings → Webhooks and set the URL below as the Payment Notification URL. It confirms payments even if the shopper closes the page early.',
   },
   {
     id: 'payu',

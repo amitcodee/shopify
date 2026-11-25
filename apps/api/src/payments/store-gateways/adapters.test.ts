@@ -10,6 +10,10 @@ import {
   ownProviderName,
   parseOwnProviderName,
   PaypalAdapter,
+  PaytmAdapter,
+  paytmFieldString,
+  paytmSignature,
+  paytmVerify,
   PayuAdapter,
   PhonepeAdapter,
 } from './adapters.js';
@@ -280,6 +284,105 @@ describe('PhonePe', () => {
 
   it('treats a refused token as rejected keys', async () => {
     const adapter = new PhonepeAdapter(context(credentials, () => Promise.resolve(json({}, 401))));
+    await expect(adapter.verify()).rejects.toThrow(GatewayKeysRejectedError);
+  });
+});
+
+describe('Paytm', () => {
+  const KEY = 'abcdefgh12345678';
+  const credentials = { mid: 'MID123', merchantKey: KEY };
+
+  it('signs and verifies like PaytmChecksum, and refuses a wrong key', () => {
+    const signature = paytmSignature('a|b', KEY);
+    expect(paytmVerify('a|b', KEY, signature)).toBe(true);
+    expect(paytmVerify('a|c', KEY, signature)).toBe(false);
+    expect(paytmVerify('a|b', 'zzzzzzzz12345678', signature)).toBe(false);
+    expect(paytmVerify('a|b', KEY, 'not-base64!')).toBe(false);
+    expect(paytmFieldString({ B: '2', A: '1', C: 'null', CHECKSUMHASH: 'x' })).toBe('1|2|');
+  });
+
+  it('starts the transaction when the shopper is sent and posts them to Paytm', async () => {
+    const calls: { url: string; init: RequestInit }[] = [];
+    const adapter = new PaytmAdapter(
+      context(credentials, (url, init) => {
+        calls.push({ url, init });
+        return Promise.resolve(
+          json({ body: { resultInfo: { resultStatus: 'S' }, txnToken: 'TOKEN' } }),
+        );
+      }),
+    );
+    const form = await adapter.payForm({
+      reference: 'R1',
+      amount: 10050,
+      currency: 'INR',
+      orderId: 'order-1',
+      orderNumber: 7,
+      email: 'a@example.com',
+      name: 'Asha',
+      phone: '+91 98765 43210',
+    });
+    expect(form.action).toBe(
+      'https://securestage.paytmpayments.com/theia/api/v1/showPaymentPage?mid=MID123&orderId=R1',
+    );
+    expect(form.fields).toEqual({ mid: 'MID123', orderId: 'R1', txnToken: 'TOKEN' });
+    const sent = JSON.parse(calls[0]?.init.body as string);
+    expect(calls[0]?.url).toContain('/theia/api/v1/initiateTransaction?mid=MID123&orderId=R1');
+    expect(sent.body.txnAmount).toEqual({ value: '100.50', currency: 'INR' });
+    expect(sent.body.websiteName).toBe('WEBSTAGING');
+    expect(sent.body.userInfo.mobile).toBe('9876543210');
+    expect(sent.body.callbackUrl).toBe('https://api.example/return?reference=R1');
+    expect(paytmVerify(JSON.stringify(sent.body), KEY, sent.head.signature)).toBe(true);
+  });
+
+  it('marks paid from the Paytm status API on return', async () => {
+    const status = (resultStatus: string) =>
+      new PaytmAdapter(
+        context(credentials, () =>
+          Promise.resolve(
+            json({ body: { resultInfo: { resultStatus }, txnId: 'TX1', txnAmount: '100.50' } }),
+          ),
+        ),
+      );
+    const input = { query: { reference: 'R1' }, rawBody: Buffer.from('STATUS=TXN_SUCCESS') };
+    await expect(status('TXN_SUCCESS').completeReturn(input)).resolves.toMatchObject({
+      kind: 'payment_succeeded',
+      providerRef: 'R1',
+      providerPaymentId: 'TX1',
+      amount: 10050,
+    });
+    await expect(status('TXN_FAILURE').completeReturn(input)).resolves.toMatchObject({
+      kind: 'payment_failed',
+    });
+    await expect(status('PENDING').completeReturn(input)).resolves.toMatchObject({
+      kind: 'ignored',
+    });
+  });
+
+  it('accepts only correctly signed payment notifications', () => {
+    const adapter = new PaytmAdapter(context(credentials));
+    const fields: Record<string, string> = {
+      MID: 'MID123',
+      ORDERID: 'R1',
+      STATUS: 'TXN_SUCCESS',
+      TXNID: 'TX1',
+      TXNAMOUNT: '100.50',
+      CURRENCY: 'INR',
+    };
+    const signed = new URLSearchParams({
+      ...fields,
+      CHECKSUMHASH: paytmSignature(paytmFieldString(fields), KEY),
+    });
+    expect(adapter.parseWebhook(Buffer.from(signed.toString()))).toMatchObject({
+      kind: 'payment_succeeded',
+      providerRef: 'R1',
+      amount: 10050,
+    });
+    signed.set('TXNAMOUNT', '1.00');
+    expect(() => adapter.parseWebhook(Buffer.from(signed.toString()))).toThrow(InvalidWebhookError);
+  });
+
+  it('rejects a merchant key of the wrong length without calling Paytm', async () => {
+    const adapter = new PaytmAdapter(context({ mid: 'M', merchantKey: 'short' }));
     await expect(adapter.verify()).rejects.toThrow(GatewayKeysRejectedError);
   });
 });

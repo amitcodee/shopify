@@ -156,7 +156,7 @@ export class StoreGatewayPublicController {
     return this.webhooks.handleStoreGateway(storeId, gatewayId(gateway), req.rawBody, headers);
   }
 
-  /** Posts the shopper to gateways that take a browser form (PayU). */
+  /** Posts the shopper to gateways that take a browser form (PayU, Paytm). */
   @Get('store-gateways/:storeId/:gateway/pay/:reference')
   async pay(
     @Param('storeId') storeId: string,
@@ -184,7 +184,7 @@ export class StoreGatewayPublicController {
     });
     if (!payment) throw new NotFoundException();
     const address = payment.order.shippingAddress as { name?: string; phone?: string };
-    const form = adapter.payForm({
+    const form = await adapter.payForm({
       reference,
       amount: payment.amount,
       currency: payment.currency,

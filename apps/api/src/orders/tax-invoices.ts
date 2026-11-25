@@ -81,6 +81,7 @@ const GATEWAY_NAMES: Record<string, string> = {
   payu: 'PayU',
   cashfree: 'Cashfree',
   phonepe: 'PhonePe',
+  paytm: 'Paytm',
   stripe: 'Stripe',
   paypal: 'PayPal',
 };

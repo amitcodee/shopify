@@ -618,7 +618,7 @@ const subprocessors: LegalDoc = {
       id: 'about',
       title: 'About this list',
       blocks: [
-        'To run the Service we use a small number of third-party providers. Each is bound by a contract requiring it to protect personal data and use it only to provide its service to us. Payment gateways that you connect to your store (Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal) are your own providers, chosen and contracted by you, and are not listed here.',
+        'To run the Service we use a small number of third-party providers. Each is bound by a contract requiring it to protect personal data and use it only to provide its service to us. Payment gateways that you connect to your store (Razorpay, PayU, Cashfree, PhonePe, Paytm, Stripe or PayPal) are your own providers, chosen and contracted by you, and are not listed here.',
       ],
     },
     {

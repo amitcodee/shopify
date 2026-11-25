@@ -108,8 +108,8 @@ function Hero({ terms }: { terms: PlanTerms | null }) {
           </span>
         </h1>
         <p className="mt-6 max-w-xl text-lg leading-[1.45] sm:text-[1.375rem] motion-safe:animate-[cp-rise_0.9s_cubic-bezier(0.2,0.7,0.2,1)_both] motion-safe:[animation-delay:120ms]">
-          {FREE_TEMPLATE_COUNT} free templates, payments through Razorpay, PayU, PhonePe, Cashfree,
-          Stripe or cash on delivery, and one admin for your orders, stock and customers.
+          {FREE_TEMPLATE_COUNT} free templates, payments through Razorpay, PayU, PhonePe, Paytm,
+          Cashfree, Stripe or cash on delivery, and one admin for your orders, stock and customers.
         </p>
         <div className="mt-9 flex flex-wrap gap-4 motion-safe:animate-[cp-rise_0.9s_cubic-bezier(0.2,0.7,0.2,1)_both] motion-safe:[animation-delay:240ms]">
           <a href={signupUrl} className={`group ${pillLight}`}>

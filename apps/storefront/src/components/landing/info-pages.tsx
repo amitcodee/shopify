@@ -117,7 +117,7 @@ export function SwitchPage() {
                 {
                   icon: 'card',
                   title: 'Payments — new connection',
-                  body: 'Connect your own Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal account, or offer cash on delivery. Money goes to your own account.',
+                  body: 'Connect your own Razorpay, PayU, Cashfree, PhonePe, Paytm, Stripe or PayPal account, or offer cash on delivery. Money goes to your own account.',
                   href: '/features/payments',
                 },
                 {

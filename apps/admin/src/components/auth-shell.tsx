@@ -10,7 +10,7 @@ const POINTS = [
   },
   {
     title: 'Get paid your way',
-    body: 'Your own Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal account, or cash on delivery.',
+    body: 'Your own Razorpay, PayU, Cashfree, PhonePe, Paytm, Stripe or PayPal account, or cash on delivery.',
   },
   {
     title: 'One admin for everything',

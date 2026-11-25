@@ -163,7 +163,7 @@ export const FEATURE_AREAS: FeatureArea[] = [
       },
       {
         title: 'Connect payments',
-        body: 'Connect Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal, turn on cash on delivery, or test with the sandbox first.',
+        body: 'Connect Razorpay, PayU, Cashfree, PhonePe, Paytm, Stripe or PayPal, turn on cash on delivery, or test with the sandbox first.',
       },
       { title: 'Take orders', body: 'Shoppers check out on one page and get a status page.' },
     ],
@@ -175,7 +175,7 @@ export const FEATURE_AREAS: FeatureArea[] = [
     name: 'Payments',
     icon: 'lock',
     summary:
-      'Your own gateway (Razorpay, PayU, Cashfree, PhonePe, Stripe, PayPal), cash on delivery, refunds and disputes.',
+      'Your own gateway (Razorpay, PayU, Cashfree, PhonePe, Paytm, Stripe, PayPal), cash on delivery, refunds and disputes.',
     eyebrow: 'Payments',
     headline: 'Get paid into your own account',
     subhead:
@@ -193,7 +193,7 @@ export const FEATURE_AREAS: FeatureArea[] = [
       },
       {
         icon: 'card',
-        title: 'PayU, Cashfree, PhonePe and PayPal',
+        title: 'PayU, Cashfree, PhonePe, Paytm and PayPal',
         body: 'Paste your gateway’s API keys in your admin; the keys are checked with the gateway and stored encrypted.',
       },
       {
@@ -224,7 +224,7 @@ export const FEATURE_AREAS: FeatureArea[] = [
     ],
     showcase: {
       title: 'Card data never touches the platform',
-      body: 'Shoppers pay on your gateway’s hosted page — Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal — so card details never touch our servers. Money settles to your own account with no platform fee, and cash on delivery works alongside.',
+      body: 'Shoppers pay on your gateway’s hosted page — Razorpay, PayU, Cashfree, PhonePe, Paytm, Stripe or PayPal — so card details never touch our servers. Money settles to your own account with no platform fee, and cash on delivery works alongside.',
       points: [
         'One gateway per store, chosen by you',
         'Amounts confirmed with the provider before fulfilment',
@@ -235,7 +235,7 @@ export const FEATURE_AREAS: FeatureArea[] = [
     steps: [
       {
         title: 'Open Payments settings',
-        body: 'Pick your gateway — Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal — and turn on cash on delivery if you want it.',
+        body: 'Pick your gateway — Razorpay, PayU, Cashfree, PhonePe, Paytm, Stripe or PayPal — and turn on cash on delivery if you want it.',
       },
       { title: 'Finish onboarding', body: 'Complete the provider’s account set-up.' },
       { title: 'Test, then go live', body: 'Try a sandbox order, then start selling.' },

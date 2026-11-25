@@ -1,4 +1,11 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from 'node:crypto';
 import type { IncomingHttpHeaders } from 'node:http';
 import { currencyDigits, type GatewayMode, type StoreGatewayId } from '@repo/contracts';
 import Stripe from 'stripe';
@@ -59,7 +66,7 @@ export interface StoreGatewayAdapter extends PaymentProvider {
   /** Proves the keys work with a harmless call; throws GatewayKeysRejectedError if they do not. */
   verify(): Promise<void>;
   /** Gateways that post the shopper's browser to their page build that form here. */
-  payForm?(input: PayFormInput): PayForm;
+  payForm?(input: PayFormInput): PayForm | Promise<PayForm>;
   /** Gateways that report the result on the shopper's return handle it here. */
   completeReturn?(input: GatewayReturn): Promise<WebhookOutcome>;
 }
@@ -787,6 +794,220 @@ export class PhonepeAdapter implements StoreGatewayAdapter {
   }
 }
 
+// ── Paytm: initiate a transaction, post the shopper to Paytm, re-read the status ──
+
+const PAYTM_IV = '@@@@&&&&####$$$$';
+
+/** Paytm's checksum (PaytmChecksum): AES-128-CBC of sha256(params|salt) + salt. */
+export function paytmSignature(params: string, merchantKey: string, salt?: string): string {
+  const s = salt ?? randomBytes(3).toString('base64');
+  const plain = `${createHash('sha256').update(`${params}|${s}`).digest('hex')}${s}`;
+  const cipher = createCipheriv('aes-128-cbc', Buffer.from(merchantKey, 'utf8'), PAYTM_IV);
+  return Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]).toString('base64');
+}
+
+export function paytmVerify(params: string, merchantKey: string, checksum: string): boolean {
+  try {
+    const decipher = createDecipheriv('aes-128-cbc', Buffer.from(merchantKey, 'utf8'), PAYTM_IV);
+    const plain = Buffer.concat([
+      decipher.update(Buffer.from(checksum, 'base64')),
+      decipher.final(),
+    ]).toString('utf8');
+    const salt = plain.slice(-4);
+    const expected = `${createHash('sha256').update(`${params}|${salt}`).digest('hex')}${salt}`;
+    return safeEqual(expected, plain);
+  } catch {
+    return false;
+  }
+}
+
+/** Form fields as Paytm signs them: values sorted by key, "|"-joined, "null" as empty. */
+export function paytmFieldString(fields: Record<string, string>): string {
+  return Object.keys(fields)
+    .filter((key) => key !== 'CHECKSUMHASH')
+    .sort()
+    .map((key) => {
+      const value = fields[key] ?? '';
+      return value === 'null' ? '' : value;
+    })
+    .join('|');
+}
+
+interface PaytmResult {
+  resultInfo?: { resultStatus?: string; resultCode?: string; resultMsg?: string };
+}
+
+export class PaytmAdapter implements StoreGatewayAdapter {
+  readonly name: string;
+
+  constructor(private readonly ctx: AdapterContext) {
+    this.name = ctx.name;
+  }
+
+  private get host(): string {
+    return this.ctx.mode === 'test'
+      ? 'https://securestage.paytmpayments.com'
+      : 'https://secure.paytmpayments.com';
+  }
+
+  private get mid(): string {
+    return this.ctx.credentials.mid ?? '';
+  }
+
+  private get key(): string {
+    return this.ctx.credentials.merchantKey ?? '';
+  }
+
+  private async call<T>(path: string, body: Record<string, unknown>): Promise<T & PaytmResult> {
+    const signature = paytmSignature(JSON.stringify(body), this.key);
+    const response = await request(this.ctx, `${this.host}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body, head: { signature } }),
+    });
+    if (!response.ok) throw new Error(`Paytm answered ${response.status}`);
+    const json = (await response.json()) as { body?: T & PaytmResult };
+    return json.body ?? ({} as T & PaytmResult);
+  }
+
+  async verify(): Promise<void> {
+    if (Buffer.byteLength(this.key, 'utf8') !== 16) {
+      throw new GatewayKeysRejectedError('A Paytm merchant key is 16 characters long.');
+    }
+    // An order that cannot exist: good keys get "not found", bad ones a checksum or MID error.
+    const result = await this.call('/v3/order/status', {
+      mid: this.mid,
+      orderId: `check-${randomBytes(6).toString('hex')}`,
+    });
+    const message = `${result.resultInfo?.resultCode ?? ''} ${result.resultInfo?.resultMsg ?? ''}`;
+    if (/checksum|invalid mid|mid is invalid|merchant/i.test(message)) {
+      throw new GatewayKeysRejectedError('Paytm did not accept this MID and merchant key.');
+    }
+  }
+
+  createPayment(input: CreatePaymentInput): Promise<CreatedPayment> {
+    // A fresh Paytm order id per attempt (letters and digits, at most 50).
+    const reference = randomBytes(16).toString('hex');
+    return Promise.resolve({
+      providerRef: reference,
+      checkoutUrl: this.ctx.urls.payUrl(reference),
+      returnUrl: input.successUrl,
+    });
+  }
+
+  /** The transaction token lasts 15 minutes, so it is fetched each time the shopper is sent. */
+  async payForm(input: PayFormInput): Promise<PayForm> {
+    const custId = `C${createHash('sha256').update(input.email.toLowerCase()).digest('hex').slice(0, 32)}`;
+    const initiated = await this.call<{ txnToken?: string }>(
+      `/theia/api/v1/initiateTransaction?mid=${encodeURIComponent(this.mid)}&orderId=${encodeURIComponent(input.reference)}`,
+      {
+        requestType: 'Payment',
+        mid: this.mid,
+        websiteName:
+          this.ctx.credentials.websiteName || (this.ctx.mode === 'test' ? 'WEBSTAGING' : 'DEFAULT'),
+        orderId: input.reference,
+        callbackUrl: `${this.ctx.urls.returnUrl}?reference=${input.reference}`,
+        txnAmount: { value: decimalAmount(input.amount, input.currency), currency: 'INR' },
+        userInfo: {
+          custId,
+          email: input.email,
+          ...(input.phone ? { mobile: input.phone.replace(/\D/g, '').slice(-10) } : {}),
+        },
+      },
+    );
+    if (!initiated.txnToken) {
+      throw new Error(`Paytm did not start the payment: ${initiated.resultInfo?.resultMsg ?? ''}`);
+    }
+    return {
+      action: `${this.host}/theia/api/v1/showPaymentPage?mid=${encodeURIComponent(this.mid)}&orderId=${encodeURIComponent(input.reference)}`,
+      fields: { mid: this.mid, orderId: input.reference, txnToken: initiated.txnToken },
+    };
+  }
+
+  private outcome(
+    reference: string,
+    status: string,
+    txnId: string,
+    amount: string,
+    type: string,
+  ): WebhookOutcome {
+    const eventId = `${txnId || reference}:${status}`;
+    if (status === 'TXN_SUCCESS') {
+      return {
+        kind: 'payment_succeeded',
+        eventId,
+        type,
+        providerRef: reference,
+        providerPaymentId: txnId || null,
+        amount: minorAmount(amount, 'INR'),
+        currency: 'INR',
+      };
+    }
+    if (status === 'TXN_FAILURE') {
+      return { kind: 'payment_failed', eventId, type, providerRef: reference };
+    }
+    return { kind: 'ignored', eventId, type };
+  }
+
+  /** Paytm's server-to-server payment notification: signed form fields. */
+  parseWebhook(rawBody: Buffer): WebhookOutcome {
+    const fields = Object.fromEntries(new URLSearchParams(rawBody.toString('utf8')));
+    const checksum = fields.CHECKSUMHASH ?? '';
+    if (
+      !checksum ||
+      fields.MID !== this.mid ||
+      !paytmVerify(paytmFieldString(fields), this.key, checksum)
+    ) {
+      throw new InvalidWebhookError('Invalid Paytm checksum');
+    }
+    return this.outcome(
+      fields.ORDERID ?? '',
+      fields.STATUS ?? '',
+      fields.TXNID ?? '',
+      fields.TXNAMOUNT ?? '0',
+      `paytm.${(fields.STATUS ?? 'unknown').toLowerCase()}`,
+    );
+  }
+
+  /** The posted callback is not trusted on its own: the result is read from Paytm. */
+  async completeReturn(input: GatewayReturn): Promise<WebhookOutcome> {
+    const reference = input.query.reference;
+    if (!reference) throw new InvalidWebhookError('Missing Paytm order');
+    const status = await this.call<{ txnId?: string; txnAmount?: string }>('/v3/order/status', {
+      mid: this.mid,
+      orderId: reference,
+    });
+    return this.outcome(
+      reference,
+      status.resultInfo?.resultStatus ?? '',
+      status.txnId ?? '',
+      status.txnAmount ?? '0',
+      'paytm.return',
+    );
+  }
+
+  async refund(refund: RefundRequest): Promise<RefundResult> {
+    if (!refund.providerPaymentId) throw new Error('Missing Paytm transaction id for refund');
+    const refId = createHash('sha256').update(refund.idempotencyKey).digest('hex').slice(0, 40);
+    const result = await this.call<{ refundId?: string }>('/refund/apply', {
+      mid: this.mid,
+      txnType: 'REFUND',
+      orderId: refund.providerRef,
+      txnId: refund.providerPaymentId,
+      refId,
+      refundAmount: decimalAmount(refund.amount, refund.currency),
+    });
+    const state = result.resultInfo?.resultStatus;
+    if (state === 'TXN_FAILURE') {
+      throw new Error(`Paytm refused the refund: ${result.resultInfo?.resultMsg ?? ''}`);
+    }
+    return {
+      providerRef: result.refundId ?? refId,
+      status: state === 'TXN_SUCCESS' ? 'SUCCEEDED' : 'PENDING',
+    };
+  }
+}
+
 export function createAdapter(id: StoreGatewayId, ctx: AdapterContext): StoreGatewayAdapter {
   switch (id) {
     case 'razorpay':
@@ -801,5 +1022,7 @@ export function createAdapter(id: StoreGatewayId, ctx: AdapterContext): StoreGat
       return new PaypalAdapter(ctx);
     case 'phonepe':
       return new PhonepeAdapter(ctx);
+    case 'paytm':
+      return new PaytmAdapter(ctx);
   }
 }

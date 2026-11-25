@@ -42,7 +42,7 @@ function sections(): Record<string, SectionIntroItem> {
     },
     '/payments': {
       title: 'Payments',
-      body: 'Choose how customers pay you: your own gateway account (Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal), payouts through the platform, or cash on delivery.',
+      body: 'Choose how customers pay you: your own gateway account (Razorpay, PayU, Cashfree, PhonePe, Paytm, Stripe or PayPal), payouts through the platform, or cash on delivery.',
       help: help('set-up-payments', 'How to set up payments'),
     },
     '/shipping': {

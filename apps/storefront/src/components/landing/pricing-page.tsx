@@ -53,7 +53,7 @@ const INCLUDED = [
   'Customer accounts and segments',
   'Inventory across locations',
   'Draft orders, returns and packing slips',
-  'Your own gateway: Razorpay, PayU, Cashfree, PhonePe, Stripe or PayPal',
+  'Your own gateway: Razorpay, PayU, Cashfree, PhonePe, Paytm, Stripe or PayPal',
   'Cash on delivery with order limits and optional email confirmation',
   'Admin API tokens and webhooks',
   'Two-factor sign-in for staff',

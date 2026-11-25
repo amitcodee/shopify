@@ -232,7 +232,8 @@ export default async function BillingPage({
                     : `${(p.transactionFeeBps / 100).toFixed(1)}% platform fee on sales`}
                 </li>
                 <li>
-                  ✓ Your own gateway (Razorpay, PayU, Cashfree, PhonePe…) and cash on delivery
+                  ✓ Your own gateway (Razorpay, PayU, Cashfree, PhonePe, Paytm…) and cash on
+                  delivery
                 </li>
                 <li>✓ Every template, custom domain and app included</li>
                 <li>
