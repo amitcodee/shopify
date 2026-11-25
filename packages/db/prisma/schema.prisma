@@ -617,13 +617,14 @@ model Customer {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
-  store       Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store       Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
   sessions    CustomerSession[]
   tokens      CustomerToken[]
   orders      Order[]
   draftOrders DraftOrder[]
   giftCards   GiftCard[]
   reviews     ProductReview[]
+  reviewVotes ProductReviewVote[]
 
   @@unique([storeId, id])
   @@unique([storeId, email])
@@ -1742,33 +1743,52 @@ enum ReviewStatus {
 /// and product, tied to the order that proves the purchase. Edits send it back to PENDING unless
 /// the store publishes reviews automatically.
 model ProductReview {
-  id          String       @id @default(uuid(7)) @db.Uuid
-  storeId     String       @db.Uuid
-  productId   String       @db.Uuid
-  customerId  String       @db.Uuid
-  orderId     String       @db.Uuid
+  id           String       @id @default(uuid(7)) @db.Uuid
+  storeId      String       @db.Uuid
+  productId    String       @db.Uuid
+  customerId   String       @db.Uuid
+  orderId      String       @db.Uuid
   /// 1 to 5 (check constraint).
-  rating      Int
-  title       String?
-  body        String
+  rating       Int
+  title        String?
+  body         String
   /// Shown publicly: the name the customer chose (first name and initial by default).
-  authorName  String
-  status      ReviewStatus @default(PENDING)
+  authorName   String
+  status       ReviewStatus @default(PENDING)
   /// The merchant's public reply.
-  reply       String?
-  repliedAt   DateTime?
-  publishedAt DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  reply        String?
+  repliedAt    DateTime?
+  /// Customers who marked it helpful (cached count of ProductReviewVote rows).
+  helpfulCount Int          @default(0)
+  publishedAt  DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
-  store    Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product  Product  @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
-  customer Customer @relation(fields: [storeId, customerId], references: [storeId, id], onDelete: Cascade)
-  order    Order    @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+  store    Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product  Product             @relation(fields: [storeId, productId], references: [storeId, id], onDelete: Cascade)
+  customer Customer            @relation(fields: [storeId, customerId], references: [storeId, id], onDelete: Cascade)
+  order    Order               @relation(fields: [storeId, orderId], references: [storeId, id], onDelete: Cascade)
+  votes    ProductReviewVote[]
 
+  @@unique([storeId, id])
   @@unique([storeId, productId, customerId])
   @@index([storeId, productId, status, publishedAt(sort: Desc)])
   @@index([storeId, status, createdAt(sort: Desc)])
   @@index([customerId])
   @@index([orderId])
+}
+
+/// "Helpful" marks on a review: one per signed-in customer.
+model ProductReviewVote {
+  storeId    String   @db.Uuid
+  reviewId   String   @db.Uuid
+  customerId String   @db.Uuid
+  createdAt  DateTime @default(now())
+
+  review   ProductReview @relation(fields: [storeId, reviewId], references: [storeId, id], onDelete: Cascade)
+  customer Customer      @relation(fields: [storeId, customerId], references: [storeId, id], onDelete: Cascade)
+
+  @@id([reviewId, customerId])
+  @@index([storeId])
+  @@index([customerId])
 }

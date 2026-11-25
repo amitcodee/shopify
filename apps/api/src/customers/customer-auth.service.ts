@@ -165,6 +165,7 @@ export class CustomerAuthService {
       id: customer.id,
       email: customer.email,
       name: customer.name,
+      reviewEmails: customer.reviewEmailsOptOutAt === null,
       orders: orders.map((o) => ({
         number: o.number,
         status: o.status,
@@ -175,6 +176,19 @@ export class CustomerAuthService {
         createdAt: o.createdAt.toISOString(),
       })),
     };
+  }
+
+  /** The signed-in customer's own choice about review request emails. */
+  async setReviewEmails(shop: ShopContext, token: string | null, enabled: boolean): Promise<void> {
+    const customer = await this.requireCurrent(shop, token);
+    await this.tenantDb.run(shop.id, (tx) =>
+      tx.customer.update({
+        where: { id: customer.id },
+        data: {
+          reviewEmailsOptOutAt: enabled ? null : (customer.reviewEmailsOptOutAt ?? new Date()),
+        },
+      }),
+    );
   }
 
   async accountOrder(

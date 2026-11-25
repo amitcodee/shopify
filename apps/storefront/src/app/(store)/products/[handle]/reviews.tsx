@@ -1,8 +1,9 @@
-import type { MyReview, ProductReviews } from '@repo/contracts';
+import type { MyReview, ProductReviews, ReviewSort } from '@repo/contracts';
 import Link from 'next/link';
 import { Stars } from '@/components/product/stars';
 import { sf } from '@/lib/api';
 import { getCustomerToken } from '@/lib/shop';
+import { HelpfulButton, ReviewSortSelect } from './review-controls';
 import { ReviewForm } from './review-form';
 
 const dateFormat = new Intl.DateTimeFormat('en-IN', {
@@ -11,16 +12,41 @@ const dateFormat = new Intl.DateTimeFormat('en-IN', {
   year: 'numeric',
 });
 
-/** Published reviews with the star breakdown, and the form for buyers. */
-export async function ProductReviewsSection({ handle, page }: { handle: string; page: number }) {
+/** Published reviews with the star breakdown, sorting and star filter, and the form for buyers. */
+export async function ProductReviewsSection({
+  handle,
+  page,
+  sort,
+  stars,
+}: {
+  handle: string;
+  page: number;
+  sort: string | undefined;
+  stars: string | undefined;
+}) {
   const path = `/products/${encodeURIComponent(handle)}/reviews`;
+  const customerToken = await getCustomerToken();
   const [reviews, mine] = await Promise.all([
-    sf<ProductReviews>(path, { query: { page } }),
-    sf<MyReview>(`${path}/mine`, { customerToken: await getCustomerToken() }),
+    sf<ProductReviews>(path, {
+      query: { page, ...(sort ? { sort } : {}), ...(stars ? { stars } : {}) },
+    }),
+    sf<MyReview>(`${path}/mine`, { customerToken }),
   ]);
   const { rating, distribution } = reviews;
   const total = rating?.count ?? 0;
-  const pageHref = (n: number) => `/products/${handle}?reviews=${n}#reviews`;
+  const voted = new Set(mine.helpfulReviewIds);
+  const href = (p: { page?: number; sort?: string; stars?: number | null }) => {
+    const params = new URLSearchParams();
+    const nextSort = p.sort ?? reviews.sort;
+    const nextStars = p.stars === undefined ? reviews.stars : p.stars;
+    if (p.page && p.page > 1) params.set('reviews', String(p.page));
+    if (nextSort !== 'newest') params.set('review_sort', nextSort);
+    if (nextStars) params.set('review_stars', String(nextStars));
+    const query = params.toString();
+    return `/products/${handle}${query ? `?${query}` : ''}#reviews`;
+  };
+  const pageHref = (n: number) => href({ page: n });
+  const sortHref = href({ sort: '__SORT__' });
 
   return (
     <section
@@ -56,17 +82,35 @@ export async function ProductReviewsSection({ handle, page }: { handle: string; 
                 {distribution.map((count, i) => {
                   const stars = 5 - i;
                   const share = total ? Math.round((count / total) * 100) : 0;
+                  const active = reviews.stars === stars;
+                  const bar = (
+                    <span className="flex flex-1 items-center gap-3">
+                      <span className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-100">
+                        <span
+                          className="block h-full rounded-full bg-amber-500"
+                          style={{ width: `${share}%` }}
+                        />
+                      </span>
+                      <span className="w-9 text-right text-zinc-500 tabular-nums">{count}</span>
+                    </span>
+                  );
                   return (
                     <div key={stars} className="flex items-center gap-3 text-sm">
                       <dt className="w-12 shrink-0 text-zinc-600">{stars} star</dt>
-                      <dd className="flex flex-1 items-center gap-3">
-                        <span className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-100">
-                          <span
-                            className="block h-full rounded-full bg-amber-500"
-                            style={{ width: `${share}%` }}
-                          />
-                        </span>
-                        <span className="w-9 text-right text-zinc-500 tabular-nums">{count}</span>
+                      <dd className="flex flex-1">
+                        {count > 0 ? (
+                          <Link
+                            href={href({ page: 1, stars: active ? null : stars })}
+                            scroll={false}
+                            aria-current={active ? 'true' : undefined}
+                            aria-label={`${active ? 'Show all reviews' : `Show only ${stars}-star reviews`} (${count})`}
+                            className={`-mx-1.5 flex flex-1 items-center rounded-md px-1.5 py-0.5 hover:bg-zinc-50 ${active ? 'bg-zinc-100 ring-1 ring-zinc-300' : ''}`}
+                          >
+                            {bar}
+                          </Link>
+                        ) : (
+                          bar
+                        )}
                       </dd>
                     </div>
                   );
@@ -94,6 +138,27 @@ export async function ProductReviewsSection({ handle, page }: { handle: string; 
         </div>
 
         <div>
+          {total > 1 ? (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-zinc-600">
+                {reviews.stars ? (
+                  <>
+                    {reviews.total} {reviews.stars}-star review{reviews.total === 1 ? '' : 's'} ·{' '}
+                    <Link
+                      href={href({ page: 1, stars: null })}
+                      scroll={false}
+                      className="font-medium text-zinc-900 underline"
+                    >
+                      Show all
+                    </Link>
+                  </>
+                ) : (
+                  `${total} reviews`
+                )}
+              </p>
+              <ReviewSortSelect value={reviews.sort as ReviewSort} hrefFor={sortHref} />
+            </div>
+          ) : null}
           {reviews.items.length > 0 ? (
             <ol className="divide-y divide-zinc-200 border-y border-zinc-200">
               {reviews.items.map((r) => (
@@ -127,6 +192,14 @@ export async function ProductReviewsSection({ handle, page }: { handle: string; 
                         <p className="mt-1 whitespace-pre-line text-zinc-700">{r.reply}</p>
                       </div>
                     ) : null}
+                    <HelpfulButton
+                      handle={handle}
+                      reviewId={r.id}
+                      count={r.helpfulCount}
+                      marked={voted.has(r.id)}
+                      signedIn={Boolean(customerToken)}
+                      own={mine.review?.id === r.id}
+                    />
                   </article>
                 </li>
               ))}
@@ -143,7 +216,7 @@ export async function ProductReviewsSection({ handle, page }: { handle: string; 
             >
               {reviews.page > 1 ? (
                 <Link href={pageHref(reviews.page - 1)} className="font-medium underline">
-                  Newer reviews
+                  Previous
                 </Link>
               ) : (
                 <span />
@@ -153,7 +226,7 @@ export async function ProductReviewsSection({ handle, page }: { handle: string; 
               </span>
               {reviews.page < reviews.pageCount ? (
                 <Link href={pageHref(reviews.page + 1)} className="font-medium underline">
-                  Older reviews
+                  Next
                 </Link>
               ) : (
                 <span />

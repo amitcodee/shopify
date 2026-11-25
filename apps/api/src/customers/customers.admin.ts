@@ -102,6 +102,7 @@ export class AdminCustomersService {
         totalSpent: paid.reduce((s, o) => s + o.total, 0),
         createdAt: customer.createdAt.toISOString(),
         orders: orders.map(toListItem),
+        reviewEmailsOptOutAt: customer.reviewEmailsOptOutAt?.toISOString() ?? null,
       };
     });
   }

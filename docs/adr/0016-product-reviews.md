@@ -38,8 +38,15 @@ post them as customers.
   the store. Order and shipping emails are unaffected.
 - Demo data has no reviews: seeding them would be exactly the fake content this avoids.
 
+## Sorting, star filter and helpful marks
+
+Shoppers sort reviews (newest, most helpful, highest, lowest) and filter by star rating by clicking
+a row of the breakdown. Signed-in customers can mark other people's published reviews helpful, once
+each (`ProductReviewVote`, count cached in `ProductReview.helpfulCount`). The merchant sees a
+customer's review-email choice on the customer page; only the customer can turn the emails back on,
+from their account page (`PUT /storefront/customers/me/review-emails`).
+
 ## Not done
 
-- Photos in reviews, "helpful" votes, sorting and filtering by stars.
-- Showing a customer's review-email choice in the admin, or turning it back on.
+- Photos in reviews.
 - Importing reviews from another platform (they could not be verified against orders here).

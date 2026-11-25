@@ -161,6 +161,49 @@ describe('Product reviews', () => {
       average: 4.5,
       count: 2,
     });
+
+    // Helpful marks: signed in, once per customer, never on your own review.
+    const adaId = list.body.items[0].id as string;
+    const graceId = list.body.items[1].id as string;
+    await sf('put', `/products/linen-shirt/reviews/${adaId}/helpful`)
+      .send({ helpful: true })
+      .expect(401);
+    await sf('put', `/products/linen-shirt/reviews/${adaId}/helpful`, { customer: ada })
+      .send({ helpful: true })
+      .expect(403);
+    for (let i = 0; i < 2; i++) {
+      const marked = await sf('put', `/products/linen-shirt/reviews/${graceId}/helpful`, {
+        customer: ada,
+      })
+        .send({ helpful: true })
+        .expect(200);
+      expect(marked.body).toEqual({ helpfulCount: 1, helpful: true });
+    }
+    expect(
+      (await sf('get', '/products/linen-shirt/reviews/mine', { customer: ada }).expect(200)).body
+        .helpfulReviewIds,
+    ).toEqual([graceId]);
+
+    // Sorting and filtering by stars.
+    const names = async (query: object) => {
+      const res = await sf('get', '/products/linen-shirt/reviews').query(query).expect(200);
+      return {
+        names: (res.body.items as { authorName: string }[]).map((r) => r.authorName),
+        total: res.body.total as number,
+        sort: res.body.sort as string,
+      };
+    };
+    expect(await names({ sort: 'helpful' })).toMatchObject({ names: ['Grace H.', 'Ada'] });
+    expect(await names({ sort: 'lowest' })).toMatchObject({ names: ['Grace H.', 'Ada'] });
+    expect(await names({ sort: 'highest' })).toMatchObject({ names: ['Ada', 'Grace H.'] });
+    expect(await names({ stars: 4 })).toMatchObject({ names: ['Grace H.'], total: 1 });
+    expect(await names({ stars: 2 })).toMatchObject({ names: [], total: 0 });
+    expect(await names({ sort: 'bogus', stars: 9 })).toMatchObject({ sort: 'newest', total: 2 });
+
+    await sf('put', `/products/linen-shirt/reviews/${graceId}/helpful`, { customer: ada })
+      .send({ helpful: false })
+      .expect(200)
+      .expect(({ body }) => expect(body.helpfulCount).toBe(0));
     const cards = await sf('get', '/products').expect(200);
     expect(cards.body.items[0].rating).toEqual({ average: 4.5, count: 2 });
 
@@ -303,6 +346,24 @@ describe('Product reviews', () => {
       data: { createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) },
     });
     expect(await sendAndRead()).toEqual([]);
+
+    // The merchant sees the choice; only the customer can turn the emails back on.
+    const detail = await ctx
+      .http()
+      .get(`${admin}/customers/${order.customerId}`)
+      .set(auth)
+      .expect(200);
+    expect(detail.body.reviewEmailsOptOutAt).toEqual(expect.any(String));
+    expect((await sf('get', '/customers/me', { customer }).expect(200)).body.reviewEmails).toBe(
+      false,
+    );
+    await sf('put', '/customers/me/review-emails').send({ enabled: true }).expect(401);
+    await sf('put', '/customers/me/review-emails', { customer })
+      .send({ enabled: true })
+      .expect(204);
+    expect((await sf('get', '/customers/me', { customer }).expect(200)).body.reviewEmails).toBe(
+      true,
+    );
 
     const timeline = await ctx.platform.orderEvent.findMany({ where: { orderId: order.id } });
     expect(timeline.map((e) => e.type)).toContain('review_request_sent');

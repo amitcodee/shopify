@@ -126,10 +126,22 @@ export default async function ProductPage({
   searchParams,
 }: {
   params: Promise<{ handle: string }>;
-  searchParams: Promise<{ collection?: string | string[]; reviews?: string | string[] }>;
+  searchParams: Promise<{
+    collection?: string | string[];
+    reviews?: string | string[];
+    review_sort?: string | string[];
+    review_stars?: string | string[];
+  }>;
 }) {
   const { handle } = await params;
-  const { collection: rawCollection, reviews: rawReviewsPage } = await searchParams;
+  const {
+    collection: rawCollection,
+    reviews: rawReviewsPage,
+    review_sort: rawReviewSort,
+    review_stars: rawReviewStars,
+  } = await searchParams;
+  const reviewSort = typeof rawReviewSort === 'string' ? rawReviewSort.slice(0, 20) : undefined;
+  const reviewStars = typeof rawReviewStars === 'string' ? rawReviewStars.slice(0, 1) : undefined;
   const reviewsPage = Math.min(1000, Math.max(1, Number(rawReviewsPage) || 1));
   const [product, shop] = await Promise.all([getProduct(handle), getShop()]);
   if (!product || !shop) notFound();
@@ -251,7 +263,12 @@ export default async function ProductPage({
         </div>
       </div>
       {shop.apps.productReviews.enabled && !product.isGiftCard ? (
-        <ProductReviewsSection handle={product.handle} page={reviewsPage} />
+        <ProductReviewsSection
+          handle={product.handle}
+          page={reviewsPage}
+          sort={reviewSort}
+          stars={reviewStars}
+        />
       ) : null}
       {related.length > 0 ? (
         <section

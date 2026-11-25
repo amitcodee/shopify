@@ -45,10 +45,37 @@ export const publicReviewSchema = z.object({
   /** When it was published. */
   date: z.iso.datetime(),
   reply: z.string().nullable(),
+  /** Signed-in customers who found it helpful. */
+  helpfulCount: z.number().int(),
 });
 export type PublicReview = z.infer<typeof publicReviewSchema>;
 
 export const REVIEWS_PAGE_SIZE = 10;
+
+export const REVIEW_SORTS = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'helpful', label: 'Most helpful' },
+  { value: 'highest', label: 'Highest rating' },
+  { value: 'lowest', label: 'Lowest rating' },
+] as const;
+export type ReviewSort = (typeof REVIEW_SORTS)[number]['value'];
+
+/** Query of GET /storefront/products/:handle/reviews; unknown values fall back to defaults. */
+export const productReviewsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).max(1000).catch(1).default(1),
+  sort: z.enum(['newest', 'helpful', 'highest', 'lowest']).catch('newest').default('newest'),
+  /** Only reviews with this many stars. */
+  stars: z.coerce.number().int().min(1).max(5).optional().catch(undefined),
+});
+export type ProductReviewsQuery = z.infer<typeof productReviewsQuerySchema>;
+
+/** PUT …/reviews/:reviewId/helpful */
+export const reviewHelpfulInputSchema = z.strictObject({ helpful: z.boolean() });
+export const reviewHelpfulSchema = z.object({
+  helpfulCount: z.number().int(),
+  helpful: z.boolean(),
+});
+export type ReviewHelpful = z.infer<typeof reviewHelpfulSchema>;
 
 /** GET /storefront/products/:handle/reviews */
 export const productReviewsSchema = z.object({
@@ -58,6 +85,11 @@ export const productReviewsSchema = z.object({
   items: z.array(publicReviewSchema),
   page: z.number().int(),
   pageCount: z.number().int(),
+  sort: z.enum(['newest', 'helpful', 'highest', 'lowest']),
+  /** The star filter applied, if any. */
+  stars: z.number().int().nullable(),
+  /** Published reviews matching the filter. */
+  total: z.number().int(),
 });
 export type ProductReviews = z.infer<typeof productReviewsSchema>;
 
@@ -70,6 +102,7 @@ export const myReviewSchema = z.object({
   suggestedName: z.string(),
   review: z
     .object({
+      id: z.uuid(),
       rating: z.number().int(),
       title: z.string().nullable(),
       body: z.string(),
@@ -77,6 +110,8 @@ export const myReviewSchema = z.object({
       status: reviewStatusSchema,
     })
     .nullable(),
+  /** This product's reviews the customer marked helpful. */
+  helpfulReviewIds: z.array(z.uuid()),
 });
 export type MyReview = z.infer<typeof myReviewSchema>;
 
@@ -88,6 +123,7 @@ export const adminReviewSchema = z.object({
   body: z.string(),
   authorName: z.string(),
   reply: z.string().nullable(),
+  helpfulCount: z.number().int(),
   product: z.object({ id: z.uuid(), title: z.string(), handle: z.string() }),
   customer: z.object({ id: z.uuid(), email: z.string() }),
   order: z.object({ id: z.uuid(), number: z.number().int() }),

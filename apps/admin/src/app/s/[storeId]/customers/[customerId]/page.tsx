@@ -88,6 +88,16 @@ export default async function CustomerPage({
                 term: 'Marketing',
                 detail: customer.acceptsMarketing ? 'Subscribed' : 'Not subscribed',
               },
+              {
+                term: 'Review requests',
+                detail: customer.reviewEmailsOptOutAt ? (
+                  <span title="Only the customer can turn these back on, from their account page.">
+                    Turned off by the customer {formatDateTime(customer.reviewEmailsOptOutAt)}
+                  </span>
+                ) : (
+                  'Sent after delivery'
+                ),
+              },
               { term: 'Orders', detail: customer.ordersCount },
               { term: 'Total spent', detail: formatMoney(customer.totalSpent, store.currency) },
               { term: 'Since', detail: formatDateTime(customer.createdAt) },

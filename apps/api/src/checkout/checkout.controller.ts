@@ -8,6 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -28,6 +29,7 @@ import {
   type MockPayment,
   mockPaymentOutcomeSchema,
   type PublicOrder,
+  reviewEmailsInputSchema,
   STOREFRONT_HEADERS,
 } from '@repo/contracts';
 import type { Request } from 'express';
@@ -209,6 +211,17 @@ export class CheckoutController {
   @Get('customers/me')
   me(@CurrentShop() shop: ShopContext, @Req() req: Request): Promise<CustomerAccount> {
     return this.customers.account(shop, customerToken(req));
+  }
+
+  @Put('customers/me/review-emails')
+  @HttpCode(204)
+  @ApiZodBody(reviewEmailsInputSchema)
+  async reviewEmails(
+    @CurrentShop() shop: ShopContext,
+    @Req() req: Request,
+    @Body(new ZodPipe(reviewEmailsInputSchema)) body: z.output<typeof reviewEmailsInputSchema>,
+  ): Promise<void> {
+    await this.customers.setReviewEmails(shop, customerToken(req), body.enabled);
   }
 
   @Get('customers/me/orders/:number')

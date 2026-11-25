@@ -45,6 +45,8 @@ export const customerAccountSchema = z.object({
   id: z.uuid(),
   email: z.string(),
   name: z.string().nullable(),
+  /** Gets "review your purchase" emails (Product reviews app); the customer can turn them off. */
+  reviewEmails: z.boolean(),
   orders: z.array(
     z.object({
       number: z.number().int(),
@@ -74,5 +76,10 @@ export const adminCustomerListSchema = paginated(adminCustomerSchema);
 
 export const adminCustomerDetailSchema = adminCustomerSchema.extend({
   orders: z.array(orderListItemSchema),
+  /** When the customer turned off review request emails; only they can turn them back on. */
+  reviewEmailsOptOutAt: z.iso.datetime().nullable(),
 });
+
+/** PUT /storefront/customers/me/review-emails */
+export const reviewEmailsInputSchema = z.strictObject({ enabled: z.boolean() });
 export type AdminCustomerDetail = z.infer<typeof adminCustomerDetailSchema>;

@@ -2,7 +2,8 @@ import { type CustomerAccount, formatMoney } from '@repo/contracts';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { sf, StorefrontApiError } from '@/lib/api';
-import { getCustomerToken } from '@/lib/shop';
+import { getCustomerToken, getShop } from '@/lib/shop';
+import { setReviewEmailsAction } from './actions';
 import { LogoutButton } from './forms';
 
 export const metadata = { title: 'Your account' };
@@ -11,6 +12,7 @@ export default async function AccountPage() {
   const customerToken = await getCustomerToken();
   if (!customerToken) redirect('/account/login');
   let account: CustomerAccount;
+  const shop = await getShop();
   try {
     account = await sf<CustomerAccount>('/customers/me', { customerToken });
   } catch (error) {
@@ -64,6 +66,29 @@ export default async function AccountPage() {
           ))}
         </ul>
       )}
+      {shop?.apps.productReviews.enabled ? (
+        <section className="mt-12" aria-labelledby="email-prefs">
+          <h2 id="email-prefs" className="mb-3 text-xl font-semibold">
+            Emails
+          </h2>
+          <form
+            action={setReviewEmailsAction.bind(null, !account.reviewEmails)}
+            className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-zinc-200 p-5"
+          >
+            <div className="text-sm">
+              <p className="font-medium text-zinc-900">Review requests</p>
+              <p className="mt-1 text-zinc-600">
+                {account.reviewEmails
+                  ? 'After an order arrives we send one email asking how you liked it.'
+                  : 'Turned off: we will not ask you to review your purchases.'}
+              </p>
+            </div>
+            <button type="submit" className="btn btn-outline min-h-11 px-5 text-sm">
+              {account.reviewEmails ? 'Turn off' : 'Turn back on'}
+            </button>
+          </form>
+        </section>
+      ) : null}
     </>
   );
 }

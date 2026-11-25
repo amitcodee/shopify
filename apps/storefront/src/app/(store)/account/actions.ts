@@ -6,7 +6,8 @@
 import type { CustomerRegisterResult, CustomerSession } from '@repo/contracts';
 import type { FormResult } from '@/components/form';
 import { sf, StorefrontApiError } from '@/lib/api';
-import { setCustomerToken } from '@/lib/shop';
+import { getCustomerToken, setCustomerToken } from '@/lib/shop';
+import { revalidatePath } from 'next/cache';
 
 function str(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -94,4 +95,14 @@ export async function completeLinkAction(
     return toResult(error);
   }
   return { redirectTo: '/account' };
+}
+
+/** The signed-in customer's choice about "review your purchase" emails. */
+export async function setReviewEmailsAction(enabled: boolean): Promise<void> {
+  await sf('/customers/me/review-emails', {
+    method: 'PUT',
+    customerToken: await getCustomerToken(),
+    body: { enabled },
+  });
+  revalidatePath('/account');
 }

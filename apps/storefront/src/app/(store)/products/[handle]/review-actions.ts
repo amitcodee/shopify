@@ -1,10 +1,27 @@
 'use server';
 
-import { reviewInputSchema } from '@repo/contracts';
+import { type ReviewHelpful, reviewInputSchema } from '@repo/contracts';
 import { revalidatePath } from 'next/cache';
 import type { FormResult } from '@/components/form';
 import { sf, StorefrontApiError } from '@/lib/api';
 import { getCustomerToken } from '@/lib/shop';
+
+/** Marks or unmarks a review as helpful for the signed-in shopper. */
+export async function markHelpfulAction(
+  handle: string,
+  reviewId: string,
+  helpful: boolean,
+): Promise<ReviewHelpful | { error: string }> {
+  try {
+    return await sf<ReviewHelpful>(
+      `/products/${encodeURIComponent(handle)}/reviews/${encodeURIComponent(reviewId)}/helpful`,
+      { method: 'PUT', customerToken: await getCustomerToken(), body: { helpful } },
+    );
+  } catch (error) {
+    if (error instanceof StorefrontApiError) return { error: error.message };
+    throw error;
+  }
+}
 
 /** Saves the signed-in buyer's review of the product. */
 export async function saveReviewAction(

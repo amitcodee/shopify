@@ -22,7 +22,11 @@ import {
   type MyReview,
   type Paginated,
   type ProductReviews,
+  type ProductReviewsQuery,
+  productReviewsQuerySchema,
   ratingOf,
+  type ReviewHelpful,
+  reviewHelpfulInputSchema,
   reviewerName,
   reviewInputSchema,
   reviewReplyInputSchema,
@@ -67,6 +71,7 @@ function toAdmin(r: AdminRow): AdminReview {
     body: r.body,
     authorName: r.authorName,
     reply: r.reply,
+    helpfulCount: r.helpfulCount,
     product: r.product,
     customer: r.customer,
     order: r.order,
@@ -125,17 +130,31 @@ export class ProductReviewsService {
     });
   }
 
-  /** Published reviews, newest first, with the star breakdown. */
-  list(shop: ShopContext, handle: string, page: number): Promise<ProductReviews> {
+  /** Published reviews in the chosen order, optionally of one star rating, with the breakdown. */
+  list(shop: ShopContext, handle: string, query: ProductReviewsQuery): Promise<ProductReviews> {
     this.requireApp(shop);
+    const { page, sort } = query;
+    const stars = query.stars ?? null;
     return this.tenantDb.run(shop.id, async (tx) => {
       const product = await this.liveProduct(tx, shop, handle);
       const where = { storeId: shop.id, productId: product.id, status: 'PUBLISHED' as const };
+      const newest: Prisma.ProductReviewOrderByWithRelationInput[] = [
+        { publishedAt: 'desc' },
+        { id: 'desc' },
+      ];
+      const orderBy: Prisma.ProductReviewOrderByWithRelationInput[] =
+        sort === 'helpful'
+          ? [{ helpfulCount: 'desc' }, ...newest]
+          : sort === 'highest'
+            ? [{ rating: 'desc' }, ...newest]
+            : sort === 'lowest'
+              ? [{ rating: 'asc' }, ...newest]
+              : newest;
       const [groups, items] = await Promise.all([
         tx.productReview.groupBy({ by: ['rating'], where, _count: { _all: true } }),
         tx.productReview.findMany({
-          where,
-          orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+          where: stars ? { ...where, rating: stars } : where,
+          orderBy,
           skip: (page - 1) * REVIEWS_PAGE_SIZE,
           take: REVIEWS_PAGE_SIZE,
         }),
@@ -145,6 +164,7 @@ export class ProductReviewsService {
       );
       const count = distribution.reduce((s, n) => s + n, 0);
       const sum = groups.reduce((s, g) => s + g.rating * g._count._all, 0);
+      const total = stars ? (distribution[5 - stars] ?? 0) : count;
       return {
         rating: ratingOf(count, sum),
         distribution,
@@ -156,9 +176,13 @@ export class ProductReviewsService {
           authorName: r.authorName,
           date: (r.publishedAt ?? r.createdAt).toISOString(),
           reply: r.reply,
+          helpfulCount: r.helpfulCount,
         })),
         page,
-        pageCount: Math.max(1, Math.ceil(count / REVIEWS_PAGE_SIZE)),
+        pageCount: Math.max(1, Math.ceil(total / REVIEWS_PAGE_SIZE)),
+        sort,
+        stars,
+        total,
       };
     });
   }
@@ -179,9 +203,10 @@ export class ProductReviewsService {
           reason: 'Sign in to review a product you bought.',
           suggestedName: '',
           review: null,
+          helpfulReviewIds: [],
         };
       }
-      const [review, bought] = await Promise.all([
+      const [review, bought, votes] = await Promise.all([
         tx.productReview.findUnique({
           where: {
             storeId_productId_customerId: {
@@ -192,6 +217,10 @@ export class ProductReviewsService {
           },
         }),
         this.purchase(tx, shop.id, customer.id, product.id),
+        tx.productReviewVote.findMany({
+          where: { storeId: shop.id, customerId: customer.id, review: { productId: product.id } },
+          select: { reviewId: true },
+        }),
       ]);
       const canReview = review !== null || bought !== null;
       return {
@@ -199,13 +228,48 @@ export class ProductReviewsService {
         reason: canReview ? null : 'Only customers who bought this product can review it.',
         suggestedName: reviewerName(customer.name, customer.email),
         review: review && {
+          id: review.id,
           rating: review.rating,
           title: review.title,
           body: review.body,
           authorName: review.authorName,
           status: review.status,
         },
+        helpfulReviewIds: votes.map((v) => v.reviewId),
       };
+    });
+  }
+
+  /** Marks or unmarks a published review as helpful: one mark per customer, not on their own. */
+  async markHelpful(
+    shop: ShopContext,
+    token: string | null,
+    handle: string,
+    reviewId: string,
+    helpful: boolean,
+  ): Promise<ReviewHelpful> {
+    this.requireApp(shop);
+    const customer = await this.customers.requireCurrent(shop, token);
+    return this.tenantDb.run(shop.id, async (tx) => {
+      const product = await this.liveProduct(tx, shop, handle);
+      const review = await tx.productReview.findFirst({
+        where: { id: reviewId, storeId: shop.id, productId: product.id, status: 'PUBLISHED' },
+        select: { id: true, customerId: true },
+      });
+      if (!review) throw new NotFoundException('Review not found.');
+      if (review.customerId === customer.id) {
+        throw new ForbiddenException('You cannot mark your own review as helpful.');
+      }
+      const key = { storeId: shop.id, reviewId: review.id, customerId: customer.id };
+      const changed = helpful
+        ? (await tx.productReviewVote.createMany({ data: [key], skipDuplicates: true })).count
+        : -(await tx.productReviewVote.deleteMany({ where: key })).count;
+      const updated = await tx.productReview.update({
+        where: { id: review.id },
+        data: { helpfulCount: { increment: changed } },
+        select: { helpfulCount: true },
+      });
+      return { helpfulCount: updated.helpfulCount, helpful };
     });
   }
 
@@ -326,8 +390,6 @@ export class ProductReviewsService {
   }
 }
 
-const pageSchema = z.object({ page: z.coerce.number().int().min(1).max(1000).default(1) });
-
 @ApiTags('Storefront')
 @Public()
 @UseGuards(StorefrontGuard)
@@ -339,9 +401,9 @@ export class StorefrontReviewsController {
   list(
     @CurrentShop() shop: ShopContext,
     @Param('handle') handle: string,
-    @Query(new ZodPipe(pageSchema)) query: z.infer<typeof pageSchema>,
+    @Query(new ZodPipe(productReviewsQuerySchema)) query: ProductReviewsQuery,
   ): Promise<ProductReviews> {
-    return this.reviews.list(shop, handle.slice(0, 200), query.page);
+    return this.reviews.list(shop, handle.slice(0, 200), query);
   }
 
   @Get('mine')
@@ -368,6 +430,25 @@ export class StorefrontReviewsController {
       typeof token === 'string' ? token : null,
       handle.slice(0, 200),
       body,
+    );
+  }
+
+  @Put(':reviewId/helpful')
+  @ApiZodBody(reviewHelpfulInputSchema)
+  helpful(
+    @CurrentShop() shop: ShopContext,
+    @Req() req: Request,
+    @Param('handle') handle: string,
+    @Param('reviewId', UuidParam) reviewId: string,
+    @Body(new ZodPipe(reviewHelpfulInputSchema)) body: z.output<typeof reviewHelpfulInputSchema>,
+  ): Promise<ReviewHelpful> {
+    const token = req.headers[STOREFRONT_HEADERS.customer];
+    return this.reviews.markHelpful(
+      shop,
+      typeof token === 'string' ? token : null,
+      handle.slice(0, 200),
+      reviewId,
+      body.helpful,
     );
   }
 }
