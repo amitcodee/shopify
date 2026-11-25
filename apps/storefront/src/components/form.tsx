@@ -9,6 +9,8 @@ export type FormResult =
       error?: string;
       success?: string;
       fieldErrors?: Record<string, string>;
+      /** What was typed, so a failed save does not empty the form. */
+      values?: Record<string, string>;
       /** Navigate the browser here (see FollowRedirect). */
       redirectTo?: string;
     }

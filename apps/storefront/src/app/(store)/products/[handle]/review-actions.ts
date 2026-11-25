@@ -79,19 +79,19 @@ export async function saveReviewAction(
   _: FormResult,
   formData: FormData,
 ): Promise<FormResult> {
-  const parsed = reviewInputSchema.safeParse({
-    rating: Number(formData.get('rating')),
+  const values = {
     title: String(formData.get('title') ?? ''),
     body: String(formData.get('body') ?? ''),
     authorName: String(formData.get('authorName') ?? ''),
-  });
+  };
+  const parsed = reviewInputSchema.safeParse({ rating: Number(formData.get('rating')), ...values });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
       const key = String(issue.path[0] ?? 'form');
       fieldErrors[key] ??= issue.message;
     }
-    return { error: 'Please check your review.', fieldErrors };
+    return { error: 'Please check your review.', fieldErrors, values };
   }
   let status: string;
   try {
@@ -101,7 +101,7 @@ export async function saveReviewAction(
     );
     status = saved.review?.status ?? 'PENDING';
   } catch (error) {
-    if (error instanceof StorefrontApiError) return { error: error.message };
+    if (error instanceof StorefrontApiError) return { error: error.message, values };
     throw error;
   }
   revalidatePath(`/products/${handle}`);

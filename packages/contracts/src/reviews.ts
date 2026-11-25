@@ -15,11 +15,12 @@ const text = (min: number, max: number, message: string) =>
 
 export const reviewInputSchema = z.strictObject({
   rating: z.number().int().min(1, 'Choose 1 to 5 stars').max(5, 'Choose 1 to 5 stars'),
+  // Null as well as blank: callers that parsed this schema already send its output (null).
   title: z
     .string()
     .trim()
     .max(150)
-    .optional()
+    .nullish()
     .transform((v) => v || null),
   body: text(10, 5000, 'Write at least a sentence (10 characters)'),
   /** Shown with the review; defaults to the first name and initial. */

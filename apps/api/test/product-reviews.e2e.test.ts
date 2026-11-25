@@ -104,8 +104,9 @@ describe('Product reviews', () => {
     await sf('put', '/products/linen-shirt/reviews/mine', { customer: grace })
       .send({ ...review, rating: 6, authorName: 'Grace H.' })
       .expect(400);
+    // A blank title arrives as null from the storefront (which parses the same schema first).
     const saved = await sf('put', '/products/linen-shirt/reviews/mine', { customer: grace })
-      .send({ ...review, authorName: 'Grace H.' })
+      .send({ ...review, title: null, authorName: 'Grace H.' })
       .expect(200);
     expect(saved.body).toMatchObject({ canReview: true, review: { status: 'PENDING', rating: 4 } });
 

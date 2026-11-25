@@ -98,7 +98,7 @@ export function ReviewForm({ handle, mine }: { handle: string; mine: MyReview })
         label="Title (optional)"
         name="title"
         maxLength={150}
-        defaultValue={existing?.title ?? ''}
+        defaultValue={state?.values?.title ?? existing?.title ?? ''}
         error={errors.title}
       />
       <div>
@@ -112,7 +112,7 @@ export function ReviewForm({ handle, mine }: { handle: string; mine: MyReview })
           required
           minLength={10}
           maxLength={5000}
-          defaultValue={existing?.body ?? ''}
+          defaultValue={state?.values?.body ?? existing?.body ?? ''}
           aria-invalid={errors.body ? true : undefined}
           placeholder="What did you like or dislike? How did it fit, feel or work?"
           className="field min-h-32"
@@ -124,7 +124,7 @@ export function ReviewForm({ handle, mine }: { handle: string; mine: MyReview })
         name="authorName"
         required
         maxLength={80}
-        defaultValue={existing?.authorName ?? mine.suggestedName}
+        defaultValue={state?.values?.authorName ?? existing?.authorName ?? mine.suggestedName}
         error={errors.authorName}
       />
       <p className="text-xs text-zinc-500">
