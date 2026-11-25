@@ -45,6 +45,9 @@ transfer sizes in Chrome.
   and 3.6 ms with RLS bypassed. Do not expect a GIN index to help a tenant query; check with
   `EXPLAIN` as `shop_app`. `enum_eq` is not leakproof either, so `status` columns in an index do
   not narrow tenant queries. `Product_tags_idx` has the same limit and was left in place.
+- Admin customer search (`ILIKE '%q%'` on email and name) needs no trigram index: with 20,000
+  customers in one store it takes about 9 ms (seq scan plus sort, measured 2026-11-25 under forced
+  RLS), and `~~*` is not leakproof, so a `pg_trgm` GIN index would not be used anyway.
 - Deep pages (page 500 of 20,000 products) still sort the whole store, about 108 ms.
 - The outbox no longer holds a transaction while sending. Claiming a message leases it for five
   minutes, so delivery is at-least-once: a worker dying mid-send causes a retry after the lease.
