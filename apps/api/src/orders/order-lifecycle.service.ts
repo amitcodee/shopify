@@ -378,6 +378,87 @@ export class OrderLifecycle {
    * Mirrors a provider dispute (chargeback) onto the order: upserts the Dispute, and on every
    * status change writes a timeline event and emails the store. Idempotent per status.
    */
+  /**
+   * Settles a refund the provider first accepted as pending. A failed one no longer counts: the
+   * order's refund status is recomputed and its GST credit note is cancelled (its number stays
+   * used). Restocked items stay in stock; the timeline says so.
+   */
+  async applyRefundStatus(
+    storeId: string,
+    paymentId: string,
+    refundRef: string,
+    status: 'SUCCEEDED' | 'FAILED',
+  ): Promise<void> {
+    await this.tenantDb.run(storeId, async (tx) => {
+      const refund = await tx.refund.findFirst({
+        where: { storeId, paymentId, providerRef: refundRef },
+      });
+      if (!refund || refund.status !== 'PENDING') return;
+      await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${refund.orderId}::uuid AND "storeId" = ${storeId}::uuid FOR UPDATE`;
+      await tx.refund.update({ where: { id: refund.id }, data: { status } });
+      const order = await tx.order.findUniqueOrThrow({
+        where: { id: refund.orderId },
+        select: { currency: true },
+      });
+      const amount = formatMoney(refund.amount, order.currency);
+      if (status === 'SUCCEEDED') {
+        await this.event(
+          tx,
+          storeId,
+          refund.orderId,
+          'refund_settled',
+          `Refund of ${amount} completed.`,
+          {
+            data: { refundId: refund.id },
+          },
+        );
+        return;
+      }
+
+      const [paid, refunds] = await Promise.all([
+        tx.payment.aggregate({
+          where: { storeId, orderId: refund.orderId, status: 'SUCCEEDED' },
+          _sum: { amount: true },
+        }),
+        tx.refund.aggregate({
+          where: { storeId, orderId: refund.orderId, status: { not: 'FAILED' } },
+          _sum: { amount: true },
+        }),
+      ]);
+      const refunded = refunds._sum.amount ?? 0;
+      await tx.order.update({
+        where: { id: refund.orderId },
+        data: {
+          financialStatus:
+            refunded <= 0
+              ? 'PAID'
+              : refunded >= (paid._sum.amount ?? 0)
+                ? 'REFUNDED'
+                : 'PARTIALLY_REFUNDED',
+        },
+      });
+      const cancelled = await tx.creditNote.updateMany({
+        where: { storeId, refundId: refund.id, cancelledAt: null },
+        data: { cancelledAt: new Date() },
+      });
+      const note =
+        cancelled.count > 0
+          ? await tx.creditNote.findFirst({
+              where: { storeId, refundId: refund.id },
+              select: { number: true },
+            })
+          : null;
+      await this.event(
+        tx,
+        storeId,
+        refund.orderId,
+        'refund_failed',
+        `Refund of ${amount} failed at the payment provider${note ? `; credit note ${note.number} was cancelled` : ''}. The customer was not paid back. Items already restocked stay in stock. Refund again, or pay the customer another way.`,
+        { data: { refundId: refund.id } },
+      );
+    });
+  }
+
   async applyDispute(storeId: string, paymentId: string, update: DisputeUpdate): Promise<void> {
     await this.tenantDb.run(storeId, async (tx) => {
       const payment = await tx.payment.findUniqueOrThrow({

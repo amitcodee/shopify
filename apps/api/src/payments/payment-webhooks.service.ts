@@ -120,7 +120,21 @@ export class PaymentWebhooksService {
     if (inserted.count === 0) return { received: true, duplicate: true };
 
     try {
-      if (outcome.kind === 'dispute') {
+      if (outcome.kind === 'refund_updated') {
+        const payment = outcome.providerPaymentId
+          ? await find.byPaymentId(outcome.providerPaymentId)
+          : null;
+        if (!payment) {
+          this.logger.warn(`Refund ${outcome.refundRef} for unknown charge`);
+        } else {
+          await this.lifecycle.applyRefundStatus(
+            payment.storeId,
+            payment.id,
+            outcome.refundRef,
+            outcome.status,
+          );
+        }
+      } else if (outcome.kind === 'dispute') {
         const payment = await find.byPaymentId(outcome.providerPaymentId);
         if (!payment) {
           this.logger.warn(`Dispute ${outcome.dispute.id} for unknown charge`);

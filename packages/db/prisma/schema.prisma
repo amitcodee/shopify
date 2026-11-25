@@ -895,15 +895,17 @@ model OrderInvoice {
 /// Tenant-scoped (RLS). A GST credit note: reduces an issued invoice by a refund. Numbered in its
 /// own series per financial year ("CN/26-27/0001"); never changed after it is issued.
 model CreditNote {
-  id            String   @id @default(uuid(7)) @db.Uuid
-  storeId       String   @db.Uuid
-  orderId       String   @db.Uuid
+  id            String    @id @default(uuid(7)) @db.Uuid
+  storeId       String    @db.Uuid
+  orderId       String    @db.Uuid
   /// The refund it records (the provider part when a refund also went to a gift card).
-  refundId      String?  @db.Uuid
+  refundId      String?   @db.Uuid
   number        String
   financialYear String
   sequence      Int
-  issuedAt      DateTime @default(now())
+  issuedAt      DateTime  @default(now())
+  /// Set when the refund it records failed later; the number stays used (GSTR-1 table 13).
+  cancelledAt   DateTime?
   /// Everything printed (see @repo/contracts creditNoteDataSchema).
   data          Json
 

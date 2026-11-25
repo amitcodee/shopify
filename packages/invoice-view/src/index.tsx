@@ -253,6 +253,11 @@ export function CreditNoteDocument({ note }: { note: CreditNote }) {
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
             Credit note
           </p>
+          {note.cancelledAt ? (
+            <p className="mt-1 inline-block rounded border-2 border-red-700 px-2 py-0.5 text-xs font-bold uppercase tracking-widest text-red-700">
+              Cancelled {date(note.cancelledAt)}: the refund failed
+            </p>
+          ) : null}
           <h1 className="mt-1 text-xl font-bold">{d.seller.legalName}</h1>
           <p className="mt-2 max-w-sm whitespace-pre-line text-neutral-700">{d.seller.address}</p>
           <p className="mt-2">

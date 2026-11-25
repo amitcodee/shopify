@@ -246,7 +246,13 @@ export function buildTaxInvoice({ store, registration, order }: InvoiceSource): 
   };
 }
 
-type CreditNoteRow = { id: string; number: string; issuedAt: Date; data: unknown };
+type CreditNoteRow = {
+  id: string;
+  number: string;
+  issuedAt: Date;
+  cancelledAt: Date | null;
+  data: unknown;
+};
 
 function toInvoice(row: OrderInvoiceRow, notes: CreditNoteRow[] = []): OrderInvoice {
   return {
@@ -259,6 +265,7 @@ function toInvoice(row: OrderInvoiceRow, notes: CreditNoteRow[] = []): OrderInvo
       id: n.id,
       number: n.number,
       issuedAt: n.issuedAt.toISOString(),
+      cancelledAt: n.cancelledAt?.toISOString() ?? null,
       data: creditNoteDataSchema.parse(n.data),
     })),
   };

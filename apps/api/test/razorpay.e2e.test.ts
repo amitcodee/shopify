@@ -236,6 +236,99 @@ describe('Razorpay gateway (Route + Payment Links) through the API', () => {
     ]);
   });
 
+  it('settles pending refunds from webhooks and cancels the credit note of a failed one', async () => {
+    const { auth, admin, store, sf, variantId } = await inrStore();
+    fake.productStatus = 'activated';
+    await ctx
+      .http()
+      .post(`${admin}/payments/account`)
+      .set(auth)
+      .send({ provider: 'razorpay', business })
+      .expect(200);
+    await ctx
+      .http()
+      .put(`${admin}/gst`)
+      .set(auth)
+      .send({
+        gstin: '27AAPFU0939F1ZV',
+        legalName: 'Chai Co Private Limited',
+        address: '1 Marine Drive, Mumbai 400020',
+        invoicePrefix: 'CC',
+      })
+      .expect(200);
+    await checkout(sf, variantId).then((r) => expect(r.status).toBe(201));
+    const payment = await ctx.platform.payment.findFirstOrThrow({ where: { storeId: store.id } });
+    await webhook('payments', {
+      entity: 'event',
+      event: 'payment_link.paid',
+      payload: {
+        payment_link: { entity: { id: payment.providerRef, amount: 50_000, currency: 'INR' } },
+        payment: { entity: { id: 'pay_pending1', amount: 50_000, currency: 'INR' } },
+      },
+    }).expect(200);
+    const orderId = (await ctx.http().get(`${admin}/orders`).set(auth).expect(200)).body.items[0]
+      .id as string;
+
+    fake.refundStatus = 'pending';
+    const refund = async (amount: number) => {
+      await ctx
+        .http()
+        .post(`${admin}/orders/${orderId}/refunds`)
+        .set(auth)
+        .send({ amount })
+        .expect(201);
+      return (await ctx.platform.refund.findFirstOrThrow({
+        where: { orderId },
+        orderBy: { createdAt: 'desc' },
+      })) as { id: string; providerRef: string | null; status: string };
+    };
+    const refundEvent = (event: string, id: string) =>
+      webhook('payments', {
+        entity: 'event',
+        event,
+        payload: { refund: { entity: { id, payment_id: 'pay_pending1', amount: 10_000 } } },
+      });
+
+    // One settles later.
+    const first = await refund(10_000);
+    expect(first.status).toBe('PENDING');
+    await refundEvent('refund.processed', first.providerRef!).expect(200);
+    expect((await ctx.platform.refund.findUniqueOrThrow({ where: { id: first.id } })).status).toBe(
+      'SUCCEEDED',
+    );
+
+    // The other fails later: the order no longer counts it and its credit note is cancelled.
+    const second = await refund(5_000);
+    let order = (await ctx.http().get(`${admin}/orders/${orderId}`).set(auth).expect(200)).body;
+    expect(order.financialStatus).toBe('PARTIALLY_REFUNDED');
+    await refundEvent('refund.failed', second.providerRef!).expect(200);
+    order = (await ctx.http().get(`${admin}/orders/${orderId}`).set(auth).expect(200)).body;
+    expect(order.financialStatus).toBe('PARTIALLY_REFUNDED');
+    expect((await ctx.platform.refund.findUniqueOrThrow({ where: { id: second.id } })).status).toBe(
+      'FAILED',
+    );
+    const notes = await ctx.platform.creditNote.findMany({
+      where: { orderId },
+      orderBy: { sequence: 'asc' },
+    });
+    expect(notes.map((n) => n.cancelledAt === null)).toEqual([true, false]);
+    expect(order.events.map((e: { type: string }) => e.type)).toContain('refund_failed');
+
+    // A failure after settling, or a repeat, changes nothing.
+    await refundEvent('refund.failed', first.providerRef!).expect(200);
+    expect((await ctx.platform.refund.findUniqueOrThrow({ where: { id: first.id } })).status).toBe(
+      'SUCCEEDED',
+    );
+
+    // GSTR-1: the cancelled note is counted in table 13 only.
+    const report = (await ctx.http().get(`${admin}/gst-returns/gstr1`).set(auth).expect(200)).body;
+    expect(report.totals.creditNotes).toBe(1);
+    expect(report.documents).toContainEqual(
+      expect.objectContaining({ nature: 'credit_note', total: 2, cancelled: 1 }),
+    );
+    fake.refundStatus = 'processed';
+  });
+
   it('keeps one gateway per store, rejects mismatched currencies, and allows switching', async () => {
     const usd = await signup(ctx);
     const usdStore = await createStore(ctx, usd.token, { payments: false });

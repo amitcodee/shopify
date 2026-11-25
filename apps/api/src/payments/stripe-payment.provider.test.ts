@@ -98,6 +98,29 @@ describe('StripePaymentProvider.parseWebhook (offline)', () => {
     expect(stripeDisputeStatus('warning_under_review')).toBe('UNDER_REVIEW');
   });
 
+  it('maps settled and failed refunds, and ignores refunds still pending', () => {
+    const refund = (status: string) =>
+      signedEvent({
+        id: `evt_r_${status}`,
+        object: 'event',
+        type: 'refund.updated',
+        data: { object: { id: 're_1', object: 'refund', status, payment_intent: 'pi_123' } },
+      });
+    const succeeded = refund('succeeded');
+    expect(provider.parseWebhook(succeeded.body, succeeded.headers)).toEqual({
+      kind: 'refund_updated',
+      eventId: 'evt_r_succeeded',
+      type: 'refund.updated',
+      refundRef: 're_1',
+      providerPaymentId: 'pi_123',
+      status: 'SUCCEEDED',
+    });
+    const failed = refund('failed');
+    expect(provider.parseWebhook(failed.body, failed.headers)).toMatchObject({ status: 'FAILED' });
+    const pending = refund('pending');
+    expect(provider.parseWebhook(pending.body, pending.headers).kind).toBe('ignored');
+  });
+
   it('rejects tampered payloads', () => {
     const { headers } = signedEvent({
       id: 'evt_4',

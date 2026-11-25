@@ -63,7 +63,8 @@ Also verify by hand:
 - [ ] Platform admins have 2FA enabled (`REQUIRE_PLATFORM_2FA` defaults to on in production).
 - [ ] `TRUST_PROXY` matches the network your proxy runs in (so per-client rate limits work).
 - [ ] Stripe webhooks point at `https://api.<platform>/api/v1/webhooks/payments/stripe` and
-      `/api/v1/webhooks/billing`; test them with the Stripe CLI in test mode first.
+      `/api/v1/webhooks/billing`; test them with the Stripe CLI in test mode first. Include
+      `refund.updated` and `refund.failed` so refunds that settle later update the order.
 - [ ] Rate limits are shared through PostgreSQL (`RATE_LIMIT_STORE=postgres`, the default), so
       they hold across API instances; keep `trust proxy` pointing at the real proxy so per-IP
       keys use the client address.
@@ -75,7 +76,8 @@ Also verify by hand:
       (ADR 0006).
 - [ ] Razorpay (if offered): Route is enabled on the platform account, live keys are set, and two
       webhooks point at `/api/v1/webhooks/payments/razorpay` (`payment_link.paid`,
-      `payment_link.expired`, `payment_link.cancelled`, `payment.dispute.*`) and
+      `payment_link.expired`, `payment_link.cancelled`, `payment.dispute.*`, `refund.processed`,
+      `refund.failed`) and
       `/api/v1/webhooks/connect/razorpay` (`product.route.*`, `account.suspended`), both signed
       with `RAZORPAY_WEBHOOK_SECRET` (ADR 0007).
 

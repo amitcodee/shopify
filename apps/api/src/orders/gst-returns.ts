@@ -32,6 +32,8 @@ export interface IssuedDocument {
 export interface CreditNoteDocument extends IssuedDocument {
   /** The invoice the note reduces. */
   invoice: IssuedDocument | null;
+  /** Cancelled because its refund failed: left out of the tables, counted in table 13. */
+  cancelled?: boolean;
 }
 
 /** YYYY-MM-DD of an instant in a time zone. */
@@ -284,7 +286,10 @@ export function buildGstr1(input: {
     }
   }
 
-  const notes = [...input.creditNotes].sort((a, b) => a.issuedAt.getTime() - b.issuedAt.getTime());
+  const allNotes = [...input.creditNotes].sort(
+    (a, b) => a.issuedAt.getTime() - b.issuedAt.getTime(),
+  );
+  const notes = allNotes.filter((n) => !n.cancelled);
   for (const note of notes) {
     const n = creditNoteDataSchema.parse(note.data);
     currencies.add(n.currency);
@@ -354,7 +359,7 @@ export function buildGstr1(input: {
   report.gstr3b.interStateUnregistered = [...interUnregistered.values()]
     .filter((r) => r.taxableValue !== 0 || r.igst !== 0)
     .sort((a, b) => (a.placeOfSupply.code ?? '').localeCompare(b.placeOfSupply.code ?? ''));
-  report.documents = [...series(invoices, 'invoice'), ...series(notes, 'credit_note')];
+  report.documents = [...series(invoices, 'invoice'), ...series(allNotes, 'credit_note')];
 
   const [only] = currencies;
   if (currencies.size === 1 && only) report.currency = only;
@@ -376,6 +381,12 @@ export function buildGstr1(input: {
   if (unknownPlace > 0) {
     report.warnings.push(
       `${unknownPlace} invoice${unknownPlace === 1 ? '' : 's'} to another state had no recognised Indian state, so the place of supply is blank. Fill it in before filing.`,
+    );
+  }
+  const cancelledNotes = allNotes.length - notes.length;
+  if (cancelledNotes > 0) {
+    report.warnings.push(
+      `${cancelledNotes} credit note${cancelledNotes === 1 ? ' was' : 's were'} cancelled because the refund failed. ${cancelledNotes === 1 ? 'It is' : 'They are'} counted as cancelled in table 13 and left out of the other tables; if you already filed this month, amend the return.`,
     );
   }
   if (testPayments > 0) {
@@ -464,21 +475,27 @@ export function buildItc(
   return { itc, warnings };
 }
 
-/** Number ranges per series ("INV/26-27/"), in issue order. Invoices are never cancelled here. */
-function series(docs: IssuedDocument[], nature: 'invoice' | 'credit_note') {
-  const groups = new Map<string, string[]>();
+/** Number ranges per series ("INV/26-27/"), in issue order. Only credit notes get cancelled. */
+function series(
+  docs: (IssuedDocument & { cancelled?: boolean })[],
+  nature: 'invoice' | 'credit_note',
+) {
+  const groups = new Map<string, { numbers: string[]; cancelled: number }>();
   for (const doc of docs) {
     const prefix = doc.number.replace(/\d+$/, '');
-    groups.set(prefix, [...(groups.get(prefix) ?? []), doc.number]);
+    const group = groups.get(prefix) ?? { numbers: [], cancelled: 0 };
+    group.numbers.push(doc.number);
+    if (doc.cancelled) group.cancelled++;
+    groups.set(prefix, group);
   }
-  return [...groups.values()].map((numbers) => {
+  return [...groups.values()].map(({ numbers, cancelled }) => {
     const sorted = [...numbers].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
     return {
       nature,
       from: sorted[0] ?? '',
       to: sorted.at(-1) ?? '',
       total: sorted.length,
-      cancelled: 0,
+      cancelled,
     };
   });
 }
@@ -543,6 +560,7 @@ export class GstReturnsService {
           select: {
             number: true,
             issuedAt: true,
+            cancelledAt: true,
             data: true,
             order: {
               select: { invoice: { select: { number: true, issuedAt: true, data: true } } },
@@ -553,7 +571,11 @@ export class GstReturnsService {
       const report = buildGstr1({
         ...p,
         invoices,
-        creditNotes: creditNotes.map(({ order, ...n }) => ({ ...n, invoice: order.invoice })),
+        creditNotes: creditNotes.map(({ order, cancelledAt, ...n }) => ({
+          ...n,
+          invoice: order.invoice,
+          cancelled: cancelledAt !== null,
+        })),
       });
       await this.addItc(tx, storeId, p.month, report);
       return report;
@@ -658,6 +680,7 @@ export class GstReturnsService {
           id: n.id,
           number: n.number,
           issuedAt: n.issuedAt.toISOString(),
+          cancelledAt: n.cancelledAt?.toISOString() ?? null,
           data: creditNoteDataSchema.parse(n.data),
         })),
       };

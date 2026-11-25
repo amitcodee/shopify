@@ -73,7 +73,7 @@ export const STORE_GATEWAYS: readonly StoreGatewayInfo[] = [
     requiresPhone: false,
     keysUrl: 'https://dashboard.razorpay.com/app/keys',
     webhookSteps:
-      'In Razorpay, open Account & Settings → Webhooks and add the URL below. Choose your own secret and turn on payment_link.paid, payment_link.expired, payment_link.cancelled and the payment.dispute events.',
+      'In Razorpay, open Account & Settings → Webhooks and add the URL below. Choose your own secret and turn on payment_link.paid, payment_link.expired, payment_link.cancelled, refund.processed, refund.failed and the payment.dispute events.',
   },
   {
     id: 'phonepe',
@@ -168,7 +168,7 @@ export const STORE_GATEWAYS: readonly StoreGatewayInfo[] = [
     requiresPhone: false,
     keysUrl: 'https://dashboard.stripe.com/apikeys',
     webhookSteps:
-      'In Stripe, open Developers → Webhooks and add the URL below. Send checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, checkout.session.expired and the charge.dispute events, then copy its signing secret here.',
+      'In Stripe, open Developers → Webhooks and add the URL below. Send checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, checkout.session.expired, refund.updated, refund.failed and the charge.dispute events, then copy its signing secret here.',
   },
   {
     id: 'cashfree',

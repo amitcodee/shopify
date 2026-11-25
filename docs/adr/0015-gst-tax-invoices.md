@@ -97,6 +97,14 @@ invoice is listed to match against GSTR-2B; the page warns about GST-bearing ord
 invoice date or from unregistered suppliers. Blocked credit (section 17(5)) and ITC reversals are
 left to the merchant.
 
+## Refunds that fail later
+
+A refund the provider accepts as pending is settled by its refund webhook (Razorpay
+`refund.processed` / `refund.failed`, Stripe `refund.updated` / `refund.failed`). A failed one no
+longer counts toward the order's refunded amount, and its credit note gets `cancelledAt`: the
+document is marked cancelled, left out of the GSTR-1 tables and counted as cancelled in table 13
+(its number stays used). Restocked items stay in stock.
+
 ## Not done
 
 - E-invoicing (IRN/QR from the IRP), mandatory only above the turnover limit.
@@ -104,8 +112,8 @@ left to the merchant.
 - Filing GSTR-1 or GSTR-3B through a GSP.
 - Checking a buyer's GSTIN against the GST portal (only its format and check digit are checked).
 - Signature: the invoice has an "Authorised signatory" space, not a digital signature.
-- A refund that a provider reports as failed later (after it was accepted) keeps its credit
-  note; cancel it by hand.
+- Refunds that settle later are only followed for Razorpay and Stripe (their refund webhooks);
+  for other gateways a refund the provider accepted as pending stays pending here.
 - Invoices are erased with the store's data when a closed store is deleted; merchants must keep
   their own copies for the retention period GST law requires (the month print above makes that one
   step per month).

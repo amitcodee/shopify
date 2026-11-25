@@ -228,6 +228,8 @@ export const creditNoteSchema = z.object({
   id: z.uuid(),
   number: z.string(),
   issuedAt: z.iso.datetime(),
+  /** The refund it records failed later; the note no longer counts. */
+  cancelledAt: z.iso.datetime().nullable(),
   data: creditNoteDataSchema,
 });
 export type CreditNote = z.infer<typeof creditNoteSchema>;

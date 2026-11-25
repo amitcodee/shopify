@@ -126,6 +126,19 @@ export class RazorpayPaymentProvider implements PaymentProvider {
           type,
           providerRef: str(entity('payment_link').id),
         };
+      case 'refund.processed':
+      case 'refund.failed': {
+        const refund = entity('refund');
+        if (typeof refund.id !== 'string') return { kind: 'ignored', eventId, type };
+        return {
+          kind: 'refund_updated',
+          eventId,
+          type,
+          refundRef: refund.id,
+          providerPaymentId: typeof refund.payment_id === 'string' ? refund.payment_id : null,
+          status: type === 'refund.processed' ? 'SUCCEEDED' : 'FAILED',
+        };
+      }
       case 'payment.dispute.created':
       case 'payment.dispute.action_required':
       case 'payment.dispute.under_review':

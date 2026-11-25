@@ -130,6 +130,28 @@ export class StripePaymentProvider implements PaymentProvider {
           },
         };
       }
+      case 'refund.updated':
+      case 'refund.failed': {
+        const refund = event.data.object;
+        const status =
+          refund.status === 'succeeded'
+            ? 'SUCCEEDED'
+            : refund.status === 'failed' || refund.status === 'canceled'
+              ? 'FAILED'
+              : null;
+        if (!status) return { kind: 'ignored', eventId: event.id, type: event.type };
+        return {
+          kind: 'refund_updated',
+          eventId: event.id,
+          type: event.type,
+          refundRef: refund.id,
+          providerPaymentId:
+            typeof refund.payment_intent === 'string'
+              ? refund.payment_intent
+              : (refund.payment_intent?.id ?? null),
+          status,
+        };
+      }
       case 'checkout.session.expired':
       case 'checkout.session.async_payment_failed':
         return {

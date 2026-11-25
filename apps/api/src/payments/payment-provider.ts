@@ -47,6 +47,17 @@ export type WebhookOutcome =
       providerPaymentId: string;
       dispute: DisputeUpdate;
     }
+  | {
+      /** A refund the provider first reported as pending has now settled or failed. */
+      kind: 'refund_updated';
+      eventId: string;
+      type: string;
+      /** The provider's refund id (stored as Refund.providerRef). */
+      refundRef: string;
+      /** The refunded charge, to scope the lookup to its store. */
+      providerPaymentId: string | null;
+      status: 'SUCCEEDED' | 'FAILED';
+    }
   | { kind: 'ignored'; eventId: string; type: string };
 
 export type DisputeStatus = 'NEEDS_RESPONSE' | 'UNDER_REVIEW' | 'WON' | 'LOST';

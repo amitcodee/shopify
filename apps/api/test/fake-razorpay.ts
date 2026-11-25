@@ -20,6 +20,9 @@ export class FakeRazorpay {
   productStatus = 'under_review';
   /** Status returned when an order is fetched ("created", "attempted" or "paid"). */
   orderStatus = 'paid';
+  /** Status a new refund starts in ("processed", or "pending" until a refund webhook). */
+  refundStatus = 'processed';
+  private refunds = 0;
   private links = 0;
   private orders = new Map<string, { amount: number; currency: string }>();
 
@@ -86,7 +89,8 @@ export class FakeRazorpay {
       return json(200, { id: orderMatch[1], ...order, status: this.orderStatus, notes: [] });
     }
     if (method === 'POST' && /^\/v1\/payments\/[^/]+\/refund$/.test(path)) {
-      return json(200, { id: 'rfnd_test1', status: 'processed' });
+      this.refunds += 1;
+      return json(200, { id: `rfnd_test${this.refunds}`, status: this.refundStatus });
     }
     return json(400, {
       error: { code: 'BAD_REQUEST_ERROR', description: `Unhandled ${method} ${path}` },
