@@ -135,8 +135,13 @@ export const gstr1Schema = z.object({
      * 4(A)(5) "All other ITC": GST on stock received from registered suppliers whose tax invoice
      * is dated this month. Only credit that also appears in GSTR-2B can be claimed.
      */
+    /** 3.1(d): inward supplies on which the store pays GST under reverse charge. */
+    inwardReverseCharge: z.object({ taxableValue: z.number().int(), ...taxSchema }),
     itc: z.object({
+      /** 4(A)(5) all other ITC. */
       ...taxSchema,
+      /** 4(A)(3): credit of the GST paid under reverse charge (3.1(d)). */
+      reverseCharge: z.object(taxSchema),
       /** One row per supplier invoice, to match against GSTR-2B. */
       purchases: z.array(
         z.object({
@@ -146,6 +151,7 @@ export const gstr1Schema = z.object({
           supplierGstin: z.string(),
           invoiceNumber: z.string(),
           invoiceDate: z.string(),
+          reverseCharge: z.boolean(),
           taxableValue: z.number().int(),
           ...taxSchema,
         }),

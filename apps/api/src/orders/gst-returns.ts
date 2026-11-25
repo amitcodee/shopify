@@ -99,7 +99,14 @@ export function buildGstr1(input: {
       zeroRated: { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 },
       nilRated: { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 },
       interStateUnregistered: [],
-      itc: { igst: 0, cgst: 0, sgst: 0, purchases: [] },
+      inwardReverseCharge: { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 },
+      itc: {
+        igst: 0,
+        cgst: 0,
+        sgst: 0,
+        reverseCharge: { igst: 0, cgst: 0, sgst: 0 },
+        purchases: [],
+      },
     },
     warnings: [],
   };
@@ -407,21 +414,35 @@ export interface PurchaseForItc {
   invoiceDate: string;
   shippingCost: number;
   shippingTaxRateBps: number;
+  reverseCharge: boolean;
   lines: { receivedQuantity: number; unitCost: number; taxRateBps: number }[];
 }
 
 /**
  * GSTR-3B table 4: GST on stock received from registered suppliers, one row per supplier
  * invoice. Same-state suppliers (first two GSTIN digits) charge CGST + SGST, others IGST. Units
- * not yet received are left out: credit needs the goods as well as the invoice.
+ * not yet received are left out: credit needs the goods as well as the invoice. Reverse-charge
+ * purchases go to 3.1(d) (tax the store pays) and their credit to 4(A)(3); a supplier without a
+ * GSTIN is treated as same-state.
  */
 export function buildItc(
   storeGstin: string | null,
   purchases: readonly PurchaseForItc[],
-): { itc: Gstr1Report['gstr3b']['itc']; warnings: string[] } {
-  const itc: Gstr1Report['gstr3b']['itc'] = { igst: 0, cgst: 0, sgst: 0, purchases: [] };
+): {
+  itc: Gstr1Report['gstr3b']['itc'];
+  inwardReverseCharge: Gstr1Report['gstr3b']['inwardReverseCharge'];
+  warnings: string[];
+} {
+  const itc: Gstr1Report['gstr3b']['itc'] = {
+    igst: 0,
+    cgst: 0,
+    sgst: 0,
+    reverseCharge: { igst: 0, cgst: 0, sgst: 0 },
+    purchases: [],
+  };
+  const inwardReverseCharge = { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 };
   const warnings: string[] = [];
-  if (!storeGstin) return { itc, warnings };
+  if (!storeGstin) return { itc, inwardReverseCharge, warnings };
   let unregistered = 0;
   const sorted = [...purchases].sort(
     (a, b) => a.invoiceDate.localeCompare(b.invoiceDate) || a.number - b.number,
@@ -434,11 +455,11 @@ export function buildItc(
       { amount: p.shippingCost, rateBps: p.shippingTaxRateBps },
     ];
     if (parts.every((x) => x.rateBps === 0 || x.amount === 0)) continue;
-    if (!p.supplierGstin) {
+    if (!p.supplierGstin && !p.reverseCharge) {
       unregistered++;
       continue;
     }
-    const intra = p.supplierGstin.slice(0, 2) === storeGstin.slice(0, 2);
+    const intra = !p.supplierGstin || p.supplierGstin.slice(0, 2) === storeGstin.slice(0, 2);
     const row = { taxableValue: 0, igst: 0, cgst: 0, sgst: 0 };
     for (const x of parts) {
       row.taxableValue += x.amount;
@@ -449,9 +470,16 @@ export function buildItc(
         row.igst += gstOn(x.amount, x.rateBps);
       }
     }
-    itc.igst += row.igst;
-    itc.cgst += row.cgst;
-    itc.sgst += row.sgst;
+    const credit = p.reverseCharge ? itc.reverseCharge : itc;
+    credit.igst += row.igst;
+    credit.cgst += row.cgst;
+    credit.sgst += row.sgst;
+    if (p.reverseCharge) {
+      inwardReverseCharge.taxableValue += row.taxableValue;
+      inwardReverseCharge.igst += row.igst;
+      inwardReverseCharge.cgst += row.cgst;
+      inwardReverseCharge.sgst += row.sgst;
+    }
     itc.purchases.push({
       purchaseOrderId: p.id,
       purchaseOrder: `#PO${p.number}`,
@@ -459,6 +487,7 @@ export function buildItc(
       supplierGstin: p.supplierGstin,
       invoiceNumber: p.supplierReference,
       invoiceDate: p.invoiceDate,
+      reverseCharge: p.reverseCharge,
       ...row,
     });
   }
@@ -472,7 +501,12 @@ export function buildItc(
       'Some purchases in the input tax credit have no supplier invoice number. Add it on the purchase order so you can match it with GSTR-2B.',
     );
   }
-  return { itc, warnings };
+  if (inwardReverseCharge.igst + inwardReverseCharge.cgst + inwardReverseCharge.sgst > 0) {
+    warnings.push(
+      'Reverse-charge GST (3.1(d)) must be paid in cash before its credit (4(A)(3)) can be used.',
+    );
+  }
+  return { itc, inwardReverseCharge, warnings };
 }
 
 /** Number ranges per series ("INV/26-27/"), in issue order. Only credit notes get cancelled. */
@@ -600,11 +634,12 @@ export class GstReturnsService {
         supplierInvoiceDate: true,
         shippingCost: true,
         shippingTaxRateBps: true,
+        reverseCharge: true,
         supplier: { select: { name: true, gstin: true } },
         lines: { select: { receivedQuantity: true, unitCost: true, taxRateBps: true } },
       },
     });
-    const { itc, warnings } = buildItc(
+    const { itc, inwardReverseCharge, warnings } = buildItc(
       report.gstin,
       rows.map((r) => ({
         id: r.id,
@@ -615,6 +650,7 @@ export class GstReturnsService {
         invoiceDate: r.supplierInvoiceDate?.toISOString().slice(0, 10) ?? '',
         shippingCost: r.shippingCost,
         shippingTaxRateBps: r.shippingTaxRateBps,
+        reverseCharge: r.reverseCharge,
         lines: r.lines,
       })),
     );
@@ -633,6 +669,12 @@ export class GstReturnsService {
       );
     }
     report.gstr3b.itc = itc;
+    report.gstr3b.inwardReverseCharge = inwardReverseCharge;
+    if (itc.purchases.length > 0) {
+      warnings.push(
+        'Table 4(B) reversals are not worked out here: reverse credit for supplier bills unpaid after 180 days, and for goods used for exempt supplies or personally.',
+      );
+    }
     report.warnings.push(...warnings);
   }
 

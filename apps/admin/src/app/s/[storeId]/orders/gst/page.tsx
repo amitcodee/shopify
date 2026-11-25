@@ -284,6 +284,11 @@ export default async function GstReturnsPage({
                     'Other outward supplies (nil rated, exempted)',
                     report.gstr3b.nilRated,
                   ],
+                  [
+                    '3.1(d)',
+                    'Inward supplies (liable to reverse charge), from purchase orders',
+                    report.gstr3b.inwardReverseCharge,
+                  ],
                 ] as const
               ).map(([table, label, r]) => (
                 <tr key={table}>
@@ -336,6 +341,13 @@ export default async function GstReturnsPage({
               numeric={[2, 3, 4]}
             >
               <tr>
+                <Td className="font-mono text-xs">4(A)(3)</Td>
+                <Td>Inward supplies liable to reverse charge</Td>
+                <Td numeric>{money(report.gstr3b.itc.reverseCharge.igst)}</Td>
+                <Td numeric>{money(report.gstr3b.itc.reverseCharge.cgst)}</Td>
+                <Td numeric>{money(report.gstr3b.itc.reverseCharge.sgst)}</Td>
+              </tr>
+              <tr>
                 <Td className="font-mono text-xs">4(A)(5)</Td>
                 <Td>All other ITC</Td>
                 <Td numeric>{money(report.gstr3b.itc.igst)}</Td>
@@ -387,7 +399,10 @@ export default async function GstReturnsPage({
                     </Td>
                     <Td>
                       <p className="text-slate-900">{p.supplierName}</p>
-                      <p className="font-mono text-xs text-slate-500">{p.supplierGstin}</p>
+                      <p className="font-mono text-xs text-slate-500">
+                        {p.supplierGstin || 'Unregistered'}
+                        {p.reverseCharge ? ' · reverse charge' : ''}
+                      </p>
                     </Td>
                     <Td>
                       <p className="text-slate-900">{p.invoiceNumber || '—'}</p>

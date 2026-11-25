@@ -95,7 +95,9 @@ or partially received orders whose invoice date falls in the month, only from su
 GSTIN: CGST + SGST when the GSTIN state code matches the store's, IGST otherwise. Each supplier
 invoice is listed to match against GSTR-2B; the page warns about GST-bearing orders without an
 invoice date or from unregistered suppliers. Blocked credit (section 17(5)) and ITC reversals are
-left to the merchant.
+left to the merchant. A purchase order marked **reverse charge** (the store pays the GST itself,
+e.g. GTA transport) owes the supplier no GST; its tax goes to 3.1(d) and its credit to 4(A)(3),
+and a supplier without a GSTIN is treated as same-state.
 
 ## Refunds that fail later
 
@@ -111,7 +113,8 @@ refund status by the id we derive from the refund, PayPal and Razorpay/Stripe by
 ## Not done
 
 - E-invoicing (IRN/QR from the IRP), mandatory only above the turnover limit.
-- RCM inward supplies (3.1(d)), ITC reversals (4(B)) and imports (4(A)(1)).
+- ITC reversals (4(B): bills unpaid after 180 days, exempt or personal use; the page says so) and
+  imports (4(A)(1)).
 - Filing GSTR-1 or GSTR-3B through a GSP.
 - Checking a buyer's GSTIN against the GST portal (only its format and check digit are checked).
 - Signature: the invoice has an "Authorised signatory" space, not a digital signature.

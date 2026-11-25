@@ -127,6 +127,17 @@ describe('Input tax credit (GSTR-3B table 4)', () => {
       receive: 1,
       supplierInvoiceDate: '2026-11-05',
     });
+    // Reverse charge from the unregistered tailor: the store pays the GST, then claims it.
+    const rcm = await purchase(local.id, {
+      quantity: 2,
+      unitCost: 1000,
+      taxRateBps: 1800,
+      receive: 2,
+      reverseCharge: true,
+      supplierInvoiceDate: '2026-11-25',
+    });
+    // The supplier is owed no GST on a reverse-charge order.
+    expect(rcm).toMatchObject({ subtotal: 2000, taxTotal: 360, total: 2000 });
     // No invoice date yet.
     const undated = await purchase(mumbai.id, {
       quantity: 2,
@@ -138,7 +149,18 @@ describe('Input tax credit (GSTR-3B table 4)', () => {
     const nov = (
       await http().get(`${admin}/gst-returns/gstr1`).query({ month: '2026-11' }).set(auth)
     ).body;
-    expect(nov.gstr3b.itc).toMatchObject({ igst: 1200, cgst: 585, sgst: 585 });
+    expect(nov.gstr3b.itc).toMatchObject({
+      igst: 1200,
+      cgst: 585,
+      sgst: 585,
+      reverseCharge: { igst: 0, cgst: 180, sgst: 180 },
+    });
+    expect(nov.gstr3b.inwardReverseCharge).toEqual({
+      taxableValue: 2000,
+      igst: 0,
+      cgst: 180,
+      sgst: 180,
+    });
     expect(nov.gstr3b.itc.purchases).toEqual([
       expect.objectContaining({
         supplierName: 'Mumbai Mills',
@@ -154,8 +176,16 @@ describe('Input tax credit (GSTR-3B table 4)', () => {
         invoiceDate: '2026-11-20',
         taxableValue: 10_000,
         igst: 1200,
+        reverseCharge: false,
+      }),
+      expect.objectContaining({
+        supplierName: 'Local Tailor',
+        supplierGstin: '',
+        reverseCharge: true,
+        cgst: 180,
       }),
     ]);
+    expect(nov.warnings.join(' ')).toMatch(/paid in cash/);
     expect(nov.warnings.join(' ')).toMatch(/supplier with no GSTIN/);
     expect(nov.warnings.join(' ')).toMatch(/no supplier invoice date/);
 

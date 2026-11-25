@@ -95,6 +95,7 @@ export function PurchaseOrderForm({
     String(order?.shippingTaxRateBps ?? 0),
   );
   const [supplierInvoiceDate, setSupplierInvoiceDate] = useState(order?.supplierInvoiceDate ?? '');
+  const [reverseCharge, setReverseCharge] = useState(order?.reverseCharge ?? false);
   const [notes, setNotes] = useState(order?.notes ?? '');
   const [lines, setLines] = useState<LineRow[]>(
     order?.lines.flatMap((l) =>
@@ -133,10 +134,10 @@ export function PurchaseOrderForm({
       subtotal,
       shipping,
       tax,
-      total: subtotal + shipping + tax,
+      total: subtotal + shipping + (reverseCharge ? 0 : tax),
       units: lines.reduce((s, l) => s + (Number.parseInt(l.quantity || '0', 10) || 0), 0),
     };
-  }, [lines, shippingCost, shippingTaxRateBps, currency]);
+  }, [lines, shippingCost, shippingTaxRateBps, reverseCharge, currency]);
 
   const payload = {
     supplierId,
@@ -145,6 +146,7 @@ export function PurchaseOrderForm({
     supplierReference,
     shippingCost: parseMoney(shippingCost || '0', currency),
     shippingTaxRateBps: Number(shippingTaxRateBps),
+    reverseCharge,
     supplierInvoiceDate: supplierInvoiceDate || null,
     notes,
     lines: lines.map((l) => ({
@@ -515,6 +517,21 @@ export function PurchaseOrderForm({
                   ))}
                 </select>
               </div>
+              <label className="flex items-start gap-2.5 text-[13px] text-slate-800">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4 rounded border-slate-300"
+                  checked={reverseCharge}
+                  onChange={(e) => setReverseCharge(e.target.checked)}
+                />
+                <span>
+                  <span className="font-medium">Reverse charge</span>
+                  <span className={`block ${hint}`}>
+                    You pay this GST to the government yourself, not to the supplier (for example
+                    transport by a GTA). Shown in GSTR-3B 3.1(d) and claimed in 4(A)(3).
+                  </span>
+                </span>
+              </label>
             </div>
           </Card>
           <Card title="Summary">
@@ -534,7 +551,9 @@ export function PurchaseOrderForm({
                 <dd className="tabular-nums">{formatMoney(totals.shipping, currency)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-slate-500">GST</dt>
+                <dt className="text-slate-500">
+                  GST{reverseCharge ? ' (you pay, reverse charge)' : ''}
+                </dt>
                 <dd className="tabular-nums">{formatMoney(totals.tax, currency)}</dd>
               </div>
               <div className="flex justify-between border-t border-slate-100 pt-2 font-semibold text-slate-900">

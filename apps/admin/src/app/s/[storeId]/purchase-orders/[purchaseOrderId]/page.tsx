@@ -216,7 +216,12 @@ export default async function PurchaseOrderPage({
                 <dd className="tabular-nums">{money(order.shippingCost)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-slate-500">GST</dt>
+                <dt className="text-slate-500">
+                  GST
+                  {order.reverseCharge
+                    ? ' (you pay, reverse charge; not owed to the supplier)'
+                    : ''}
+                </dt>
                 <dd className="tabular-nums">{money(order.taxTotal)}</dd>
               </div>
               <div className="flex justify-between font-semibold text-slate-900">
@@ -230,7 +235,7 @@ export default async function PurchaseOrderPage({
             <Card
               title="Supplier invoice"
               description={
-                order.supplier.gstin
+                order.supplier.gstin || order.reverseCharge
                   ? 'GST on the units received counts as input tax credit in the month of this invoice date (Orders → GST returns, GSTR-3B table 4).'
                   : `${order.supplier.name} has no GSTIN saved, so this order gives no input tax credit. Add their GSTIN on the supplier page if they are registered.`
               }

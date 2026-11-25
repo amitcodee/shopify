@@ -122,6 +122,11 @@ export const purchaseOrderInputSchema = z.strictObject({
   expectedAt: dateOnly.nullable().default(null),
   shippingCost: moneyMinor.default(0),
   shippingTaxRateBps: taxRateBps.default(0),
+  /**
+   * Reverse charge: the supplier does not charge GST and the store pays it to the government
+   * (for example goods transport by a GTA, or notified goods from an unregistered person).
+   */
+  reverseCharge: z.boolean().default(false),
   /** Date on the supplier's tax invoice (YYYY-MM-DD); input tax credit falls in that month. */
   supplierInvoiceDate: dateOnly.nullable().default(null),
   notes: text(2000),
@@ -213,15 +218,16 @@ export const purchaseOrderSchema = z.object({
   supplierReference: z.string(),
   expectedAt: z.string().nullable(),
   supplierInvoiceDate: z.string().nullable(),
+  reverseCharge: z.boolean(),
   shippingCost: z.number().int(),
   shippingTaxRateBps: z.number().int(),
   notes: z.string(),
   lines: z.array(purchaseOrderLineSchema),
   /** Items before GST. */
   subtotal: z.number().int(),
-  /** GST on the items and shipping as ordered. */
+  /** GST on the items and shipping as ordered (paid by the store itself under reverse charge). */
   taxTotal: z.number().int(),
-  /** Subtotal + shipping + GST: what the supplier is owed. */
+  /** What the supplier is owed: subtotal + shipping, plus GST unless it is reverse charge. */
   total: z.number().int(),
   unitsOrdered: z.number().int(),
   unitsReceived: z.number().int(),

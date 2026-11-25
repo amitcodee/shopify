@@ -74,6 +74,7 @@ const toDate = (day: string | null) => (day ? new Date(`${day}T00:00:00Z`) : nul
 function orderTotals(o: {
   shippingCost: number;
   shippingTaxRateBps: number;
+  reverseCharge: boolean;
   lines: { quantity: number; unitCost: number; taxRateBps: number }[];
 }) {
   const subtotal = o.lines.reduce((s, l) => s + l.quantity * l.unitCost, 0);
@@ -81,7 +82,11 @@ function orderTotals(o: {
     o.lines.map((l) => ({ units: l.quantity, unitCost: l.unitCost, taxRateBps: l.taxRateBps })),
     { cost: o.shippingCost, taxRateBps: o.shippingTaxRateBps },
   );
-  return { subtotal, taxTotal: tax, total: subtotal + o.shippingCost + tax };
+  return {
+    subtotal,
+    taxTotal: tax,
+    total: subtotal + o.shippingCost + (o.reverseCharge ? 0 : tax),
+  };
 }
 
 /**
@@ -440,6 +445,7 @@ export class PurchaseOrdersService {
       expectedAt: toDate(input.expectedAt),
       shippingCost: input.shippingCost,
       shippingTaxRateBps: input.shippingTaxRateBps,
+      reverseCharge: input.reverseCharge,
       supplierInvoiceDate: toDate(input.supplierInvoiceDate),
       notes: input.notes,
     };
@@ -530,6 +536,7 @@ export class PurchaseOrdersService {
       supplierReference: o.supplierReference,
       expectedAt: dateOnly(o.expectedAt),
       supplierInvoiceDate: dateOnly(o.supplierInvoiceDate),
+      reverseCharge: o.reverseCharge,
       shippingCost: o.shippingCost,
       shippingTaxRateBps: o.shippingTaxRateBps,
       notes: o.notes,
